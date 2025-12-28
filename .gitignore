@@ -28,3 +28,6 @@ venv/
 dist/
 build/
 .out/
+
+# Generated demo scenarios (exclude all demo-* folders except tracked examples)
+demo-*/

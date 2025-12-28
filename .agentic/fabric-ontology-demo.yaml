@@ -81,11 +81,11 @@ deliverables:
   - id: static_csvs
     path: "demo-<scenario-name>/data/lakehouse/"
     tables: [DimCustomer.csv, DimAccount.csv, DimMerchant.csv, DimDevice.csv, FactTransactions.csv]
-    minRowsPerTable: 50
+    minRowsPerTable: 20
   - id: timeseries_csvs
     path: "demo-<scenario-name>/data/eventhouse/"
     tables: [AccountBalanceTelemetry.csv]
-    minRowsPerTable: 50
+    minRowsPerTable: 20
     requiresTimestamp: true
   - id: bindings_lakehouse
     path: "demo-<scenario-name>/bindings/lakehouse-binding-instructions.md"
@@ -104,8 +104,7 @@ discoveryQuestions:
   - "Which domain and audience?"
   - "Entity types (3–5) and multi-hop depth?"
   - "Include time-series? Which entities?"
-  - "Dataset scale: small (10–20) or realistic (50–100+)?"
-  - "Demo duration and interaction mode?"
+  - "Dataset scale: small (10–20) or realistic (30-50+)?"
 
 modelTemplates:
   entityTemplate:
@@ -154,8 +153,8 @@ questionTemplate:
 validation:
   dataset:
     minTotalRows: 200
-    primaryFactsMinRows: 50
-    timeseriesMinRowsPerEntity: 50
+    primaryFactsMinRows: 20
+    timeseriesMinRowsPerEntity: 20
   ontology:
     keysDefined: true
     propertyTypesValid: true
@@ -405,10 +404,10 @@ agentSteps:
   - "Run preflight checks and abort with actionable guidance if violations are found"
   - "Collect discovery inputs (fill defaults if missing)"
   - "Design entities, properties, and relationships (apply constraints)"
-  - "Generate TTL and Mermaid from the model"
-  - "Produce CSVs aligned to bindings and data types"
+  - "Generate TTL as ttl and Mermaid diagram as .md from the model. Ensure it is formatted well for readableness."
+  - "Produce CSVs sample data aligned to bindings and data types"
   - "Write binding instructions (static → lakehouse, timeseries → eventhouse)"
-  - "Create 5 questions with GQL + traversal + explanations"
+  - "Create 5 questions with GQL query + traversal + explanations + value proposition why an ontology is better for such questions"
   - "Run validation checklist and produce a summary report"
   - "Output the demo folder structure with all files"
 
@@ -422,6 +421,6 @@ instructions_narrative: |
   - Folder structure for deliverables and documentation
   - Ontology creation practices (entity names, keys, properties, relationships)
   - Sample data guidance and references (CSV files, row counts, types)
-  - Mermaid diagram guidance (erDiagram/flowchart)
+  - Mermaid diagram (https://mermaid.js.org/intro/syntax-reference.html)
   - Data Agent integration notes and demo question patterns
   - Validation checklist and tenant settings prerequisites

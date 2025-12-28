@@ -5,13 +5,51 @@ An expert agent configuration for creating Microsoft Fabric Ontology demo scenar
 ## What's inside
 - **.agentic/fabric-ontology-demo.yaml** — the agent spec covering capabilities, defaults, constraints, sample entities/relationships, known issues, and steps to generate demo assets (TTL, Mermaid, CSVs, bindings, and docs).
 - **Docs** — project guidelines for contribution, conduct, and security reporting.
+- **demo-*** — generated demo folders (e.g., `demo-water_treatment_plant/`, `demo-potash_mining/`)
+
+## Output folder structure
+Each generated demo follows a consistent structure:
+
+```
+demo-{scenario_name}/
+├── ontology/
+│   ├── {scenario_name}.ttl          # RDF/Turtle ontology definition with classes, relationships, and properties
+│   ├── ontology.mmd                 # Mermaid ER diagram (fenced markdown block) for visualization
+│   └── ontology-structure.md        # Human-readable entity/relationship summary with binding notes
+├── data/
+│   └── data-dictionary.md           # CSV schema definitions for static, edge, and timeseries tables
+├── bindings/
+│   ├── lakehouse-binding-instructions.md    # Step-by-step guide for static data bindings (OneLake/Lakehouse)
+│   └── eventhouse-binding-instructions.md   # Step-by-step guide for timeseries bindings (Eventhouse)
+├── queries/
+│   └── demo-questions.md            # 5+ sample questions with GQL traversals and expected insights
+└── README.md                        # Demo overview, setup steps, constraints, and usage guidance
+```
+
+### File purposes
+- **TTL file**: Formal ontology in Turtle format defining entity types, relationships, and data properties aligned to Fabric Ontology constraints (string/int keys, no Decimal types, property uniqueness).
+- **Mermaid diagram**: Visual ER representation of the ontology for quick comprehension; can be rendered in VS Code with Mermaid extensions.
+- **Ontology structure**: Plain markdown summary of entities, relationships, and binding mappings for reference.
+- **Data dictionary**: Detailed schemas for creating CSV files (≥50 rows each) with column names, types, foreign keys, and constraints.
+- **Binding instructions**: Step-by-step workflows for configuring static (lakehouse) and timeseries (eventhouse) bindings in the Fabric Ontology preview UI.
+- **Demo questions**: Example analytical queries demonstrating how the ontology enables traversals across heterogeneous data sources.
+- **Demo README**: Quick-start guide with setup, bindings summary, constraints, and try-it instructions.
 
 ## Getting started
-1) Clone the repo:
+1) Clone this repo:
    - `git clone git@github.com:falloutxAY/Fabric-Ontology-demoAgent.git`
    - or `git clone https://github.com/falloutxAY/Fabric-Ontology-demoAgent.git`
-2) Inspect the agent spec: open `.agentic/fabric-ontology-demo.yaml`.
-3) Use the spec to generate your demo assets (ontology TTL/Mermaid, CSVs, bindings, and README) following the described agent steps and validation checks.
+2) (Optional) Inspect/update the agent spec: `.agentic/fabric-ontology-demo.yaml`.
+3) Use the spec for an agent to generate your demo assets. Example: "Create a demo for a water treatment plant"
+4) Read demo-{scenario_name}/readme.md
+5) Upload ttl to Fabric Ontology using https://github.com/falloutxAY/rdf-fabric-ontology-converter
+6) Bind and map data based on data and bindings folders
+7) Use queries folder with Data Agent
+
+**Note**: Generated demo folders (`demo-*/`) are excluded from version control by default via `.gitignore`. This keeps the repository focused on the agent spec and documentation. To track a specific demo, use `git add -f demo-<scenario-name>/`.
+
+## Troubleshooting
+As this is based on an agent, the output is non-deterministic. Happy prompting
 
 ## Contributing
 See `CONTRIBUTING.md` for branching, commits, and pull request guidelines.
