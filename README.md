@@ -51,14 +51,5 @@ demo-{scenario_name}/
 ## Troubleshooting
 As this is based on an agent, the output is non-deterministic. Happy prompting
 
-## Contributing
-See `CONTRIBUTING.md` for branching, commits, and pull request guidelines.
-
-## Code of Conduct
-Be kind and inclusive. Refer to `CODE_OF_CONDUCT.md`.
-
-## Security
-Report potential vulnerabilities via the process in `SECURITY.md`.
-
 ## License
 MIT — see `LICENSE`.
