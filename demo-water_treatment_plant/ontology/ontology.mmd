@@ -1,0 +1,35 @@
+# Water Treatment Plant ER diagram
+
+```mermaid
+erDiagram
+  Plant {
+    string PlantId PK
+    string PlantName
+    string Region
+  }
+  Unit {
+    string UnitId PK
+    string UnitType
+    string Status
+    string PlantId FK
+  }
+  SensorEvent {
+    string SensorEventId PK
+    double FlowRateLps
+    double PressureBar
+    datetime Timestamp
+    string UnitId FK
+  }
+  WaterQualitySample {
+    string SampleId PK
+    double TurbidityNTU
+    double pH
+    double ConductivityuScm
+    datetime SampleTimestamp
+    string PlantId FK
+  }
+
+  Plant ||--o{ Unit : operates
+  Unit ||--o{ SensorEvent : hasReading
+  Plant ||--o{ WaterQualitySample : sampledAt
+```
