@@ -43,6 +43,7 @@ deliverables:
   - { id: ttl, path: "ontology/{scenario}.ttl" }
   - { id: mermaid, path: "ontology/ontology.mmd" }
   - { id: structure, path: "ontology/ontology-structure.md" }
+  - { id: html_slide, path: "ontology/ontology-diagram-slide.html" }
   - { id: dictionary, path: "data/data-dictionary.md" }
   - { id: lakehouse_csvs, path: "data/lakehouse/*.csv" }
   - { id: eventhouse_csvs, path: "data/eventhouse/*.csv" }
@@ -77,6 +78,21 @@ templates:
     Example for Facility with DailyOutput, EquipmentUptime timeseries:
     > ⚠️ **Note:** Timeseries properties (DailyOutput, EquipmentUptime) are bound separately via Eventhouse.
 
+  # HTML slide template structure
+  htmlSlide: |
+    Create interactive HTML slide with:
+    - <!DOCTYPE html> with proper meta tags
+    - Mermaid CDN: https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js
+    - Gradient background (purple/blue theme)
+    - White card container with rounded corners and shadow
+    - Header: Title + subtitle
+    - Info grid: 4 metric cards (entity count, relationships, multi-hop depth, target audience)
+    - Diagram container with embedded Mermaid ER diagram
+    - Legend: Color-coded items for entities, relationships, timeseries
+    - Footer: Company name, domain, Microsoft Fabric Ontology, date
+    - Responsive CSS and print-ready styles
+    - Mermaid initialization script
+
 # Condensed known issues - key points only
 knownIssues:
   - "Keys must be string/int only"
@@ -103,9 +119,14 @@ agentInstructions: |
   - Confirm requirements before proceeding
   - Output: Brief confirmation of scope
   
-  ## Phase 2: Design (1 response)  
-  - Output ONLY ontology-structure.md with entity/relationship summary
-  - Include Mermaid diagram in this file
+  ## Phase 2: Design (2 responses)  
+  - Response 1: Output ontology-structure.md with entity/relationship summary and Mermaid diagram
+  - Response 2: Generate ontology-diagram-slide.html - an interactive HTML slide with:
+    * Professional styling with gradient background
+    * Key metrics cards (entity count, relationship count, multi-hop depth, target users)
+    * Embedded Mermaid ER diagram (copy from ontology-structure.md)
+    * Color-coded legend
+    * Footer with company/domain info
   - Do NOT generate CSVs or TTL yet
   
   ## Phase 3: Ontology TTL (1 response)

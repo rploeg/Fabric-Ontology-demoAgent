@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BD Medical Manufacturing Ontology - Architecture</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .slide-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1400px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #667eea;
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-card {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .info-card .label {
+            font-size: 0.85em;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .info-card .value {
+            font-size: 1.1em;
+            color: #2d3748;
+            font-weight: 600;
+        }
+
+        .diagram-container {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            background: #f7fafc;
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+
+        .legend-icon {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .entity { background: #4299e1; }
+        .relationship { background: #48bb78; }
+        .timeseries { background: #ed8936; }
+
+        .legend-text {
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+
+        .footer {
+            text-align: center;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+            color: #718096;
+            font-size: 0.9em;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .slide-container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="slide-container">
+        <div class="header">
+            <h1>BD Medical Manufacturing Ontology</h1>
+            <div class="subtitle">Graph-Based Traceability from Raw Materials to Post-Market Surveillance</div>
+        </div>
+
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="label">Entity Types</div>
+                <div class="value">8 Core Entities</div>
+            </div>
+            <div class="info-card">
+                <div class="label">Relationships</div>
+                <div class="value">10 Connections</div>
+            </div>
+            <div class="info-card">
+                <div class="label">Multi-hop Depth</div>
+                <div class="value">Up to 4 Levels</div>
+            </div>
+            <div class="info-card">
+                <div class="label">Target Users</div>
+                <div class="value">Supply Chain, Quality, Regulatory</div>
+            </div>
+        </div>
+
+        <div class="diagram-container">
+            <div class="mermaid">
+erDiagram
+    Product {
+        string ProductId PK
+        string ProductName
+        string ProductLine
+        string Segment
+        string SKU
+        string RegulatoryClass
+        boolean IsActive
+    }
+    
+    ProductionBatch {
+        string BatchId PK
+        string ProductId FK
+        string FacilityId FK
+        datetime BatchDate
+        datetime ExpirationDate
+        int Quantity
+        string Status
+        double YieldRate
+        int DefectCount
+    }
+    
+    Facility {
+        string FacilityId PK
+        string FacilityName
+        string Country
+        string Region
+        string FacilityType
+        int Capacity
+        string CertificationStatus
+        int DailyOutput
+        double EquipmentUptime
+    }
+    
+    Supplier {
+        string SupplierId PK
+        string SupplierName
+        string Country
+        string SupplierType
+        string RiskTier
+        string ContractStatus
+    }
+    
+    Component {
+        string ComponentId PK
+        string ComponentName
+        string ComponentType
+        string Material
+        string CriticalityLevel
+        string SupplierId FK
+    }
+    
+    QualityEvent {
+        string EventId PK
+        string BatchId FK
+        string EventType
+        string Severity
+        string RootCause
+        string Status
+        datetime EventDate
+    }
+    
+    RegulatorySubmission {
+        string SubmissionId PK
+        string ProductId FK
+        string Agency
+        string SubmissionType
+        string Status
+        datetime ApprovalDate
+    }
+    
+    CustomerComplaint {
+        string ComplaintId PK
+        string ProductId FK
+        string BatchId FK
+        datetime ComplaintDate
+        string ComplaintType
+        string Region
+        boolean IsReportable
+    }
+
+    Facility ||--o{ ProductionBatch : produces
+    ProductionBatch }o--|| Product : manufactures
+    Supplier ||--o{ Component : supplies
+    ProductionBatch }o--o{ Component : usesComponent
+    ProductionBatch ||--o{ QualityEvent : hasQualityEvent
+    Product ||--o{ RegulatorySubmission : requiresApproval
+    Product ||--o{ CustomerComplaint : receivedComplaint
+    CustomerComplaint }o--|| ProductionBatch : tracesToBatch
+    Facility }o--o{ Supplier : sourcedFrom
+    QualityEvent }o--o| RegulatorySubmission : escalatesTo
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-icon entity"></div>
+                <div class="legend-text"><strong>8 Entity Types:</strong> Product, Batch, Facility, Supplier, Component, QualityEvent, Regulatory, Complaint</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-icon relationship"></div>
+                <div class="legend-text"><strong>10 Relationships:</strong> produces, manufactures, supplies, usesComponent, hasQualityEvent, etc.</div>
+            </div>
+            <div class="legend-item">
+                <div class="legend-icon timeseries"></div>
+                <div class="legend-text"><strong>Timeseries Properties:</strong> YieldRate, DefectCount, DailyOutput, EquipmentUptime</div>
+            </div>
+        </div>
+
+        <div class="footer">
+              Medical Device Manufacturing | Microsoft Fabric Ontology 
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#667eea',
+                primaryTextColor: '#fff',
+                primaryBorderColor: '#5568d3',
+                lineColor: '#48bb78',
+                secondaryColor: '#ed8936',
+                tertiaryColor: '#f7fafc'
+            }
+        });
+    </script>
+</body>
+</html>
