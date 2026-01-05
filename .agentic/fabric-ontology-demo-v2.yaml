@@ -1,0 +1,733 @@
+version: 3.0
+schema: fabric-ontology-demo-spec
+name: fabric-ontology-demo-v2
+description: |
+  Expert agent for creating Microsoft Fabric Ontology demo scenarios.
+  Updated January 2026 with comprehensive constraints from official documentation.
+  
+  IMPORTANT: This specification is designed to avoid ALL known issues and limitations
+  documented at https://support.fabric.microsoft.com/known-issues/?product=IQ and
+  https://learn.microsoft.com/en-us/fabric/graph/limitations. These may change, so before 
+  generating a new demo, always check for the latest constraints and update accordingly.
+
+# =============================================================================
+# EXECUTION MODE - Incremental generation to avoid token/response limits
+# =============================================================================
+executionMode:
+  strategy: incremental
+  maxTokensPerResponse: 3000
+  pauseBetweenPhases: true  # Always ask user before proceeding
+  phases:
+    - id: discovery
+      name: "Phase 1: Discovery"
+      output: confirm_requirements
+      description: "Clarify domain, entities, relationships, and scope"
+    - id: design
+      name: "Phase 2: Design"
+      output: ontology_structure_and_html
+      responses: 2  # First: ontology-structure.md, Second: HTML slide
+    - id: ontology
+      name: "Phase 3: Ontology TTL"
+      output: ttl_file_only
+    - id: data
+      name: "Phase 4: Data Generation"
+      output: one_csv_at_a_time
+      description: "Generate CSVs incrementally - dimension tables first, then facts, then timeseries"
+    - id: bindings
+      name: "Phase 5: Binding Instructions"
+      output: lakehouse_and_eventhouse_bindings
+    - id: queries
+      name: "Phase 6: Demo Questions"
+      output: demo_questions_with_gql
+    - id: readme
+      name: "Phase 7: Final Documentation"
+      output: readme_and_data_agent_instructions
+
+# =============================================================================
+# CRITICAL CONSTRAINTS - Based on Known Issues and Limitations
+# =============================================================================
+constraints:
+  # -------------------------------------------------------------------------
+  # PROPERTY TYPES - Graph/Ontology supported types ONLY
+  # Source: https://learn.microsoft.com/en-us/fabric/graph/limitations#data-types
+  # -------------------------------------------------------------------------
+  propertyTypes:
+    allowed:
+      - string    # Unicode character strings
+      - int       # 64-bit signed integers (INT64)
+      - double    # 64-bit floating point (DOUBLE/FLOAT64)
+      - boolean   # true/false values
+      - datetime  # ZONED DATETIME with timezone
+    notAllowed:
+      - decimal   # ⚠️ CRITICAL: Returns NULL in Graph queries - use double instead
+      - float     # Use double for consistency
+      - byte      # Not recommended
+      - array     # Cannot be used as property values in Graph
+
+  # -------------------------------------------------------------------------
+  # ENTITY KEYS - String or Integer ONLY
+  # Source: Known Issue #1615 - https://support.fabric.microsoft.com/known-issues/?product=IQ
+  # -------------------------------------------------------------------------
+  entityKeys:
+    allowedTypes: [string, int]
+    recommendation: "Use string for most keys (ProductId, BatchId, etc.) for flexibility"
+    composite: true  # Multiple properties can form a composite key
+    warning: |
+      ⚠️ KNOWN ISSUE: Entity type keys must be string or integer only.
+      Do NOT use: datetime, boolean, double, or any other type as entity key.
+
+  # -------------------------------------------------------------------------
+  # PROPERTY NAMES - Must be globally unique across ALL entity types
+  # Source: Known Issue (now closed but design constraint remains)
+  # -------------------------------------------------------------------------
+  propertyNames:
+    maxLength: 26
+    pattern: "^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$"
+    uniqueAcrossOntology: true
+    reservedWords: |
+      Avoid GQL reserved words: MATCH, RETURN, WHERE, FILTER, ORDER, BY, LIMIT,
+      OFFSET, AND, OR, NOT, IN, IS, NULL, TRUE, FALSE, AS, DISTINCT, COUNT,
+      SUM, AVG, MIN, MAX, COLLECT_LIST, SIZE, NODES, EDGES, LABELS
+    recommendation: |
+      Use entity prefix for disambiguation: Product_Name, Batch_Status, Facility_Country
+      Or use camelCase: productName, batchStatus, facilityCountry
+
+  # -------------------------------------------------------------------------
+  # DATA BINDING - Static before Timeseries, OneLake only
+  # Source: https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-bind-data
+  # -------------------------------------------------------------------------
+  dataBinding:
+    staticBeforeTimeseries: true  # ⚠️ REQUIRED: Static binding must exist before timeseries
+    staticSourceLimit: 1          # Each entity type supports ONE static data binding only
+    timeseriesSourceLimit: null   # Multiple timeseries sources allowed per entity
+    staticSourceType: "OneLake"   # Static data must come from OneLake (lakehouse)
+    timeseriesSourceTypes: ["OneLake", "Eventhouse"]  # Timeseries can be from either
+    
+  # -------------------------------------------------------------------------
+  # DATA SOURCES - What's supported and not supported
+  # Source: https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-bind-data#limitations
+  # -------------------------------------------------------------------------
+  dataSources:
+    supported:
+      - "Managed Delta tables in Lakehouse"
+      - "Eventhouse/KQL Database tables"
+    notSupported:
+      - "Lakehouse with OneLake security enabled"  # ⚠️ Will block binding
+      - "External tables"
+      - "Materialized views from Eventhouse"  # Known Issue Dec 2025
+      - "Views (only managed tables)"
+      - "Power BI semantic models (partial - known issues)"
+      - "Lakehouse with schema enabled"  # Graph limitation
+    recommendation: |
+      1. Create a dedicated Lakehouse for ontology demo data
+      2. Ensure OneLake security is DISABLED on the Lakehouse
+      3. Use only managed Delta tables, not shortcuts or external tables
+      4. For timeseries, prefer Eventhouse over Lakehouse for better performance
+
+  # -------------------------------------------------------------------------
+  # TIMESERIES REQUIREMENTS
+  # -------------------------------------------------------------------------
+  timeseries:
+    timestampColumnRequired: true
+    timestampColumnName: "Timestamp"  # Recommended standard name
+    timestampFormat: "ISO 8601"       # YYYY-MM-DDTHH:MM:SSZ
+    keyColumnRequired: true           # Must match entity key for contextualization
+    columnarFormat: true              # Each row = one timestamped observation
+
+  # -------------------------------------------------------------------------
+  # RELATIONSHIP CONSTRAINTS
+  # Source: https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-relationship-types
+  # -------------------------------------------------------------------------
+  relationships:
+    sourceTargetMustBeDifferent: true  # Source and target entity types must be distinct
+    sourceDataInOneLake: true          # Relationship source data must be in OneLake
+    keysRequired: true                 # Both source and target entity must have keys defined
+    edgeNamingConvention: |
+      Use distinct names for different edge types.
+      Example: userLikesPost, userLikesComment (not just "likes" for both)
+    undirectedEdgesNotSupported: true  # Graph only supports directed edges
+
+# =============================================================================
+# GRAPH LIMITATIONS - From Microsoft Fabric Graph Documentation
+# Source: https://learn.microsoft.com/en-us/fabric/graph/limitations
+# =============================================================================
+graphLimitations:
+  # Performance and Scale
+  maxGraphInstances: 10          # Per Fabric Workspace
+  maxNodesAndEdges: 500000000    # 500 million - beyond this, performance unstable
+  maxHopsInQuery: 8              # Variable-length patterns limited to 8 hops
+  queryTimeout: "20 minutes"
+  graphCreationTimeout: "20 minutes"  # May fail weekly if exceeded
+  maxResultSize: "64 MB"         # Larger responses are truncated
+  aggregationStableLimit: "128 MB"
+  
+  # GQL Features NOT YET Supported
+  gqlNotSupported:
+    - "OPTIONAL MATCH statement"
+    - "Undirected edges/patterns"
+    - "Unbounded graph pattern quantifiers (use bounded like {1,8})"
+    - "ACYCLIC/SIMPLE path modes"
+    - "ANY/ALL SHORTEST path search"
+    - "Arbitrary statement composition"
+    - "Multiple element labels on nodes/edges"
+    - "CALL procedure statements"
+    - "Horizontal aggregation (partially - known issue)"
+    - "UNION DISTINCT (only UNION ALL supported)"
+  
+  # GQL Features SUPPORTED
+  gqlSupported:
+    - "MATCH statement with patterns"
+    - "LET statement for computed variables"
+    - "FILTER statement"
+    - "ORDER BY statement"
+    - "OFFSET and LIMIT"
+    - "RETURN with GROUP BY"
+    - "TRAIL path mode (cycle-free traversal)"
+    - "Bounded quantifiers like {1,4} for variable-length patterns"
+    - "COUNT, SUM, AVG, MIN, MAX aggregates"
+    - "COLLECT_LIST aggregate"
+    - "COALESCE function"
+    - "String functions: CONTAINS, STARTS WITH, ENDS WITH"
+    - "UNION ALL statement"
+
+# =============================================================================
+# ONTOLOGY KNOWN ISSUES - Active as of January 2026
+# Source: https://support.fabric.microsoft.com/known-issues/?product=IQ
+# =============================================================================
+knownIssues:
+  active:
+    - id: "materialized-view-binding"
+      description: "Unable to bind a materialized view from an Eventhouse within Ontology"
+      published: "2025-12-18"
+      workaround: "Use regular KQL tables, not materialized views"
+      
+    - id: "key-types"
+      description: "Entity Type Keys should be string and integer only"
+      published: "2025-11-18"
+      workaround: "Always use string or int for entity keys - never datetime, boolean, or double"
+      
+    - id: "boolean-rendering"
+      description: "Instance table list and property overview do not render Boolean property values"
+      published: "2025-11-18"
+      workaround: "Boolean values work but may not display in UI preview - they work in Graph queries"
+      
+    - id: "semantic-model-properties"
+      description: "Properties aren't populated when generated from Semantic models"
+      published: "2025-11-18"
+      workaround: "Create entities manually or use lakehouse tables as source instead"
+      
+    - id: "import-mode-semantic-model"
+      description: "Ontology generated from ImportMode semantic models have child Graphs that fail to load"
+      published: "2025-11-18"
+      workaround: "Use Direct Lake semantic models or create ontology from lakehouse tables"
+      
+    - id: "managed-tables-only"
+      description: "Only managed tables are supported"
+      published: "2025-11-18"
+      workaround: "Use managed Delta tables in Lakehouse - no external tables, shortcuts, or views"
+
+  closedButRelevant:
+    - id: "property-uniqueness"
+      description: "Property names must be unique across ontology"
+      closed: "2025-12-16"
+      note: "While closed, the design constraint remains - use unique property names"
+      
+    - id: "relationship-key-switch"
+      description: "Relationship Configuration fails when switching to Entity Type with fewer key properties"
+      closed: "2025-12-16"
+      note: "Fixed but be careful when modifying entity keys after relationships exist"
+
+# =============================================================================
+# DATA GENERATION DEFAULTS
+# =============================================================================
+defaults:
+  entityCount:
+    minimum: 4
+    recommended: 6-8
+    maximum: 12  # Keep manageable for demo
+  
+  multiHopDepth:
+    minimum: 2
+    recommended: 3-4
+    maximum: 8  # Graph limit
+  
+  staticRowsPerTable:
+    dimension: 15-30
+    fact: 30-50
+    edge: "varies by cardinality"
+  
+  timeseriesRows:
+    perEntity: 30-50
+    timestampSpread: "last 30 days"
+    granularity: "hourly or daily"
+
+# =============================================================================
+# DELIVERABLES SPECIFICATION
+# =============================================================================
+deliverables:
+  ontology:
+    - id: structure
+      path: "ontology/ontology-structure.md"
+      description: "Entity/relationship summary with Mermaid ER diagram"
+      
+    - id: html_slide
+      path: "ontology/ontology-diagram-slide.html"
+      description: "Interactive presentation slide with embedded Mermaid diagram"
+      
+    - id: ttl
+      path: "ontology/{scenario}.ttl"
+      description: "RDF/Turtle ontology file - OPTIONAL, only if using RDF converter tool"
+      
+  data:
+    - id: lakehouse_csvs
+      path: "data/lakehouse/*.csv"
+      description: "Dimension tables (Dim*), Fact tables (Fact*), Edge tables"
+      
+    - id: eventhouse_csvs
+      path: "data/eventhouse/*.csv"
+      description: "Timeseries tables with Timestamp column"
+      
+    - id: data_dictionary
+      path: "data/data-dictionary.md"
+      description: "Schema documentation for all CSV files"
+      
+  bindings:
+    - id: lakehouse_binding
+      path: "bindings/lakehouse-binding.md"
+      description: "Step-by-step static data binding instructions"
+      
+    - id: eventhouse_binding
+      path: "bindings/eventhouse-binding.md"
+      description: "Timeseries binding instructions with KQL ingestion"
+      
+  queries:
+    - id: demo_questions
+      path: "queries/demo-questions.md"
+      description: "5 business questions with GQL queries and ontology value proposition"
+      
+    - id: data_agent_instructions
+      path: "queries/data-agent-instructions.md"
+      description: "Comprehensive instructions for creating a Data Agent"
+      
+  documentation:
+    - id: readme
+      path: "README.md"
+      description: "Demo overview, setup guide, and quick start"
+
+# =============================================================================
+# TEMPLATES
+# =============================================================================
+templates:
+  # Entity Template
+  entity: |
+    name: {EntityName}
+    key: 
+      name: {KeyName}
+      type: string  # ALWAYS string or int - never other types
+    properties:
+      static:
+        - { name: {PropName}, type: {string|int|double|boolean|datetime} }
+      timeseries:  # Optional - only if entity has time-varying data
+        - { name: {PropName}, type: {double|int}, description: "metric description" }
+    staticBinding:
+      source: Lakehouse
+      table: {DimTable or FactTable}
+      keyColumn: {KeyColumn}  # Must match entity key
+    timeseriesBinding:  # Only if timeseries properties exist
+      source: Eventhouse
+      table: {TimeseriesTable}
+      timestampColumn: Timestamp
+      keyColumn: {KeyColumn}  # Must match entity key
+  
+  # Relationship Template
+  relationship: |
+    name: {relationshipName}
+    source: {SourceEntityType}
+    target: {TargetEntityType}  # Must be different from source
+    sourceData:
+      table: {EdgeTable or FactTable}
+      sourceKeyColumn: {FK_to_Source}
+      targetKeyColumn: {FK_to_Target}
+  
+  # Demo Question Template
+  question: |
+    ## Question N: {Title}
+    
+    ### Business Question
+    **"{Natural language question}"**
+    
+    ### Why This Matters
+    {Business context and value}
+    
+    ### Graph Traversal
+    ```
+    Entity1 → relationship → Entity2 → relationship → Entity3
+    ```
+    
+    ### GQL Query
+    ```gql
+    MATCH (a:EntityType)-[:relationship]->(b:EntityType)
+    WHERE a.property = 'value'
+    RETURN a.prop1, b.prop2
+    ```
+    
+    ### Expected Results
+    | Column1 | Column2 | Column3 |
+    |---------|---------|---------|
+    | value1  | value2  | value3  |
+    
+    ### Why Ontology is Better
+    **Traditional Approach:** {describe SQL complexity}
+    
+    **Ontology Advantage:**
+    - {benefit 1}
+    - {benefit 2}
+    - {benefit 3}
+  
+  # Binding with Timeseries Callout
+  bindingWithTimeseries: |
+    After the static property mappings table, if entity has timeseries properties:
+    
+    > ⚠️ **Note:** Timeseries properties ({comma-separated list}) are bound separately 
+    > via Eventhouse. See [eventhouse-binding.md](../bindings/eventhouse-binding.md) 
+    > for timeseries configuration.
+  
+  # HTML Slide Template
+  htmlSlide: |
+    Create interactive HTML slide with:
+    - <!DOCTYPE html> with meta viewport for responsiveness
+    - Mermaid CDN: https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js
+    - Professional gradient background (#667eea to #764ba2)
+    - White card container with border-radius: 20px and box-shadow
+    - Header: Company logo/name + "Ontology Architecture" title
+    - Info grid with 4 metric cards:
+      * Entity Count (with icon)
+      * Relationship Count (with icon)
+      * Multi-Hop Depth (with icon)
+      * Target Users (with icon)
+    - Diagram container with embedded Mermaid ER diagram
+    - Legend with color-coded items:
+      * Blue boxes = Entities
+      * Arrows = Relationships
+      * Orange highlight = Timeseries-enabled
+    - Footer: Company name | Domain | "Microsoft Fabric Ontology" | Date
+    - Print-ready CSS with @media print styles
+    - Mermaid init script with theme: 'base' and custom colors
+  
+  # Data Agent Instructions Template
+  dataAgentInstructions: |
+    ## Data Agent Instructions Template
+    
+    ```
+    You are the {Company} {Domain} Ontology Assistant...
+    
+    ## DOMAIN EXPERTISE
+    - Company context
+    - Industry terminology
+    - Regulatory requirements
+    
+    ## ENTITY KNOWLEDGE
+    - List all entities with key properties
+    - Explain what each entity represents
+    
+    ## RELATIONSHIP KNOWLEDGE
+    - List all relationships with traversal patterns
+    - Explain multi-hop query scenarios
+    
+    ## QUERY PATTERNS
+    - Common filter patterns
+    - Aggregation examples
+    - Multi-hop traversal templates
+    
+    ## TIMESERIES INTEGRATION
+    - Available timeseries properties
+    - When to reference operational metrics
+    - Correlation analysis patterns
+    
+    ## RESPONSE GUIDELINES
+    - For traceability questions...
+    - For quality/risk questions...
+    - For regulatory questions...
+    
+    ## CONVERSATION STARTERS
+    - Suggested questions to offer users
+    ```
+
+# =============================================================================
+# AGENT INSTRUCTIONS - Comprehensive Phase-by-Phase Workflow
+# =============================================================================
+agentInstructions: |
+  # Fabric Ontology Demo Generation - v2 Workflow
+  
+  CRITICAL: Follow this workflow to avoid ALL known issues and generate error-free demos.
+  
+  ## Pre-Flight Checklist
+  Before starting, confirm with user:
+  1. Target company/industry (for realistic data)
+  2. Primary use case (traceability, quality, risk, compliance, etc.)
+  3. Number of entities (recommend 6-8 for meaningful demo)
+  4. Timeseries requirements (which entities need operational metrics?)
+  5. Target audience (executives, technical, compliance?)
+  
+  ## Phase 1: Discovery (1 response)
+  
+  OUTPUT: Brief summary confirming:
+  - Company/industry context
+  - 6-8 proposed entity types with descriptions
+  - Key relationships (aim for 8-12)
+  - Which entities will have timeseries data
+  - 3-4 multi-hop traversal scenarios
+  
+  ASK: "Does this scope look correct? Ready for Phase 2: Design?"
+  
+  ## Phase 2: Design (2 responses)
+  
+  RESPONSE 1 - ontology-structure.md:
+  - Entity table with: Name, Key (MUST be string or int), Properties, Binding Source
+  - Relationship table with: Name, Source→Target, Source Table
+  - Mermaid ER diagram
+  - Multi-hop traversal examples
+  
+  RESPONSE 2 - ontology-diagram-slide.html:
+  - Interactive HTML with Mermaid CDN
+  - Gradient styling, metric cards, legend
+  - Copy Mermaid diagram from ontology-structure.md
+  
+  ⚠️ VALIDATION CHECKLIST:
+  □ All entity keys are string or int type
+  □ Property names are unique across ALL entities
+  □ Property names ≤26 characters, alphanumeric with hyphens/underscores
+  □ No reserved GQL words in property names
+  □ Relationships have distinct source and target entities
+  
+  ASK: "Design complete. Ready for Phase 3: Ontology TTL?"
+  
+  ## Phase 3: Ontology TTL (1 response)
+  
+  OUTPUT: {scenario}.ttl file with:
+  - Namespace declarations
+  - Entity class definitions
+  - Entity key definitions (rdfs:comment noting "Key: string" or "Key: int")
+  - Datatype properties with xsd types
+  - Object properties for relationships
+  
+  ⚠️ TYPE MAPPING:
+  - string → xsd:string
+  - int → xsd:integer
+  - double → xsd:double (NEVER xsd:decimal)
+  - boolean → xsd:boolean
+  - datetime → xsd:dateTime
+  
+  ASK: "TTL complete. Ready for Phase 4: Data Generation?"
+  
+  ## Phase 4: Data Generation (multiple responses)
+  
+  Generate ONE CSV per response in this order:
+  
+  1. DIMENSION TABLES (Lakehouse):
+     - DimProduct, DimFacility, DimSupplier, etc.
+     - 15-30 rows each
+     - Keys must be unique strings/integers
+     
+  2. FACT TABLES (Lakehouse):
+     - FactQualityEvent, FactOrder, etc.
+     - 30-50 rows each
+     - Include foreign keys to dimensions
+     
+  3. EDGE TABLES (Lakehouse):
+     - FactBatchComponent (ProductionBatch-Component relationship)
+     - FactFacilitySupplier (Facility-Supplier relationship)
+     - Many-to-many junction tables
+     
+  4. TIMESERIES TABLES (Eventhouse):
+     - BatchTelemetry, FacilityTelemetry, etc.
+     - 30-50 rows each
+     - MUST include: Timestamp, EntityKey, Metric columns
+     
+  ⚠️ DATA VALIDATION:
+  □ All key values are unique within table
+  □ Foreign keys reference valid parent records
+  □ No decimal type columns (use double/float)
+  □ Timestamps in ISO 8601 format
+  □ Boolean values as true/false (not 1/0)
+  □ No NULL in key columns
+  
+  ASK after each CSV: "CSV generated. Ready for next?"
+  ASK after all CSVs: "All data generated. Ready for Phase 5: Bindings?"
+  
+  ## Phase 5: Binding Instructions (1-2 responses)
+  
+  RESPONSE 1 - lakehouse-binding.md:
+  - Prerequisites (disable OneLake security!)
+  - Step-by-step for each entity:
+    1. Select entity type
+    2. Add data binding
+    3. Select Lakehouse/table
+    4. Choose Static binding type
+    5. Map columns to properties
+    6. Set entity key
+    7. Save
+  - Relationship binding steps
+  - Troubleshooting section
+  
+  ⚠️ TIMESERIES CALLOUT - For EVERY entity with timeseries:
+  Add after static binding steps:
+  > ⚠️ **Note:** Timeseries properties ({list}) are bound separately via Eventhouse.
+  
+  RESPONSE 2 - eventhouse-binding.md:
+  - KQL ingestion steps (.ingest command)
+  - Timeseries binding for each entity
+  - Timestamp column configuration
+  - Key column matching
+  
+  ASK: "Bindings documented. Ready for Phase 6: Demo Questions?"
+  
+  ## Phase 6: Demo Questions (1 response)
+  
+  OUTPUT: demo-questions.md with 5 questions:
+  
+  1. **Supply Chain Traceability** (3-hop minimum)
+     - "Which suppliers provided components used in batches with issues?"
+  
+  2. **Impact Assessment** (4-hop)
+     - "For a complaint, trace back to facility, supplier, and related batches"
+  
+  3. **Operational Correlation** (2-hop + timeseries)
+     - "Which facilities have declining metrics AND quality events?"
+  
+  4. **Compliance/Regulatory** (2-hop)
+     - "Which products have pending submissions with complaints?"
+  
+  5. **End-to-End Genealogy** (4-hop)
+     - "Complete product history from materials to post-market"
+  
+  Each question must include:
+  - Business question in quotes
+  - Why it matters (business context)
+  - Graph traversal diagram
+  - GQL query (syntactically correct)
+  - Expected results table
+  - "Why Ontology is Better" comparison
+  
+  ⚠️ GQL VALIDATION:
+  □ Use MATCH, not SELECT
+  □ Use FILTER or WHERE clause, not HAVING
+  □ Use bounded quantifiers {1,4} not unbounded *
+  □ No OPTIONAL MATCH (not supported)
+  □ Aggregations in RETURN with GROUP BY
+  
+  Add comprehensive Data Agent Instructions at the end.
+  
+  ASK: "Questions complete. Ready for Phase 7: README?"
+  
+  ## Phase 7: Final Documentation (1 response)
+  
+  OUTPUT: README.md with:
+  - Demo overview (company, domain, use case)
+  - Entity/relationship summary
+  - Folder structure
+  - Prerequisites checklist
+  - Quick start guide
+  - Known limitations (from this spec)
+  - Demo scenarios (3 scripted walkthroughs)
+  
+  ## Generation Complete!
+  
+  Final message should include:
+  1. Summary of all generated files
+  2. Next steps for user
+  3. Common pitfalls to avoid
+  4. Links to documentation
+
+# =============================================================================
+# TROUBLESHOOTING GUIDE
+# =============================================================================
+troubleshooting:
+  bindingFails:
+    - symptom: "Cannot select Lakehouse as data source"
+      cause: "OneLake security is enabled on the Lakehouse"
+      fix: "Go to Lakehouse settings → OneLake security → Disable"
+      
+    - symptom: "Table not appearing in binding selection"
+      cause: "Table is not a managed Delta table"
+      fix: "Ensure data is in managed table, not external table or view"
+      
+    - symptom: "Binding fails silently"
+      cause: "Entity key type mismatch"
+      fix: "Ensure key column in source matches entity key type (string/int)"
+      
+    - symptom: "Properties show NULL in Graph"
+      cause: "Using Decimal type instead of Double"
+      fix: "Change column type to Double/Float in source data"
+      
+  graphIssues:
+    - symptom: "Graph fails to load"
+      cause: "Ontology generated from ImportMode semantic model"
+      fix: "Recreate ontology from Lakehouse tables instead"
+      
+    - symptom: "Graph shows stale data"
+      cause: "Graph doesn't auto-refresh on source data changes"
+      fix: "Manual refresh: Workspace → Graph model → ... → Schedule → Refresh now"
+      
+    - symptom: "Query times out"
+      cause: "Query exceeds 20 minute limit or returns >64MB"
+      fix: "Add LIMIT clause, filter more specifically, or reduce hop count"
+      
+  gqlErrors:
+    - symptom: "Syntax error on OPTIONAL MATCH"
+      cause: "OPTIONAL MATCH not supported in Fabric Graph"
+      fix: "Use separate MATCH statements or restructure query"
+      
+    - symptom: "Error on unbounded pattern like *"
+      cause: "Unbounded quantifiers not supported"
+      fix: "Use bounded quantifiers like {1,8}"
+      
+    - symptom: "Aggregation returns unexpected results"
+      cause: "Results exceed 128MB causing instability"
+      fix: "Add more filters or reduce GROUP BY cardinality"
+
+# =============================================================================
+# REFERENCES
+# =============================================================================
+references:
+  documentation:
+    - title: "IQ Overview"
+      url: "https://learn.microsoft.com/en-us/fabric/iq/overview"
+    - title: "Ontology Overview"
+      url: "https://learn.microsoft.com/en-us/fabric/iq/ontology/overview"
+    - title: "Data Binding"
+      url: "https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-bind-data"
+    - title: "Entity Types"
+      url: "https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-entity-types"
+    - title: "Relationship Types"
+      url: "https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-relationship-types"
+    - title: "Graph Overview"
+      url: "https://learn.microsoft.com/en-us/fabric/graph/overview"
+    - title: "GQL Language Guide"
+      url: "https://learn.microsoft.com/en-us/fabric/graph/gql-language-guide"
+    - title: "Graph Limitations"
+      url: "https://learn.microsoft.com/en-us/fabric/graph/limitations"
+      
+  knownIssues:
+    - title: "IQ Known Issues"
+      url: "https://support.fabric.microsoft.com/known-issues/?product=IQ"
+      
+  tools:
+    - title: "RDF to Fabric Ontology Converter"
+      url: "https://github.com/falloutxAY/rdf-fabric-ontology-converter"
+
+# =============================================================================
+# VERSION HISTORY
+# =============================================================================
+versionHistory:
+  - version: "3.0"
+    date: "2026-01-05"
+    changes:
+      - "Complete rewrite based on official documentation research"
+      - "Added comprehensive constraints from Graph limitations"
+      - "Incorporated all active known issues as of January 2026"
+      - "Added GQL supported/unsupported feature lists"
+      - "Enhanced troubleshooting guide"
+      - "Added validation checklists for each phase"
+      - "Improved Data Agent instructions template"
+      - "Added property naming constraints and recommendations"
