@@ -1,0 +1,21 @@
+ProductId,ProductName,ProductLine,Segment,SKU,UnitOfMeasure,RegulatoryClass,IsActive
+PROD001,BD Insyte Autoguard,Vascular Access,BD Medical,381423,Box,Class II,true
+PROD002,BD Nexiva Closed IV Catheter,Vascular Access,BD Medical,383530,Box,Class II,true
+PROD003,BD Integra Syringe 3mL,Syringes,BD Medical,305270,Case,Class II,true
+PROD004,BD Ultra-Fine Insulin Syringe,Diabetes Care,BD Medical,328431,Box,Class II,true
+PROD005,BD Vacutainer EDTA Tube,Blood Collection,BD Life Sciences,367862,Case,Class II,true
+PROD006,BD Vacutainer SST Tube,Blood Collection,BD Life Sciences,367988,Case,Class II,true
+PROD007,BD Falcon 50mL Conical Tube,Lab Plastics,BD Life Sciences,352070,Case,Class I,true
+PROD008,BD Falcon 15mL Conical Tube,Lab Plastics,BD Life Sciences,352096,Case,Class I,true
+PROD009,BD Alaris Infusion Set,Infusion Systems,BD Medical,2N8399,Box,Class II,true
+PROD010,BD ChloraPrep Applicator,Infection Prevention,BD Medical,260449,Case,Class II,true
+PROD011,BD BACTEC Blood Culture Bottle,Diagnostics,BD Life Sciences,442192,Case,Class II,true
+PROD012,BD MAX Enteric Bacterial Panel,Molecular Diagnostics,BD Life Sciences,445300,Kit,Class II,true
+PROD013,BD Veritor Rapid Test,Point of Care,BD Life Sciences,256088,Kit,Class II,true
+PROD014,BD Venflon IV Cannula,Vascular Access,BD Interventional,391452,Box,Class II,true
+PROD015,BD Angiocath IV Catheter,Vascular Access,BD Interventional,381137,Box,Class II,true
+PROD016,BD Eclipse Safety Needle,Sharps Safety,BD Medical,305764,Box,Class II,true
+PROD017,BD SafetyGlide Insulin Syringe,Diabetes Care,BD Medical,305932,Box,Class II,true
+PROD018,BD Microtainer Contact Tube,Blood Collection,BD Life Sciences,365978,Case,Class I,true
+PROD019,BD Q-Syte Luer Access Device,Vascular Access,BD Medical,385100,Box,Class II,true
+PROD020,BD PhaSeal System,Hazardous Drug,BD Medical,515100,Kit,Class II,true

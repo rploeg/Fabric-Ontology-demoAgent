@@ -1,0 +1,26 @@
+ComponentId,ComponentName,ComponentType,Material,CriticalityLevel,SupplierId
+COMP001,18G Stainless Steel Needle,Needle,Stainless Steel,Critical,SUP001
+COMP002,20G Stainless Steel Needle,Needle,Stainless Steel,Critical,SUP001
+COMP003,22G Stainless Steel Needle,Needle,Stainless Steel,Critical,SUP001
+COMP004,25G Stainless Steel Needle,Needle,Stainless Steel,Critical,SUP007
+COMP005,3mL Syringe Barrel,Barrel,Polypropylene,Critical,SUP002
+COMP006,5mL Syringe Barrel,Barrel,Polypropylene,Critical,SUP002
+COMP007,10mL Syringe Barrel,Barrel,Polypropylene,Critical,SUP003
+COMP008,Rubber Plunger Stopper,Plunger,Butyl Rubber,Critical,SUP009
+COMP009,Silicone Plunger Tip,Plunger,Silicone,Critical,SUP009
+COMP010,PTFE Catheter Tubing,Tubing,PTFE,Critical,SUP004
+COMP011,PVC IV Tubing,Tubing,PVC,Standard,SUP006
+COMP012,TPE Extension Set,Tubing,TPE,Standard,SUP005
+COMP013,Vacutainer Glass Tube,Container,Borosilicate Glass,Critical,SUP013
+COMP014,Vacutainer PET Tube,Container,PET,Standard,SUP008
+COMP015,EDTA Anticoagulant,Additive,Chemical,Critical,SUP002
+COMP016,Lithium Heparin Additive,Additive,Chemical,Critical,SUP016
+COMP017,Falcon Tube PP Body,Container,Polypropylene,Standard,SUP003
+COMP018,Falcon Tube HDPE Cap,Cap,HDPE,Standard,SUP011
+COMP019,Luer Lock Connector,Connector,Polycarbonate,Critical,SUP014
+COMP020,Blister Pack Tray,Packaging,PETG,Standard,SUP012
+COMP021,Sterile Pouch Film,Packaging,Medical Paper,Standard,SUP11
+COMP022,IV Catheter Hub,Hub,ABS Plastic,Critical,SUP010
+COMP023,Safety Shield Mechanism,Safety,Polypropylene,Critical,SUP015
+COMP024,Infusion Set Roller Clamp,Clamp,Polycarbonate,Standard,SUP017
+COMP025,Blood Culture Media,Media,Chemical,Critical,SUP018

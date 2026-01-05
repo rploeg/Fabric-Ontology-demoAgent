@@ -1,0 +1,21 @@
+SupplierId,SupplierName,Country,SupplierType,RiskTier,ContractStatus
+SUP001,Nippon Steel Corporation,Japan,Raw Material,Critical,Active
+SUP002,BASF SE,Germany,Raw Material,Critical,Active
+SUP003,Dow Chemical Company,United States,Raw Material,Critical,Active
+SUP004,Eastman Chemical,United States,Raw Material,High,Active
+SUP005,Covestro AG,Germany,Raw Material,High,Active
+SUP006,LyondellBasell,Netherlands,Raw Material,High,Active
+SUP007,Terumo Corporation,Japan,Component,Critical,Active
+SUP008,Gerresheimer AG,Germany,Component,Critical,Active
+SUP009,West Pharmaceutical,United States,Component,Critical,Active
+SUP010,Stevanato Group,Italy,Component,High,Active
+SUP011,Berry Global,United States,Packaging,Medium,Active
+SUP012,Amcor PLC,Australia,Packaging,Medium,Active
+SUP013,Schott AG,Germany,Component,Critical,Active
+SUP014,Nemera Group,France,Component,High,Active
+SUP015,Aptar Pharma,United States,Component,High,Active
+SUP016,Mitsubishi Chemical,Japan,Raw Material,High,Active
+SUP017,Tekni-Plex,United States,Component,Medium,Active
+SUP018,Catalent Inc,United States,Component,Medium,Under Review
+SUP019,Qorpak Packaging,United States,Packaging,Low,Active
+SUP020,UFP Technologies,United States,Packaging,Low,Active
