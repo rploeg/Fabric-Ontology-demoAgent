@@ -6,57 +6,24 @@ This project provides everything you need to create and deploy Microsoft Fabric 
 
 ---
 
-## ⚡ Quick Start (5 Minutes)
+## ⚡ Quick Start
 
-### Prerequisites
-
-- Python 3.10+
-- A Microsoft Fabric workspace with Ontology preview enabled
-- Your workspace ID (GUID from Fabric portal URL)
-
-### Step 1: Install the Tool
+**Prerequisites**: Python 3.10+, Microsoft Fabric workspace with Ontology enabled
 
 ```bash
+# Install
 git clone https://github.com/falloutxAY/Fabric-Ontology-demoAgent.git
 cd Fabric-Ontology-demoAgent/Demo-automation
 pip install -e .
-```
 
-### Step 2: Configure Your Workspace
-
-```bash
+# Configure workspace
 python -m demo_automation config init
-```
 
-This interactive wizard saves your workspace ID to `~/.fabric-demo/config.yaml` so you don't need to type it every time.
+# Deploy demo
+python -m demo_automation setup ../FreshMart
 
-### Step 3: Deploy a Demo
-
-```bash
-# Validate the demo package
-python -m demo_automation validate ../MedicalManufacturing
-
-# Run the 11-step automated setup
-python -m demo_automation setup ../MedicalManufacturing
-```
-
-The tool will:
-1. Create a Lakehouse and Eventhouse
-2. Upload and load all CSV data
-3. Create the ontology with entities, properties, and relationships
-4. Configure all data bindings automatically
-5. Verify everything is working
-
-### Step 4: Try It Out
-
-1. Open your Fabric workspace in the browser
-2. Find the newly created ontology
-3. Run the sample queries from `demo-questions.md`
-
-### Step 5: Cleanup When Done
-
-```bash
-python -m demo_automation cleanup ../MedicalManufacturing
+# Cleanup when done
+python -m demo_automation cleanup ../FreshMart
 ```
 
 ---
@@ -104,18 +71,7 @@ For custom scenarios or learning:
 
 ## 📁 Project Structure
 
-```
-Fabric-Ontology-demoAgent/
-├── .agentic/                  # AI agent specifications
-│   ├── agent-instructions.md  # 7-phase generation workflow
-│   ├── schemas/               # Bindings and metadata schemas
-│   └── templates/             # Output templates
-├── Demo-automation/           # CLI tool source code
-│   ├── src/demo_automation/   # Python modules
-│   └── README.md              # Detailed CLI documentation
-├── docs/                      # This documentation folder
-└── demo-*/                    # Generated demo packages (gitignored)
-```
+`.agentic/` - AI agent specs • `Demo-automation/` - CLI tool • `docs/` - Documentation • `demo-*/` - Generated demos
 
 ---
 

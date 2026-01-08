@@ -73,90 +73,39 @@ The tool executes the following steps in order:
 
 ## Features
 
-- **Global configuration**: One-time setup via `fabric-demo config init`
-- **Auto-discovery**: Reads demo structure from folder conventions
-- **Structured bindings**: Parses `bindings.yaml` (v3.2+) for machine-readable configuration
-- **Validation**: Ensures demo packages match generator constraints and limitations
-- **Resume capability**: State persistence via `.setup-state.yaml` for failure recovery
-- **Individual step execution**: Run any step independently via `run-step` command
-- **Smart skipping**: Automatically skips resources/tables that already exist
-- **Safe cleanup**: Only deletes resources tracked in state file; `--force-by-name` for fallback
-- **Progress reporting**: Real-time progress with rich terminal output
+- State-based resume capability
+- Individual step execution
+- Safe cleanup with audit trail
+- Auto-discovery from folder structure
+- Rich terminal progress output
 
 ## Installation
 
 ```bash
-# Navigate to the Demo-automation folder first
 cd Demo-automation
-
-# Install in development mode (creates 'fabric-demo' command)
 pip install -e .
-
-# Install with dev dependencies
-pip install -e ".[dev]"
-
-# Verify installation
 python -m demo_automation --help
 ```
 
-### Alternative: Using `fabric-demo` Command
+See [Troubleshooting](../docs/troubleshooting.md) if you get "fabric-demo not recognized" errors.
 
-If you prefer the shorter `fabric-demo` command, you need to configure PATH:
-
-If you get the error `fabric-demo: The term 'fabric-demo' is not recognized`, the Python Scripts folder is not in your PATH.
-
-**Option 1: Add Python Scripts to PATH (Recommended)**
-
-```powershell
-# Find where the script was installed (look for the WARNING during pip install)
-# Usually: C:\Users\<username>\AppData\Roaming\Python\Python3xx\Scripts
-
-# Add to PATH for current session
-$env:PATH += ";$env:APPDATA\Python\Python314\Scripts"
-
-# Or add permanently (run as admin or via System Properties > Environment Variables)
-[Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$env:APPDATA\Python\Python314\Scripts", "User")
-```
-
-**Option 2: Run with Full Path**
-
-```powershell
-# Windows (adjust Python version as needed)
-& "$env:APPDATA\Python\Python314\Scripts\fabric-demo.exe" --help
-& "$env:APPDATA\Python\Python314\Scripts\fabric-demo.exe" setup ./PillManufacturing
-```
-
-**Option 3: Run as Python Module (Recommended)**
+## Commands
 
 ```bash
-# Works from anywhere without PATH configuration
-python -m demo_automation --help
-python -m demo_automation validate ../MedicalManufacturing
-python -m demo_automation setup ../PillManufacturing --workspace-id <id>
-```
-
-## Commands Reference
-
-```bash
-# Configuration
-python -m demo_automation config init          # Interactive setup wizard
-python -m demo_automation config show          # Show current configuration
-python -m demo_automation config path          # Show config file location
-
-# Demo Operations
-python -m demo_automation init ./Demo          # Create demo.yaml template
-python -m demo_automation validate ./Demo      # Validate demo package
-python -m demo_automation setup ./Demo         # Run full setup
-python -m demo_automation status ./Demo        # Check setup progress
-python -m demo_automation list                 # List resources in workspace
-python -m demo_automation cleanup ./Demo       # Remove demo resources
+# Setup
+python -m demo_automation config init          # One-time configuration
+python -m demo_automation validate ./Demo      # Check demo package
+python -m demo_automation setup ./Demo         # Deploy to Fabric
+python -m demo_automation status ./Demo        # Check progress
+python -m demo_automation cleanup ./Demo       # Remove resources
 
 # Advanced
-python -m demo_automation setup ./Demo --dry-run           # Preview without changes
 python -m demo_automation setup ./Demo --resume            # Resume from failure
 python -m demo_automation run-step ./Demo --step 8         # Run single step
-python -m demo_automation cleanup ./Demo --force-by-name   # Cleanup without state file
+python -m demo_automation cleanup ./Demo --force-by-name   # Cleanup by name
 ```
+
+**[📖 Full CLI Reference →](../docs/cli-reference.md)**
 
 ## Running Individual Steps
 

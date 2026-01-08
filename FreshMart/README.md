@@ -25,152 +25,37 @@
 | **Compliance Officers** | Inspection audits, recall management |
 | **IT/Data Teams** | Ontology implementation, data binding |
 
----
+## Data Model
 
-## 📊 Entity & Relationship Summary
+**Entities**: Store, Product, Supplier, ProductBatch, Category, Employee, PurchaseOrder, QualityInspection  
+**Timeseries**: Store (FootTraffic, SalesVelocity), ProductBatch (Temperature, Humidity)
 
-### Entities (8)
-
-| Entity | Description | Key | Timeseries |
-|--------|-------------|-----|------------|
-| Store | Physical supermarket locations | StoreId | ✅ FootTraffic, SalesVelocity, AvgTransactionValue |
-| Product | SKUs sold across stores | ProductId | ❌ |
-| Supplier | Vendor partners | SupplierId | ❌ |
-| ProductBatch | Shipment lots with expiry tracking | BatchId | ✅ StorageTemperature, Humidity, DaysToExpiry |
-| Category | Product classification | CategoryId | ❌ |
-| Employee | Store staff including QA inspectors | EmployeeId | ❌ |
-| PurchaseOrder | Orders placed to suppliers | OrderId | ❌ |
-| QualityInspection | Food safety checks on batches | InspectionId | ❌ |
-
-### Relationships (10)
-
+**Key Relationships**:
 ```
-Store ──STOCKS──> Product ──BELONGS_TO──> Category
-  │                  │
-  │                  └──SUPPLIED_BY──> Supplier
-  │                                       ▲
-  └──EMPLOYS──> Employee                  │
-                   ▲                      │
-                   │              PurchaseOrder
-                   │                  │    │
-         PERFORMED_BY             ORDERED_BY  FULFILLED_BY
-                   │                  │    │
-                   │                  ▼    │
-        QualityInspection ◄──── ProductBatch
-                   │                  │
-               INSPECTED          CONTAINS ──> Product
-                                      │
-                              RECEIVED_AT ──> Store
+Supplier → Product → ProductBatch → Store
+                ↓
+           QualityInspection ← Employee
 ```
+
+See [ontology-structure.md](ontology-structure.md) for details.
+
+## Structure
+
+`Ontology/` • `Data/Lakehouse/` (9 CSVs) • `Data/Eventhouse/` (2 telemetry) • `Bindings/` • `demo-questions.md`
 
 ---
 
-## 📁 Folder Structure
+## 🚀 Quick Start
 
-```
-FreshMart\
-├── README.md                          # This file
-├── .demo-metadata.yaml                # Automation metadata
-├── demo-questions.md                  # 5 demo scenarios with GQL queries
-├── ontology-structure.md              # Entity/relationship design
-│
-├── Bindings\
-│   ├── bindings.yaml                  # Machine-readable binding config
-│   ├── lakehouse-binding.md           # Lakehouse binding instructions
-│   └── eventhouse-binding.md          # Eventhouse timeseries binding
-│
-├── Data\
-│   ├── Lakehouse\                     # Dimension and fact tables
-│   │   ├── DimStore.csv              (12 stores)
-│   │   ├── DimProduct.csv            (28 products)
-│   │   ├── DimSupplier.csv           (10 suppliers)
-│   │   ├── DimProductBatch.csv       (45 batches)
-│   │   ├── DimCategory.csv           (8 categories)
-│   │   ├── DimEmployee.csv           (24 employees)
-│   │   ├── FactPurchaseOrder.csv     (35 orders)
-│   │   ├── FactQualityInspection.csv (40 inspections)
-│   │   └── FactStoreInventory.csv    (70 inventory records)
-│   │
-│   └── Eventhouse\                    # Timeseries data
-│       ├── StoreTelemetry.csv        (54 readings)
-│       └── BatchTelemetry.csv        (63 readings)
-│
-└── Ontology\
-    ├── freshmart.ttl                  # OWL/RDF ontology definition
-    └── ontology-diagram-slide.html    # Interactive visualization
+### Automated Setup (Recommended)
+
+```bash
+# From repository root
+pip install -e Demo-automation/
+python -m demo_automation setup FreshMart/
 ```
 
----
-
-## ✅ Prerequisites Checklist
-
-Before setting up this demo, ensure you have:
-
-- [ ] **Microsoft Fabric workspace** with capacity enabled
-- [ ] **Fabric trial or paid capacity** (P1 or higher recommended)
-- [ ] **Permissions** to create Lakehouse, Eventhouse, and Ontology items
-- [ ] **OneLake security disabled** on Lakehouse (required for binding)
-
-### Fabric Items to Create
-
-| Item | Name | Purpose |
-|------|------|---------|
-| Lakehouse | FreshMartLakehouse | Store dimension and fact tables |
-| Eventhouse | FreshMartEventhouse | Store timeseries telemetry |
-| Ontology | FreshMartOntology | Define and bind graph model |
-
----
-
-## 🚀 Quick Start Guide
-
-### Option 1: Manual Setup
-
-1. **Create Lakehouse**
-   ```powershell
-   # Fabric Portal → New → Lakehouse → "FreshMartLakehouse"
-   ```
-
-2. **Upload CSV Files**
-   - Navigate to `Data\Lakehouse\` folder
-   - Upload all CSV files to Lakehouse Files section
-   - Right-click each file → Load to Tables
-
-3. **Create Eventhouse**
-   ```powershell
-   # Fabric Portal → New → Eventhouse → "FreshMartEventhouse"
-   ```
-   - Create KQL Database
-   - Run ingestion commands from `Bindings\eventhouse-binding.md`
-
-4. **Create Ontology**
-   ```powershell
-   # Fabric Portal → New → Ontology → "FreshMartOntology"
-   ```
-   - Upload `Ontology/freshmart.ttl`
-   - Follow binding steps in `Bindings/lakehouse-binding.md`
-
-5. **Test Queries**
-   - Open Graph Explorer in Ontology
-   - Run queries from `demo-questions.md`
-
-### Option 2: Automated Setup (CLI)
-
-```powershell
-# Navigate to Demo-automation folder
-cd Demo-automation
-
-# Install Demo generator
-pip install -e .
-
-# Navigate to demo folder
-cd ..\FreshMart
-
-# Run automated setup
-python -m demo_automation setup .\
-
-# Validate bindings
-python -m demo_automation validate .\
-```
+See [CLI Reference](../docs/cli-reference.md) for all commands.
 
 ---
 

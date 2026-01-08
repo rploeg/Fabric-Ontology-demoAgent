@@ -72,20 +72,7 @@ Checks:
 Run the complete 11-step setup workflow.
 
 ```bash
-# Basic usage (uses config file for workspace ID)
-python -m demo_automation setup ./MedicalManufacturing
-
-# Specify workspace ID explicitly
-python -m demo_automation setup ./MedicalManufacturing --workspace-id <guid>
-
-# Preview without making changes
-python -m demo_automation setup ./MedicalManufacturing --dry-run
-
-# Resume from a failed run
-python -m demo_automation setup ./MedicalManufacturing --resume
-
-# Clear state and start fresh
-python -m demo_automation setup ./MedicalManufacturing --clear-state
+python -m demo_automation setup ./MedicalManufacturing [--workspace-id <guid>] [--dry-run] [--resume] [--clear-state]
 ```
 
 **Options:**
@@ -125,17 +112,7 @@ python -m demo_automation list --workspace-id <guid>
 Remove resources created by the setup command.
 
 ```bash
-# Interactive confirmation (default)
-python -m demo_automation cleanup ./MedicalManufacturing
-
-# Skip confirmation
-python -m demo_automation cleanup ./MedicalManufacturing --confirm
-
-# Skip confirmation with -y shorthand
-python -m demo_automation cleanup ./MedicalManufacturing -y
-
-# Cleanup by name (when state file is missing)
-python -m demo_automation cleanup ./MedicalManufacturing --force-by-name
+python -m demo_automation cleanup ./MedicalManufacturing [--confirm|-y] [--force-by-name] [--dry-run]
 ```
 
 **Options:**
@@ -230,59 +207,6 @@ python -m demo_automation recover ./MedicalManufacturing --force
 - You need to enable cleanup for resources created outside the tool
 
 The command searches for resources matching the demo naming convention (prefixed with demo name) and recreates the state file.
-
----
-
-## Examples
-
-### Complete Workflow
-
-```bash
-# One-time setup
-python -m demo_automation config init
-
-# Deploy a demo
-python -m demo_automation validate ./MedicalManufacturing
-python -m demo_automation setup ./MedicalManufacturing
-
-# Check progress
-python -m demo_automation status ./MedicalManufacturing
-
-# Cleanup when done
-python -m demo_automation cleanup ./MedicalManufacturing
-```
-
-### Recovery from Failure
-
-```bash
-# If setup fails mid-way
-python -m demo_automation setup ./MedicalManufacturing --resume
-
-# If you need to start fresh
-python -m demo_automation setup ./MedicalManufacturing --clear-state
-
-# If state file is corrupted/deleted but resources exist
-python -m demo_automation recover ./MedicalManufacturing
-
-# If state file is lost, cleanup by resource name
-python -m demo_automation cleanup ./MedicalManufacturing --force-by-name
-```
-
-### Debugging
-
-```bash
-# See exactly what would happen
-python -m demo_automation setup ./MedicalManufacturing --dry-run
-
-# Run a specific step
-python -m demo_automation run-step ./MedicalManufacturing --step bind_static
-
-# Force re-run a step
-python -m demo_automation run-step ./MedicalManufacturing --step 8 --force
-
-# Show full error details
-python -m demo_automation setup ./MedicalManufacturing --debug
-```
 
 ---
 

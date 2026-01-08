@@ -168,43 +168,35 @@ fabric:
 
 ## Authentication Methods
 
-### Interactive Browser (Default)
+The tool supports three authentication methods. Set via `config init` or in `~/.fabric-demo/config.yaml`:
 
-Best for demos and development. Opens a browser window for Azure AD login.
+| Method | Use Case | How It Works |
+|--------|----------|--------------|
+| `interactive` | Demos, development | Opens browser for Azure AD login |
+| `default` | CI/CD, automation | Uses DefaultAzureCredential chain |
+| `service_principal` | CI/CD (explicit) | Uses env vars via DefaultAzureCredential |
+
+### Interactive Browser (Default)
 
 ```yaml
 defaults:
   auth_method: interactive
 ```
 
-### Service Principal
+### Default Azure Credential Chain (Recommended for CI/CD)
 
-Best for CI/CD automation. Requires environment variables.
-
-```yaml
-defaults:
-  auth_method: service_principal
-```
-
-Required environment variables:
-```bash
-AZURE_TENANT_ID=your-tenant-id
-AZURE_CLIENT_ID=your-app-id
-AZURE_CLIENT_SECRET=your-secret
-```
-
-### Default Azure Credential Chain
-
-Uses Azure SDK's DefaultAzureCredential, which tries multiple methods:
-1. Environment variables
-2. Managed Identity
-3. Visual Studio Code credentials
-4. Azure CLI credentials
-5. Interactive browser (fallback)
+Automatically tries: Environment variables → Managed Identity → VS Code → Azure CLI → Browser
 
 ```yaml
 defaults:
   auth_method: default
+```
+
+For service principal auth, set environment variables:
+```bash
+export AZURE_TENANT_ID=your-tenant-id
+export AZURE_CLIENT_ID=your-app-id  
+export AZURE_CLIENT_SECRET=your-secret
 ```
 
 ---
@@ -242,76 +234,17 @@ rate_limiting:
 
 ## Common Configuration Scenarios
 
-### Personal Demo Machine
-
-```yaml
-defaults:
-  workspace_id: your-personal-workspace-id
-  auth_method: interactive
-
-options:
-  skip_existing: true
-  confirm_cleanup: true
-
-rate_limiting:
-  requests_per_minute: 30
-```
-
-### CI/CD Pipeline
-
-```yaml
-defaults:
-  auth_method: service_principal
-
-options:
-  skip_existing: false
-  confirm_cleanup: false
-
-rate_limiting:
-  requests_per_minute: 60
-```
-
-### Shared Demo Environment
-
-```yaml
-defaults:
-  workspace_id: shared-team-workspace-id
-  auth_method: interactive
-
-options:
-  skip_existing: true
-  confirm_cleanup: true  # Always confirm to avoid accidents
-```
+**Personal Demo**: Use `interactive` auth, 30 req/min, confirm cleanup  
+**CI/CD**: Use `service_principal` auth, 60 req/min, auto-confirm  
+**Shared**: Use `interactive` auth, always confirm cleanup
 
 ---
 
-## Troubleshooting Configuration
+## Troubleshooting
 
-### "Workspace ID not configured"
-
-Run `python -m demo_automation config init` or set the environment variable:
-
-```bash
-export FABRIC_WORKSPACE_ID=your-workspace-id
-```
-
-### "Auth method not recognized"
-
-Valid values are: `interactive`, `service_principal`, `default`
-
-### Config File Not Loading
-
-Check the file location:
-
-```bash
-python -m demo_automation config path
-```
-
-Verify YAML syntax with:
-
-```bash
-python -c "import yaml; yaml.safe_load(open('~/.fabric-demo/config.yaml'))"
-```
+**"Workspace ID not configured"** → Run `python -m demo_automation config init`  
+**"Auth method not recognized"** → Valid: `interactive`, `service_principal`, `default`  
+**Config not loading** → Check path with `python -m demo_automation config path`
 
 ---
 
