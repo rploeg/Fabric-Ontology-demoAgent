@@ -2,6 +2,10 @@
 
 Automated setup tool for Microsoft Fabric Ontology demos. This CLI tool orchestrates the complete demo setup process with **11 sequential steps**, each independently executable with built-in resume capability.
 
+## Dependencies
+
+This tool uses the [Fabric Ontology SDK](https://github.com/falloutxAY/Fabric-Ontology-SDK) (v0.2.0) for ontology operations including validation, entity/relationship building, and data bindings.
+
 ## Quick Start
 
 ```bash
