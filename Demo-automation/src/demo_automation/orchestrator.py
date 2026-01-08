@@ -55,6 +55,10 @@ from .sdk_adapter import (
     map_ttl_type_to_string,
 )
 
+# SDK validation for pre-flight checks (Phase 4)
+from fabric_ontology.validation import OntologyValidator as SDKOntologyValidator
+from fabric_ontology.exceptions import ValidationError as SDKValidationError
+
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -1164,6 +1168,64 @@ class DemoOrchestrator:
         
         return configs
 
+    def _validate_ontology_definition_with_sdk(
+        self, 
+        ttl_path: Path,
+        strict: bool = False,
+    ) -> tuple[bool, list[str], list[str]]:
+        """
+        Pre-flight validation of ontology definition using SDK OntologyValidator.
+        
+        Phase 4: Uses SDK's OntologyValidator for comprehensive validation
+        before making API calls. This catches issues early and provides
+        better error messages than API failures.
+        
+        Args:
+            ttl_path: Path to the TTL file to validate
+            strict: If True, treat warnings as errors
+            
+        Returns:
+            Tuple of (is_valid, errors, warnings)
+        """
+        errors = []
+        warnings = []
+        
+        try:
+            # Convert TTL to SDK builder/definition
+            from .ontology.sdk_converter import ttl_to_sdk_builder
+            
+            builder = ttl_to_sdk_builder(str(ttl_path))
+            definition = builder.build()
+            
+            # Use SDK OntologyValidator for comprehensive validation
+            validator = SDKOntologyValidator(strict=strict)
+            
+            try:
+                is_valid = validator.validate(definition)
+                warnings = validator.get_warnings()
+                
+                if warnings:
+                    for warning in warnings:
+                        logger.warning(f"SDK validation warning: {warning}")
+                
+                return is_valid, [], warnings
+                
+            except SDKValidationError as e:
+                # Strict mode: validation errors raise exception
+                errors = e.details.get("errors", [str(e)]) if e.details else [str(e)]
+                warnings = e.details.get("warnings", []) if e.details else []
+                
+                for error in errors:
+                    logger.error(f"SDK validation error: {error}")
+                
+                return False, errors, warnings
+                
+        except Exception as e:
+            # Conversion or other error
+            logger.warning(f"SDK pre-flight validation failed: {e}")
+            errors.append(f"Pre-flight validation error: {e}")
+            return False, errors, warnings
+
     def _step_create_ontology(self) -> StepResult:
         """Create Ontology from TTL file and upload definition."""
         start = time.time()
@@ -1222,6 +1284,41 @@ class DemoOrchestrator:
                 error=e,
                 duration_seconds=time.time() - start,
             )
+
+        # Phase 4: SDK Pre-flight Validation
+        # Validate ontology definition with SDK before making API calls
+        self._report_progress("create_ontology", "in_progress", 30)
+        is_valid, sdk_errors, sdk_warnings = self._validate_ontology_definition_with_sdk(
+            ttl_path=ttl_file,
+            strict=False,  # Don't fail on warnings, just log them
+        )
+        
+        if not is_valid and sdk_errors:
+            # Log all errors but only fail if there are critical ones
+            for error in sdk_errors:
+                logger.error(f"SDK validation: {error}")
+            
+            # Check if these are critical errors that would cause API failure
+            critical_errors = [e for e in sdk_errors if "must" in e.lower() or "invalid" in e.lower() or "duplicate" in e.lower()]
+            
+            if critical_errors:
+                return StepResult(
+                    status=StepStatus.FAILED,
+                    message=f"Ontology validation failed: {critical_errors[0]}",
+                    error=DemoAutomationError(f"SDK validation failed: {'; '.join(critical_errors)}"),
+                    duration_seconds=time.time() - start,
+                    details={
+                        "validation_errors": sdk_errors,
+                        "validation_warnings": sdk_warnings,
+                    }
+                )
+            else:
+                # Non-critical errors, proceed with warning
+                logger.warning(f"SDK validation issues found but proceeding: {sdk_errors}")
+        
+        # Log any warnings from SDK validation
+        for warning in sdk_warnings:
+            logger.warning(f"SDK validation warning: {warning}")
 
         # Create new ontology (empty shell)
         self._report_progress("create_ontology", "in_progress", 40)
