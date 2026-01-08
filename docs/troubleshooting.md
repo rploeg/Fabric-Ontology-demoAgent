@@ -363,19 +363,6 @@ python -m demo_automation status ./MedicalManufacturing
 cat ./MedicalManufacturing/.setup-state.yaml
 ```
 
-### Report a Bug
-
-If you find a bug, please report it at:
-https://github.com/falloutxAY/Fabric-Ontology-demoAgent/issues
-
-Include:
-- Command you ran
-- Full error output (with `--debug`)
-- Your Python version (`python --version`)
-- Your OS
-
----
-
 ## See Also
 
 - [CLI Reference](cli-reference.md) - All commands

@@ -2,6 +2,18 @@
 Base Fabric REST API client.
 
 Handles authentication, rate limiting, retries, and long-running operations.
+
+Note on Ontology Operations:
+    This client provides low-level HTTP methods for Fabric Ontology API operations.
+    For building ontology definitions, the Fabric Ontology SDK is recommended:
+    
+    - Use ``fabric_ontology.builders.OntologyBuilder`` for creating definitions
+    - Use ``fabric_ontology.validation.OntologyValidator`` for validation
+    - Use ``demo_automation.binding.SDKBindingBridge`` for binding configuration
+    
+    The ontology methods in this client (create_ontology, update_ontology_definition, etc.)
+    are still used by the orchestrator for HTTP transport but SDK builders should be
+    used to construct the definition payloads.
 """
 
 import logging

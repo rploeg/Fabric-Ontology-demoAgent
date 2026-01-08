@@ -4,8 +4,29 @@ Ontology Binding Builder for configuring data source bindings.
 Builds the binding configuration that connects ontology entities to
 Lakehouse tables (NonTimeSeries) and Eventhouse tables (TimeSeries),
 as well as relationship contextualizations between entities.
+
+.. deprecated:: 0.2.0
+    This module is deprecated in favor of the SDK Binding Bridge.
+    Use ``sdk_binding_bridge.SDKBindingBridge`` instead, which provides:
+    - Official Fabric Ontology SDK integration
+    - Built-in validation and type safety
+    - Cleaner fluent builder API
+    
+    Migration example:
+    
+    Old (deprecated):
+        builder = OntologyBindingBuilder(workspace_id, ontology_id)
+        builder.add_lakehouse_binding(entity_id, lakehouse_id, table, key, mappings)
+        parts = builder.build_definition_parts()
+    
+    New (recommended):
+        from demo_automation.binding import SDKBindingBridge
+        bridge = SDKBindingBridge(workspace_id, lakehouse_id=lakehouse_id)
+        bridge.add_entity_with_binding(ttl_entity, binding_config)
+        definition = bridge.build()
 """
 
+import warnings
 import base64
 import json
 import uuid
@@ -235,6 +256,11 @@ class OntologyBindingBuilder:
     Supports:
     - Entity data bindings (NonTimeSeries from Lakehouse, TimeSeries from Eventhouse)
     - Relationship contextualizations (foreign key joins between entities)
+    
+    .. deprecated:: 0.2.0
+        Use ``SDKBindingBridge`` from ``demo_automation.binding.sdk_binding_bridge``
+        for new implementations. SDKBindingBridge uses the Fabric Ontology SDK
+        and provides better validation and API compliance.
     """
 
     def __init__(
@@ -248,7 +274,16 @@ class OntologyBindingBuilder:
         Args:
             workspace_id: Fabric workspace ID
             ontology_id: Target ontology ID
+            
+        .. deprecated:: 0.2.0
+            Use ``SDKBindingBridge`` instead.
         """
+        warnings.warn(
+            "OntologyBindingBuilder is deprecated. Use SDKBindingBridge from "
+            "demo_automation.binding.sdk_binding_bridge instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.workspace_id = workspace_id
         self.ontology_id = ontology_id
         # Support multiple bindings per entity: entity_id -> list of bindings

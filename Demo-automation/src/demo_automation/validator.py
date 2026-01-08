@@ -19,21 +19,31 @@ from enum import Enum
 
 import yaml
 
+# SDK validation imports - Phase 4 integration
+from fabric_ontology.validation import (
+    validate_name as sdk_validate_name,
+    validate_data_type as sdk_validate_data_type,
+    GQL_RESERVED_WORDS as SDK_GQL_RESERVED_WORDS,
+    RECOMMENDED_NAME_LENGTH,
+    OntologyValidator,
+)
+from fabric_ontology.exceptions import ValidationError as SDKValidationError
+
 logger = logging.getLogger(__name__)
 
-# GQL Reserved words that should not be used as property/entity names
-GQL_RESERVED_WORDS = {
-    "match", "return", "filter", "where", "let", "order", "limit", "offset",
-    "distinct", "group", "by", "asc", "desc", "and", "or", "not", "true", "false",
-    "null", "is", "in", "starts", "ends", "contains", "with", "as", "node", "edge",
-    "path", "trail", "union", "all", "count", "sum", "avg", "min", "max", "coalesce",
-    "size", "labels", "nodes", "edges", "upper", "lower", "trim", "char_length"
-}
+# GQL Reserved words - now uses SDK's comprehensive list with fallback
+# The SDK's GQL_RESERVED_WORDS is more complete and authoritative
+GQL_RESERVED_WORDS = SDK_GQL_RESERVED_WORDS
 
 # Valid property/entity name pattern (1-26 chars, alphanumeric with hyphens/underscores)
+# Note: SDK pattern is more permissive (128 chars), but we keep 26 for demo compatibility
 NAME_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$|^[a-zA-Z0-9]$')
 
-# Valid data types for Graph
+# =============================================================================
+# Legacy Validation Constants (kept for backwards compatibility)
+# Note: Primary validation now uses SDK functions in _validate_name_constraints()
+# and _validate_data_type(). These constants are used for demo-specific checks.
+# =============================================================================
 VALID_PROPERTY_TYPES = {"string", "str", "int", "integer", "long", "double", "float", "boolean", "bool", "datetime"}
 VALID_KEY_TYPES = {"string", "str", "int", "integer", "long"}
 INVALID_TYPES = {"decimal"}  # Decimal returns NULL in Graph queries
@@ -1113,42 +1123,94 @@ class DemoPackageValidator:
             logger.warning(f"Failed to validate TTL: {e}")
 
     def _validate_name_constraints(self, name: str, name_type: str, context: str) -> None:
-        """Validate name against Fabric Ontology constraints."""
+        """
+        Validate name against Fabric Ontology constraints using SDK validation.
+        
+        Phase 4: Now uses SDK's validate_name() function for authoritative validation,
+        with additional demo-specific length checks (26 chars recommended for demos).
+        """
         if not name:
             return
         
-        # Check length (1-26 characters)
-        if len(name) > 26:
-            self.result.add_error(
-                f"{name_type} '{name}' exceeds 26 character limit ({len(name)} chars)",
+        # Demo-specific: Check length (1-26 characters for optimal Graph queries)
+        # SDK allows 128 chars, but demos should use shorter names
+        if len(name) > RECOMMENDED_NAME_LENGTH:
+            self.result.add_warning(
+                f"{name_type} '{name}' exceeds recommended {RECOMMENDED_NAME_LENGTH} character limit ({len(name)} chars)",
                 path=context,
-                suggestion="Shorten name to 26 characters or less",
+                suggestion=f"Consider shortening to {RECOMMENDED_NAME_LENGTH} characters or less for optimal Graph query compatibility",
             )
         
-        # Check pattern (alphanumeric, hyphens, underscores)
-        if len(name) > 1 and not NAME_PATTERN.match(name):
-            self.result.add_warning(
-                f"{name_type} '{name}' doesn't match naming pattern",
+        # Use SDK validation for name pattern and reserved words
+        try:
+            # Capture warnings from SDK validation
+            warnings_collected = []
+            def collect_warning(msg: str) -> None:
+                warnings_collected.append(msg)
+            
+            sdk_validate_name(
+                name=name, 
+                field_name=name_type, 
+                allow_reserved=False,
+                warn_callback=collect_warning,
+            )
+            
+            # Add any SDK warnings to our result
+            for warning in warnings_collected:
+                self.result.add_warning(warning, path=context)
+                
+        except SDKValidationError as e:
+            # SDK validation failed - add as error
+            self.result.add_error(
+                f"{name_type} '{name}' validation failed: {e.message}",
+                path=context,
+                suggestion=e.details.get("suggestion") if e.details else None,
+            )
+        
+        # Fallback: Check pattern (for demo-specific shorter pattern)
+        # SDK pattern allows 128 chars, demo pattern is stricter (26 chars)
+        if len(name) > 1 and not NAME_PATTERN.match(name) and len(name) <= 26:
+            self.result.add_info(
+                f"{name_type} '{name}' doesn't match demo naming pattern (may still be valid for API)",
                 path=context,
                 suggestion="Use alphanumeric characters, hyphens, underscores; start/end with alphanumeric",
             )
-        
-        # Check for GQL reserved words
-        if name.lower() in GQL_RESERVED_WORDS:
-            self.result.add_warning(
-                f"{name_type} '{name}' is a GQL reserved word",
-                path=context,
-                suggestion="Rename to avoid GQL reserved words or escape with backticks",
-            )
 
     def _validate_data_type(self, data_type: str, context: str, is_key: bool = False) -> None:
-        """Validate data type against Fabric Graph constraints."""
+        """
+        Validate data type against Fabric Graph constraints using SDK validation.
+        
+        Phase 4: Uses SDK's validate_data_type() function for authoritative validation.
+        """
         if not data_type:
             return
         
         type_lower = data_type.lower()
         
-        # Check for invalid types
+        # Map common aliases to SDK types for validation
+        type_mapping = {
+            "string": "String", "str": "String",
+            "int": "Int64", "integer": "Int64", "long": "Int64",
+            "double": "Double", "float": "Double",
+            "boolean": "Boolean", "bool": "Boolean",
+            "datetime": "DateTime", "datetimeoffset": "DateTimeOffset",
+            "decimal": "Decimal",  # Will fail SDK validation
+        }
+        
+        sdk_type = type_mapping.get(type_lower, data_type)
+        
+        # Use SDK validation for data type
+        try:
+            sdk_validate_data_type(sdk_type)
+        except SDKValidationError as e:
+            self.result.add_error(
+                f"Data type '{data_type}' validation failed: {e.message}",
+                path=context,
+                suggestion=e.details.get("suggestion") if e.details else "Use a valid type: String, Int64, Double, Boolean, DateTime",
+            )
+            return
+        
+        # Check for invalid types that SDK explicitly rejects
         if type_lower in INVALID_TYPES:
             self.result.add_error(
                 f"Data type '{data_type}' is NOT supported by Fabric Graph (returns NULL)",
