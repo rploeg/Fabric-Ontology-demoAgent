@@ -2,6 +2,8 @@
 
 System design documentation for contributors and maintainers.
 
+> **Version**: 0.2.0+ uses the [Fabric Ontology SDK](https://github.com/falloutxAY/Fabric-Ontology-SDK) for ontology operations.
+
 ---
 
 ## High-Level Architecture
@@ -29,9 +31,9 @@ System design documentation for contributors and maintainers.
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           Business Logic Layer                               │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌────────────────────────────┐  │
-│  │ Validator       │  │ BindingParser   │  │ OntologyBindingBuilder     │  │
+│  │ Validator       │  │ BindingParser   │  │ SDKBindingBridge           │  │
 │  │ (demo structure)│  │ (YAML + MD)     │  │ (Static + Timeseries +     │  │
-│  │                 │  │                 │  │  Relationships)            │  │
+│  │                 │  │                 │  │  Relationships via SDK)    │  │
 │  └─────────────────┘  └─────────────────┘  └────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │
@@ -73,6 +75,7 @@ Demo-automation/
 │   ├── orchestrator.py        # 11-step workflow execution
 │   ├── state_manager.py       # Setup state persistence
 │   ├── validator.py           # Demo package validation
+│   ├── sdk_adapter.py         # SDK client/builder factories (v0.2.0+)
 │   │
 │   ├── core/
 │   │   ├── config.py          # Demo-specific configuration
@@ -86,18 +89,23 @@ Demo-automation/
 │   │   └── onelake_client.py      # OneLake file operations
 │   │
 │   ├── binding/
-│   │   ├── binding_builder.py     # Build binding payloads
+│   │   ├── sdk_binding_bridge.py  # SDK-based binding builder (recommended)
+│   │   ├── binding_builder.py     # Legacy binding builder (deprecated)
 │   │   ├── binding_parser.py      # Parse binding instructions
 │   │   └── yaml_parser.py         # Parse bindings.yaml
 │   │
 │   └── ontology/
-│       └── ttl_converter.py       # Parse TTL files
+│       ├── ttl_converter.py       # Parse TTL files
+│       └── sdk_converter.py       # TTL to SDK builder conversion (v0.2.0+)
 │
 ├── tests/
 │   ├── conftest.py            # Pytest fixtures
 │   ├── test_config.py
 │   ├── test_validator.py
-│   └── test_relationship_bindings.py
+│   ├── test_relationship_bindings.py
+│   ├── test_sdk_adapter.py        # SDK adapter tests
+│   ├── test_sdk_binding_bridge.py # SDK binding bridge tests
+│   └── test_sdk_converter.py      # SDK converter tests
 │
 └── pyproject.toml             # Package configuration
 ```
@@ -169,14 +177,16 @@ RateLimitConfig(
 )
 ```
 
-### Binding Builder (`binding/binding_builder.py`)
+### SDK Binding Bridge (`binding/sdk_binding_bridge.py`) *(v0.2.0+)*
 
-Constructs binding payloads for the Ontology API.
+Constructs binding payloads using the Fabric Ontology SDK builders.
 
 **Binding Types**:
 - Static (Lakehouse tables)
 - Timeseries (Eventhouse tables)
 - Relationship contextualizations
+
+> **Note**: The legacy `OntologyBindingBuilder` in `binding_builder.py` is deprecated. Use `SDKBindingBridge` for new code.
 
 ---
 

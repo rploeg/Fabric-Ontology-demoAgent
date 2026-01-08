@@ -2,7 +2,7 @@
 
 > **Get a working Fabric Ontology demo running in under 5 minutes**
 
-This project provides everything you need to create and deploy Microsoft Fabric Ontology demos—automated tooling, AI agent specifications, and complete demo packages.
+This project provides everything you need to create and deploy Microsoft Fabric Ontology demos—automated tooling (powered by the [Fabric Ontology SDK](https://github.com/falloutxAY/Fabric-Ontology-SDK)), AI agent specifications, and complete demo packages.
 
 ---
 
