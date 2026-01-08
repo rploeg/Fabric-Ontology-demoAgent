@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NextGen Motors - Automotive Manufacturing & Supply Chain Ontology</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background: linear-gradient(90deg, #e94560 0%, #0f3460 100%);
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.3);
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: linear-gradient(145deg, #1e3a5f 0%, #16213e 100%);
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #e94560;
+        }
+        
+        .metric-label {
+            font-size: 0.95rem;
+            color: #a0a0a0;
+            margin-top: 5px;
+        }
+        
+        .diagram-container {
+            background: #fff;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .diagram-title {
+            color: #1a1a2e;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        .legend-item.vehicle { border-left-color: #e94560; }
+        .legend-item.assembly { border-left-color: #f39c12; }
+        .legend-item.component { border-left-color: #3498db; }
+        .legend-item.supplier { border-left-color: #2ecc71; }
+        .legend-item.facility { border-left-color: #9b59b6; }
+        .legend-item.order { border-left-color: #1abc9c; }
+        .legend-item.quality { border-left-color: #e74c3c; }
+        .legend-item.shipment { border-left-color: #95a5a6; }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 15px;
+        }
+        
+        .legend-item.vehicle .legend-color { background: #e94560; }
+        .legend-item.assembly .legend-color { background: #f39c12; }
+        .legend-item.component .legend-color { background: #3498db; }
+        .legend-item.supplier .legend-color { background: #2ecc71; }
+        .legend-item.facility .legend-color { background: #9b59b6; }
+        .legend-item.order .legend-color { background: #1abc9c; }
+        .legend-item.quality .legend-color { background: #e74c3c; }
+        .legend-item.shipment .legend-color { background: #95a5a6; }
+        
+        .legend-text {
+            flex: 1;
+        }
+        
+        .legend-text strong {
+            display: block;
+            margin-bottom: 3px;
+        }
+        
+        .legend-text span {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+        
+        .timeseries-badge {
+            background: #e94560;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚗 NextGen Motors</h1>
+            <p>Automotive Manufacturing & Supply Chain Ontology</p>
+        </header>
+        
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value">8</div>
+                <div class="metric-label">Entity Types</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">10</div>
+                <div class="metric-label">Relationships</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">2</div>
+                <div class="metric-label">Timeseries Entities</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">6</div>
+                <div class="metric-label">Timeseries Metrics</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">4</div>
+                <div class="metric-label">Max Traversal Hops</div>
+            </div>
+        </div>
+        
+        <div class="diagram-container">
+            <h2 class="diagram-title">Entity Relationship Diagram</h2>
+            <div class="mermaid">
+erDiagram
+    Vehicle ||--o{ Assembly : "ASSEMBLED_INTO"
+    Assembly }o--o{ Component : "USES_COMPONENT"
+    Component }o--|| Supplier : "SUPPLIED_BY"
+    Vehicle }o--|| Facility : "PRODUCED_AT"
+    ProductionOrder ||--|| Vehicle : "ORDERED_FOR"
+    QualityEvent }o--|| Assembly : "AFFECTS"
+    Shipment }o--|| Facility : "ORIGINATED_FROM"
+    Shipment }o--|| Facility : "DELIVERED_TO"
+    Shipment }o--o{ Component : "CONTAINS"
+    Supplier }o--|| Facility : "OPERATES_FROM"
+    
+    Vehicle {
+        string VehicleId PK
+        string Vehicle_VIN
+        string Vehicle_Model
+        int Vehicle_Year
+        string Vehicle_Status
+    }
+    
+    Assembly {
+        string AssemblyId PK
+        string Assembly_Type
+        string Assembly_SerialNum
+        string Assembly_Status
+        double Temperature
+        double Torque
+        double CycleTime
+    }
+    
+    Component {
+        string ComponentId PK
+        string Component_Name
+        string Component_PartNumber
+        string Component_Category
+        double Component_UnitCost
+    }
+    
+    Supplier {
+        string SupplierId PK
+        string Supplier_Name
+        int Supplier_Tier
+        string Supplier_Country
+        double Supplier_Rating
+    }
+    
+    Facility {
+        string FacilityId PK
+        string Facility_Name
+        string Facility_Type
+        string Facility_Location
+        double EnergyConsumption
+        double ProductionRate
+    }
+    
+    ProductionOrder {
+        string OrderId PK
+        string Order_Number
+        int Order_Quantity
+        string Order_Priority
+        string Order_Status
+    }
+    
+    QualityEvent {
+        string EventId PK
+        string Event_Type
+        string Event_Severity
+        string Event_Description
+        string Event_Resolution
+    }
+    
+    Shipment {
+        string ShipmentId PK
+        string Shipment_TrackingNum
+        string Shipment_Status
+        string Shipment_Carrier
+    }
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item vehicle">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>Vehicle</strong>
+                    <span>Final assembled vehicle with VIN tracking</span>
+                </div>
+            </div>
+            <div class="legend-item assembly">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>Assembly <span class="timeseries-badge">TIMESERIES</span></strong>
+                    <span>Engine, Chassis, Body, Battery assemblies</span>
+                </div>
+            </div>
+            <div class="legend-item component">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>Component</strong>
+                    <span>Parts from suppliers used in assemblies</span>
+                </div>
+            </div>
+            <div class="legend-item supplier">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>Supplier</strong>
+                    <span>Tier 1 and Tier 2 component suppliers</span>
+                </div>
+            </div>
+            <div class="legend-item facility">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>Facility <span class="timeseries-badge">TIMESERIES</span></strong>
+                    <span>Manufacturing plants and warehouses</span>
+                </div>
+            </div>
+            <div class="legend-item order">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>ProductionOrder</strong>
+                    <span>Work orders for vehicle production</span>
+                </div>
+            </div>
+            <div class="legend-item quality">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>QualityEvent</strong>
+                    <span>Inspections, defects, recalls</span>
+                </div>
+            </div>
+            <div class="legend-item shipment">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>Shipment</strong>
+                    <span>Logistics between facilities</span>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Generated by Fabric Ontology Demo Agent | Spec v3.3 | January 2026</p>
+        </footer>
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            er: {
+                diagramPadding: 20,
+                layoutDirection: 'TB',
+                minEntityWidth: 100,
+                minEntityHeight: 75,
+                entityPadding: 15
+            }
+        });
+    </script>
+</body>
+</html>

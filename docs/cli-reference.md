@@ -2,8 +2,6 @@
 
 Complete reference for the demo automation CLI.
 
-> 💡 **Recommended**: Use `python -m demo_automation` instead of `fabric-demo` to avoid PATH configuration issues. Both are equivalent.
-
 ---
 
 ## Global Options

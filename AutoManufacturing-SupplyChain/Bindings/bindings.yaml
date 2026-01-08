@@ -1,0 +1,307 @@
+_schema_version: "1.0"
+
+metadata:
+  name: "AutoManufacturing-SupplyChain"
+  version: "1.0"
+  description: "Automotive manufacturing and supply chain traceability demo for NextGen Motors"
+  company: "NextGen Motors"
+  domain: "Automotive Manufacturing"
+  created: "2026-01-07"
+
+lakehouse:
+  name: "AutoManufacturing_Lakehouse"
+  entities:
+    - entity: Vehicle
+      sourceTable: DimVehicle
+      keyColumn: VehicleId
+      file: Data/Lakehouse/DimVehicle.csv
+      properties:
+        - property: VehicleId
+          column: VehicleId
+          type: string
+        - property: Vehicle_VIN
+          column: Vehicle_VIN
+          type: string
+        - property: Vehicle_Model
+          column: Vehicle_Model
+          type: string
+        - property: Vehicle_Year
+          column: Vehicle_Year
+          type: int
+        - property: Vehicle_Status
+          column: Vehicle_Status
+          type: string
+        - property: Vehicle_CompletionDate
+          column: Vehicle_CompletionDate
+          type: datetime
+
+    - entity: Assembly
+      sourceTable: DimAssembly
+      keyColumn: AssemblyId
+      file: Data/Lakehouse/DimAssembly.csv
+      properties:
+        - property: AssemblyId
+          column: AssemblyId
+          type: string
+        - property: Assembly_Type
+          column: Assembly_Type
+          type: string
+        - property: Assembly_SerialNum
+          column: Assembly_SerialNum
+          type: string
+        - property: Assembly_Status
+          column: Assembly_Status
+          type: string
+        - property: Assembly_StartDate
+          column: Assembly_StartDate
+          type: datetime
+
+    - entity: Component
+      sourceTable: DimComponent
+      keyColumn: ComponentId
+      file: Data/Lakehouse/DimComponent.csv
+      properties:
+        - property: ComponentId
+          column: ComponentId
+          type: string
+        - property: Component_Name
+          column: Component_Name
+          type: string
+        - property: Component_PartNumber
+          column: Component_PartNumber
+          type: string
+        - property: Component_Category
+          column: Component_Category
+          type: string
+        - property: Component_UnitCost
+          column: Component_UnitCost
+          type: double
+        - property: Component_LeadTimeDays
+          column: Component_LeadTimeDays
+          type: int
+
+    - entity: Supplier
+      sourceTable: DimSupplier
+      keyColumn: SupplierId
+      file: Data/Lakehouse/DimSupplier.csv
+      properties:
+        - property: SupplierId
+          column: SupplierId
+          type: string
+        - property: Supplier_Name
+          column: Supplier_Name
+          type: string
+        - property: Supplier_Tier
+          column: Supplier_Tier
+          type: int
+        - property: Supplier_Country
+          column: Supplier_Country
+          type: string
+        - property: Supplier_Rating
+          column: Supplier_Rating
+          type: double
+        - property: Supplier_Certified
+          column: Supplier_Certified
+          type: boolean
+
+    - entity: Facility
+      sourceTable: DimFacility
+      keyColumn: FacilityId
+      file: Data/Lakehouse/DimFacility.csv
+      properties:
+        - property: FacilityId
+          column: FacilityId
+          type: string
+        - property: Facility_Name
+          column: Facility_Name
+          type: string
+        - property: Facility_Type
+          column: Facility_Type
+          type: string
+        - property: Facility_Location
+          column: Facility_Location
+          type: string
+        - property: Facility_Capacity
+          column: Facility_Capacity
+          type: int
+
+    - entity: ProductionOrder
+      sourceTable: DimProductionOrder
+      keyColumn: OrderId
+      file: Data/Lakehouse/DimProductionOrder.csv
+      properties:
+        - property: OrderId
+          column: OrderId
+          type: string
+        - property: Order_Number
+          column: Order_Number
+          type: string
+        - property: Order_Quantity
+          column: Order_Quantity
+          type: int
+        - property: Order_Priority
+          column: Order_Priority
+          type: string
+        - property: Order_DueDate
+          column: Order_DueDate
+          type: datetime
+        - property: Order_Status
+          column: Order_Status
+          type: string
+
+    - entity: QualityEvent
+      sourceTable: FactQualityEvent
+      keyColumn: EventId
+      file: Data/Lakehouse/FactQualityEvent.csv
+      properties:
+        - property: EventId
+          column: EventId
+          type: string
+        - property: Event_Type
+          column: Event_Type
+          type: string
+        - property: Event_Severity
+          column: Event_Severity
+          type: string
+        - property: Event_Description
+          column: Event_Description
+          type: string
+        - property: Event_Timestamp
+          column: Event_Timestamp
+          type: datetime
+        - property: Event_Resolution
+          column: Event_Resolution
+          type: string
+
+    - entity: Shipment
+      sourceTable: FactShipment
+      keyColumn: ShipmentId
+      file: Data/Lakehouse/FactShipment.csv
+      properties:
+        - property: ShipmentId
+          column: ShipmentId
+          type: string
+        - property: Shipment_TrackingNum
+          column: Shipment_TrackingNum
+          type: string
+        - property: Shipment_Status
+          column: Shipment_Status
+          type: string
+        - property: Shipment_DepartureDate
+          column: Shipment_DepartureDate
+          type: datetime
+        - property: Shipment_ArrivalDate
+          column: Shipment_ArrivalDate
+          type: datetime
+        - property: Shipment_Carrier
+          column: Shipment_Carrier
+          type: string
+
+  relationships:
+    - relationship: ASSEMBLED_INTO
+      sourceEntity: Assembly
+      targetEntity: Vehicle
+      sourceTable: DimAssembly
+      sourceKeyColumn: AssemblyId
+      targetKeyColumn: VehicleId
+
+    - relationship: USES_COMPONENT
+      sourceEntity: Assembly
+      targetEntity: Component
+      sourceTable: EdgeAssemblyComponent
+      sourceKeyColumn: AssemblyId
+      targetKeyColumn: ComponentId
+
+    - relationship: SUPPLIED_BY
+      sourceEntity: Component
+      targetEntity: Supplier
+      sourceTable: DimComponent
+      sourceKeyColumn: ComponentId
+      targetKeyColumn: SupplierId
+
+    - relationship: PRODUCED_AT
+      sourceEntity: Vehicle
+      targetEntity: Facility
+      sourceTable: DimVehicle
+      sourceKeyColumn: VehicleId
+      targetKeyColumn: FacilityId
+
+    - relationship: ORDERED_FOR
+      sourceEntity: ProductionOrder
+      targetEntity: Vehicle
+      sourceTable: DimProductionOrder
+      sourceKeyColumn: OrderId
+      targetKeyColumn: VehicleId
+
+    - relationship: AFFECTS
+      sourceEntity: QualityEvent
+      targetEntity: Assembly
+      sourceTable: FactQualityEvent
+      sourceKeyColumn: EventId
+      targetKeyColumn: AssemblyId
+
+    - relationship: ORIGINATED_FROM
+      sourceEntity: Shipment
+      targetEntity: Facility
+      sourceTable: EdgeShipmentOrigin
+      sourceKeyColumn: ShipmentId
+      targetKeyColumn: FacilityId
+
+    - relationship: DELIVERED_TO
+      sourceEntity: Shipment
+      targetEntity: Facility
+      sourceTable: EdgeShipmentDestination
+      sourceKeyColumn: ShipmentId
+      targetKeyColumn: FacilityId
+
+    - relationship: CONTAINS
+      sourceEntity: Shipment
+      targetEntity: Component
+      sourceTable: EdgeShipmentComponent
+      sourceKeyColumn: ShipmentId
+      targetKeyColumn: ComponentId
+
+    - relationship: OPERATES_FROM
+      sourceEntity: Supplier
+      targetEntity: Facility
+      sourceTable: DimSupplier
+      sourceKeyColumn: SupplierId
+      targetKeyColumn: FacilityId
+
+eventhouse:
+  name: "AutoManufacturing_Telemetry"
+  database: "AutoManufacturingDB"
+  entities:
+    - entity: Assembly
+      sourceTable: AssemblyTelemetry
+      keyColumn: AssemblyId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/AssemblyTelemetry.csv
+      rowCount: 50
+      properties:
+        - property: Temperature
+          column: Temperature
+          type: double
+        - property: Torque
+          column: Torque
+          type: double
+        - property: CycleTime
+          column: CycleTime
+          type: double
+
+    - entity: Facility
+      sourceTable: FacilityTelemetry
+      keyColumn: FacilityId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/FacilityTelemetry.csv
+      rowCount: 50
+      properties:
+        - property: EnergyConsumption
+          column: EnergyConsumption
+          type: double
+        - property: Humidity
+          column: Humidity
+          type: double
+        - property: ProductionRate
+          column: ProductionRate
+          type: double

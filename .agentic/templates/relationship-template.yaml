@@ -20,8 +20,9 @@ relationship:
     # ⚠️ CRITICAL: source_key_column must be the SOURCE entity's own primary key!
     source_key_column: "{SourceEntity_PrimaryKey}"
     
-    # target_key_column is the foreign key pointing to the target entity
-    target_key_column: "{ForeignKey_to_TargetEntity}"
+    # ⚠️ CRITICAL: target_key_column MUST be named EXACTLY the same as the target entity's key!
+    # The Fabric API validates this - using a different column name will cause binding to fail.
+    target_key_column: "{TargetEntity_KeyName}"  # Must match target's key property name EXACTLY
 
 # =============================================================================
 # CRITICAL CONSTRAINT: sourceKeyColumn
@@ -44,6 +45,32 @@ relationship:
 # API Error for this mistake:
 # "sourceKeyRefBindings targetPropertyId 'X' must be present in the source 
 #  EntityType's EntityIdParts"
+
+# =============================================================================
+# CRITICAL CONSTRAINT: targetKeyColumn Name Must Match Target Entity's Key
+# =============================================================================
+#
+# The Fabric API REQUIRES that target_key_column has the EXACT SAME NAME as
+# the target entity's key property. This is a hard validation.
+#
+# ✓ CORRECT (Facility entity has key "FacilityId"):
+#   - target_entity: Facility
+#   - target_key_column: FacilityId    # Exact match!
+#
+# ✗ WRONG:
+#   - target_entity: Facility
+#   - target_key_column: OriginFacilityId    # Different name - WILL FAIL!
+#   - target_key_column: DestFacilityId      # Different name - WILL FAIL!
+#
+# API Error for this mistake:
+# "targetKeyRefBindings targetPropertyId 'OriginFacilityId' must be present 
+#  in the target EntityType's EntityIdParts"
+#
+# SOLUTION: If your table has FK columns with different names (e.g., OriginFacilityId,
+# DestFacilityId), create SEPARATE EDGE TABLES with columns renamed to match:
+#
+#   EdgeShipmentOrigin.csv:      ShipmentId, FacilityId  (not OriginFacilityId)
+#   EdgeShipmentDestination.csv: ShipmentId, FacilityId  (not DestFacilityId)
 
 # =============================================================================
 # Relationship Naming Convention

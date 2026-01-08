@@ -1,0 +1,16 @@
+FacilityId,Facility_Name,Facility_Type,Facility_Location,Facility_Capacity
+FAC-001,NextGen Motors Detroit,Assembly,Detroit USA,50000
+FAC-002,NextGen Motors Austin,Assembly,Austin USA,35000
+FAC-003,Central Distribution Hub,Distribution,Chicago USA,100000
+FAC-004,West Coast Warehouse,Warehouse,Los Angeles USA,75000
+FAC-005,VoltPower Shenzhen Plant,Manufacturing,Shenzhen China,200000
+FAC-006,ElectroDrive Munich Factory,Manufacturing,Munich Germany,80000
+FAC-007,WireConnect Monterrey,Manufacturing,Monterrey Mexico,60000
+FAC-008,SteelFrame Ohio Works,Manufacturing,Cleveland USA,120000
+FAC-009,AutoMotion Nagoya,Manufacturing,Nagoya Japan,150000
+FAC-010,PrecisionMech Seoul Hub,Manufacturing,Seoul South Korea,45000
+FAC-011,SmartDrive Taipei Center,Manufacturing,Taipei Taiwan,90000
+FAC-012,SafetyFirst Tel Aviv,Manufacturing,Tel Aviv Israel,30000
+FAC-013,ThermoTech Toronto,Manufacturing,Toronto Canada,40000
+FAC-014,ComfortZone Chennai,Manufacturing,Chennai India,55000
+FAC-015,Northeast Parts Depot,Warehouse,Boston USA,50000

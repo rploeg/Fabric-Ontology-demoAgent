@@ -411,14 +411,16 @@ def _config_init(args: argparse.Namespace) -> int:
     
     # Get auth method
     console.print("\nAuthentication methods:")
-    console.print("  [cyan]interactive[/cyan] - Opens browser for login (recommended)")
-    console.print("  [cyan]service_principal[/cyan] - Uses environment variables")
-    console.print("  [cyan]default[/cyan] - Azure SDK default chain")
-    auth_method = Prompt.ask(
-        "Authentication method",
-        choices=["interactive", "service_principal", "default"],
-        default="interactive",
+    console.print("  [cyan]1[/cyan] - interactive (Opens browser for login - recommended)")
+    console.print("  [cyan]2[/cyan] - service_principal (Uses environment variables)")
+    console.print("  [cyan]3[/cyan] - default (Azure SDK default chain)")
+    auth_choice = Prompt.ask(
+        "Select authentication method",
+        choices=["1", "2", "3"],
+        default="1",
     )
+    auth_method_map = {"1": "interactive", "2": "service_principal", "3": "default"}
+    auth_method = auth_method_map[auth_choice]
     
     # Create and save config
     config = GlobalConfig(

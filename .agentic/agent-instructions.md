@@ -121,17 +121,51 @@ The parser uses regex `Key:\s*(\w+)` to extract the key property name.
 
 ### Type Mapping
 
-| Ontology Type | XSD Type |
-|---------------|----------|
-| string | xsd:string |
-| int | xsd:integer |
-| double | xsd:double |
-| boolean | xsd:boolean |
-| datetime | xsd:dateTime |
+| Ontology Type | XSD Type | Graph Type |
+|---------------|----------|------------|
+| string | xsd:string | STRING |
+| int | xsd:integer | INTEGER (64-bit signed) |
+| double | xsd:double | DOUBLE (64-bit floating point) |
+| boolean | xsd:boolean | BOOLEAN (true/false) |
+| datetime | xsd:dateTime | ZONED DATETIME |
 
-> ⚠️ **Never use xsd:decimal** - it returns NULL in Graph queries
+> ⚠️ **CRITICAL TYPE CONSTRAINTS**:
+> - **Never use xsd:decimal** - Fabric Graph does NOT support Decimal type (returns NULL)
+> - **Key properties MUST be string or int ONLY** (not datetime, boolean, or double)
+> - Use **double** instead of decimal for all monetary/precision values
 
 **Action**: Ask "TTL complete. Ready for Phase 4: Data Generation?"
+
+---
+
+## ⚠️ CRITICAL: Property and Entity Naming Constraints
+
+These constraints come directly from Microsoft Fabric Ontology documentation:
+
+### Entity Type Names
+- **Length**: 1–26 characters
+- **Pattern**: `^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$`
+- Must start and end with alphanumeric character
+- Can contain hyphens and underscores
+
+### Property Names
+- **Length**: 1–26 characters  
+- **Pattern**: `^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$`
+- **MUST be unique across ALL entity types in the ontology**
+- Must start and end with alphanumeric character
+- Recommendation: Use entity prefix for uniqueness (e.g., `Product_Name`, `Batch_Status`)
+
+### GQL Reserved Words to AVOID
+
+Never use these as property or entity names (or escape with backticks):
+
+```
+MATCH, RETURN, FILTER, WHERE, LET, ORDER, LIMIT, OFFSET,
+DISTINCT, GROUP, BY, ASC, DESC, AND, OR, NOT, TRUE, FALSE,
+NULL, IS, IN, STARTS, ENDS, CONTAINS, WITH, AS, NODE, EDGE,
+PATH, TRAIL, UNION, ALL, count, sum, avg, min, max, coalesce,
+size, labels, nodes, edges, upper, lower, trim, char_length
+```
 
 ---
 
@@ -156,15 +190,27 @@ The parser uses regex `Key:\s*(\w+)` to extract the key property name.
 - BatchTelemetry, FacilityTelemetry, etc.
 - 30-50 rows each
 - MUST include: Timestamp, EntityKey, Metric columns
+- **CRITICAL**: Data MUST be in COLUMNAR format (each row = one timestamped observation)
+- **Format**: Each row represents one entity at one timestamp with metric values as columns
+
+#### Timeseries Columnar Format Example:
+```csv
+Timestamp,AssemblyId,Temperature,Torque,CycleTime
+2024-01-15T08:00:00Z,ASM-001,72.5,45.2,120.5
+2024-01-15T08:01:00Z,ASM-001,73.1,44.8,119.8
+```
 
 ### Data Validation Checklist
 
 - [ ] All key values are unique within table
+- [ ] Key values contain no NULLs
+- [ ] Key columns are string or int type ONLY
 - [ ] Foreign keys reference valid parent records
-- [ ] No decimal type columns (use double/float)
-- [ ] Timestamps in ISO 8601 format
-- [ ] Boolean values as true/false (not 1/0)
+- [ ] No decimal type columns (use double/float for precision values)
+- [ ] Timestamps in ISO 8601 format (e.g., 2024-01-15T10:30:00Z)
+- [ ] Boolean values as true/false (lowercase, not 1/0)
 - [ ] No NULL in key columns
+- [ ] All property values match declared data types
 
 **Action**: Ask "All data generated. Ready for Phase 5: Bindings?" after all CSVs.
 
@@ -250,15 +296,52 @@ Based on the official Microsoft Fabric Ontology tutorial, relationship bindings 
   targetKeyColumn: CardId         # Key that identifies which CreditCard
 ```
 
-**Common Patterns:**
+#### ⚠️ CRITICAL: BOTH sourceKeyColumn AND targetKeyColumn MUST Match Entity Key Names
 
+The Fabric API **requires** that **both** `sourceKeyColumn` and `targetKeyColumn` have the **exact same names** as their respective entity's key properties. From the documentation:
+
+> "The source column selections must match the entity type keys."
+
+This applies to **BOTH** columns - the API validates this for both source and target entities.
+
+**❌ WRONG - Column names differ from entity keys:**
+```yaml
+# Shipment entity has key: ShipmentId
+# Facility entity has key: FacilityId
+# But table uses different column names - THIS WILL FAIL!
+- relationship: ORIGINATED_FROM
+  sourceEntity: Shipment
+  targetEntity: Facility
+  sourceTable: FactShipment
+  sourceKeyColumn: ShipmentId         # ✅ Matches Shipment's key
+  targetKeyColumn: OriginFacilityId   # ❌ ERROR! Must be "FacilityId"
+```
+API Error: `targetKeyRefBindings targetPropertyId 'OriginFacilityId' must be present in the target EntityType's EntityIdParts`
+
+**✅ CORRECT - Use edge tables with matching column names:**
+```yaml
+# Create separate edge table with columns named exactly as entity keys
+- relationship: ORIGINATED_FROM
+  sourceEntity: Shipment
+  targetEntity: Facility
+  sourceTable: EdgeShipmentOrigin    # Edge table with proper column names
+  sourceKeyColumn: ShipmentId        # ✅ Matches Shipment's key property name
+  targetKeyColumn: FacilityId        # ✅ Matches Facility's key property name
+```
+
+**Rule**: If your source table has FK columns with different names (e.g., `OriginFacilityId`, `DestFacilityId`, `SourceShipmentId`), you MUST create a separate edge table where the columns are renamed to match the entity keys exactly.
+
+**Common Patterns:**
 | Relationship Pattern | sourceTable | sourceKeyColumn | targetKeyColumn |
 |---------------------|-------------|-----------------|-----------------|
 | Parent OWNS Child | Child table | ParentId (FK) | ChildId (PK) |
 | Entity1 USES Entity2 | Fact table | Entity1Id | Entity2Id |
 | Many-to-Many | Junction/Edge table | Entity1Id | Entity2Id |
+| Multiple refs to same entity | **Separate Edge tables** | SourceId | **TargetEntityKey** (exact name!) |
 
-**Validation**: The sourceTable must contain both `sourceKeyColumn` and `targetKeyColumn` as columns.
+**Validation**: 
+1. The sourceTable must contain both `sourceKeyColumn` and `targetKeyColumn` as columns
+2. **`targetKeyColumn` must be named exactly the same as the target entity's key property**
 
 ### Response 2: lakehouse-binding.md (human-readable) — save to `{DemoName}/Bindings/lakehouse-binding.md`
 
@@ -267,6 +350,15 @@ Include:
 - Step-by-step for each entity
 - Relationship binding steps
 - Troubleshooting section
+
+#### ⚠️ CRITICAL: Lakehouse Binding Limitations
+
+Document these limitations clearly:
+
+1. **OneLake Security**: Lakehouses with OneLake security enabled CANNOT be used as data sources
+2. **One Static Binding Per Entity**: Each entity type supports only ONE static data binding (cannot combine static data from multiple sources)
+3. **Multiple Timeseries Supported**: Entity types DO support bindings from multiple time series sources (eventhouse + lakehouse)
+4. **Schema Requirement**: Lakehouse schemas (Public Preview) must be DISABLED - the automation sets sourceSchema to null
 
 > ⚠️ **Timeseries Callout**: For EVERY entity with timeseries, add:
 > "Note: Timeseries properties ({list}) are bound separately via Eventhouse."
@@ -309,8 +401,21 @@ Each question must include:
 - [ ] Use MATCH, not SELECT
 - [ ] Use FILTER or WHERE clause, not HAVING
 - [ ] Use bounded quantifiers {1,4} not unbounded *
-- [ ] No OPTIONAL MATCH (not supported)
+- [ ] No OPTIONAL MATCH (not supported in Fabric Graph)
 - [ ] Aggregations in RETURN with GROUP BY
+- [ ] Max 8 hops in variable-length patterns
+- [ ] Query results must be < 64MB (truncated otherwise)
+- [ ] Query timeout is 20 minutes max
+
+### GQL Features NOT YET Supported
+
+Do NOT use these in demo queries:
+- OPTIONAL MATCH
+- UNION DISTINCT (only UNION ALL works)
+- Unbounded graph pattern quantifiers (use {1,8} max)
+- Path value constructor
+- Scalar subqueries
+- Undirected edge patterns
 
 Add comprehensive Data Agent Instructions at the end.
 
@@ -393,12 +498,76 @@ Final message should include:
 
 1. **Summary** of all generated files (including .demo-metadata.yaml)
 2. **Next steps** for user:
-   - Manual setup: Follow README.md
-   - Automated setup: Run `python -m demo_automation setup {DemoName}/`
-3. **Common pitfalls** to avoid
-4. **Links** to documentation
+   - Follow Quickstart in README.md
 
-> 💡 **CLI Invocation**: Use `python -m demo_automation` instead of `fabric-demo` to avoid PATH configuration issues. Both are equivalent.
+---
+
+## Phase 8: Final Validation (MANDATORY)
+
+> ⚠️ **This phase is REQUIRED before declaring demo complete.** Run validation to catch errors before setup.
+
+### Step 1: Run the Validate Command
+
+Execute the validation command on the generated demo:
+
+```bash
+cd Demo-automation/src
+python -m demo_automation validate ../../{DemoName}
+```
+
+Or if installed:
+```bash
+fabric-demo validate {DemoName}
+```
+
+### Step 2: Review Validation Output
+
+The validator checks ALL Fabric Ontology constraints:
+
+| Check | What It Validates |
+|-------|------------------|
+| **Structure** | Required directories, expected files |
+| **Naming** | Entity/property names 1-26 chars, valid pattern, no GQL reserved words |
+| **Types** | No xsd:decimal in TTL, keys are string/int only |
+| **Property Uniqueness** | Property names unique across ALL entities |
+| **TTL Key Format** | `rdfs:comment "Key: PropertyName (type)"` present |
+| **CSV Data** | No NULL keys, unique key values, valid timestamps |
+| **Bindings** | sourceTable exists, columns present in CSV |
+| **targetKeyColumn Match** | Column name matches target entity's key exactly |
+| **Static Binding Count** | Only 1 static binding per entity (across ALL sources) |
+
+### Step 3: Fix All Errors
+
+If validation reports **ERRORS**, you MUST fix them before proceeding:
+
+| Error Type | Action Required |
+|------------|----------------|
+| `targetKeyColumn 'X' does not match target entity's key 'Y'` | Create edge table with column renamed to 'Y' |
+| `Entity 'X' has N static bindings - only 1 allowed` | Remove duplicate bindings or change to TimeSeries |
+| `Property 'X' uses reserved GQL word` | Rename property with entity prefix |
+| `Property 'X' is not unique - also exists in Entity Y` | Rename with entity prefix (e.g., `Entity_Property`) |
+| `Invalid data type: decimal` | Change to `double` in TTL and data |
+| `Key column has NULL values` | Fix data to ensure all keys have values |
+
+### Step 4: Re-validate
+
+After fixing errors, run validation again:
+
+```bash
+python -m demo_automation validate ../../{DemoName}
+```
+
+**Repeat Steps 2-4 until validation passes with 0 errors.**
+
+### Step 5: Confirm Success
+
+✅ **Demo is ready when:**
+- Validation shows `0 errors`
+- Warnings are reviewed and acceptable
+- All critical constraints are satisfied
+
+**Action**: Report validation results to user. If errors exist, list them and offer to fix. If clean, confirm: "Demo validated successfully! Ready for `fabric-demo setup`."
+
 
 ---
 
@@ -411,6 +580,9 @@ Before finishing, verify ALL of the following for `fabric-demo setup` to work:
 - [ ] `_schema_version: "1.0"` is present at root level
 - [ ] Entities under `lakehouse.entities[]` use `sourceTable`, `keyColumn`, `properties[]`
 - [ ] Relationships under `lakehouse.relationships[]` use `relationship`, `sourceEntity`, `targetEntity`, `sourceTable`, `sourceKeyColumn`, `targetKeyColumn`
+- [ ] **`sourceKeyColumn` name MUST exactly match the SOURCE entity's key property name**
+- [ ] **`targetKeyColumn` name MUST exactly match the TARGET entity's key property name**
+- [ ] If a table has multiple FK columns to the same entity (e.g., OriginFacilityId, DestFacilityId), create **separate Edge tables** with the columns renamed to match entity keys
 - [ ] Eventhouse entities under `eventhouse.entities[]` include `timestampColumn`
 - [ ] All paths use **forward slashes** (`Data/Lakehouse/`, not `Data\Lakehouse\`)
 
@@ -418,6 +590,14 @@ Before finishing, verify ALL of the following for `fabric-demo setup` to work:
 - [ ] Each entity class has `rdfs:comment "Key: {PropertyName} (type)"` 
 - [ ] Key property name in comment matches an actual DatatypeProperty
 - [ ] No `xsd:decimal` types (use `xsd:double` instead)
+- [ ] Key properties use `xsd:string` or `xsd:integer` ONLY
+
+### Entity & Property Naming
+- [ ] Entity names are 1-26 characters
+- [ ] Property names are 1-26 characters
+- [ ] Names start and end with alphanumeric characters
+- [ ] Property names are UNIQUE across ALL entities in the ontology
+- [ ] No GQL reserved words used as names
 
 ### Folder Structure
 - [ ] Case matches exactly: `Bindings/`, `Data/`, `Ontology/` (parser is case-insensitive but consistency matters)
@@ -428,25 +608,119 @@ Before finishing, verify ALL of the following for `fabric-demo setup` to work:
 ### CSV Files
 - [ ] All CSVs have headers in first row
 - [ ] Key columns contain unique values (no duplicates)
+- [ ] Key columns are string or int type only
 - [ ] Foreign keys reference valid parent records
 - [ ] No NULL values in key columns
-- [ ] Timestamps in ISO 8601 format
+- [ ] Timestamps in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)
+- [ ] Booleans as lowercase `true`/`false`
+- [ ] No decimal columns (use double/float)
 
 ### .demo-metadata.yaml
 - [ ] `ontology.file` path uses forward slashes
 - [ ] `data.lakehouse.folder` path uses forward slashes
 - [ ] All entity names match TTL class names exactly
+- [ ] All entity keys specify `keyType: string` or `keyType: int`
+
+### Graph Query Constraints
+- [ ] Demo questions use max 8 hops in MATCH patterns
+- [ ] No OPTIONAL MATCH in GQL queries
+- [ ] Use bounded quantifiers `{1,N}` not unbounded `*`
+- [ ] Results designed to stay under 64MB
 
 
 # REFERENCES
 
-When ask to validate limitations for update, read through all the below.
+When asked to validate limitations for update, read through all the below.
+
 references:
   documentation:
     - { title: "IQ Overview", url: "https://learn.microsoft.com/en-us/fabric/iq/overview" }
     - { title: "Data Binding", url: "https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-bind-data" }
     - { title: "Graph Limitations", url: "https://learn.microsoft.com/en-us/fabric/graph/limitations" }
     - { title: "GQL Guide", url: "https://learn.microsoft.com/en-us/fabric/graph/gql-language-guide" }
+    - { title: "Entity Types", url: "https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-entity-types" }
+    - { title: "Troubleshooting", url: "https://learn.microsoft.com/en-us/fabric/iq/ontology/resources-troubleshooting" }
   
   knownIssues:
     - { title: "IQ Known Issues", url: "https://support.fabric.microsoft.com/known-issues/?product=IQ" }
+
+---
+
+# COMPREHENSIVE CONSTRAINTS SUMMARY
+
+This section consolidates ALL constraints from Microsoft Fabric Ontology and Graph documentation.
+
+## 1. Graph Data Type Constraints
+
+| Supported Type | Description | Notes |
+|----------------|-------------|-------|
+| Boolean | `true` / `false` | Lowercase only |
+| Double | 64-bit floating point | Use instead of Decimal |
+| Integer | 64-bit signed integers | Range: -9,223,372,036,854,775,808 to 9,223,372,036,854,775,807 |
+| String | Unicode character strings | |
+| Zoned DateTime | Timestamps with timezone | ISO 8601 format |
+
+**❌ NOT SUPPORTED:**
+- `Decimal` type - returns NULL in Graph queries
+- Complex types (arrays, objects as properties)
+
+## 2. Entity Type Constraints
+
+| Constraint | Value |
+|------------|-------|
+| Name length | 1–26 characters |
+| Name pattern | `^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$` |
+| Key types | string OR int ONLY |
+| Properties | Must be unique across ALL entities |
+
+## 3. Data Binding Constraints
+
+| Constraint | Details |
+|------------|---------|
+| OneLake Security | Must be DISABLED on Lakehouse |
+| Static bindings per entity | Maximum ONE per entity type |
+| Timeseries bindings | Multiple allowed from eventhouse + lakehouse |
+| Lakehouse schemas | Must be DISABLED (automation sets sourceSchema=null) |
+
+## 4. Relationship Binding Constraints
+
+| Field | Constraint |
+|-------|------------|
+| `sourceKeyColumn` | **MUST have EXACT SAME NAME as source entity's key property** |
+| `targetKeyColumn` | **MUST have EXACT SAME NAME as target entity's key property** |
+
+> From MS Documentation: "The source column selections must match the entity type keys."
+
+**Common Errors:**
+- `targetKeyRefBindings targetPropertyId 'X' must be present in the target EntityType's EntityIdParts`
+  - **Cause**: targetKeyColumn name doesn't match target entity's key
+  - **Fix**: Rename column or create edge table with correct column name
+- `sourceKeyRefBindings` error (similar for source)
+  - **Cause**: sourceKeyColumn name doesn't match source entity's key
+  - **Fix**: Rename column or create edge table with correct column name
+
+## 5. GQL Query Constraints
+
+| Constraint | Limit |
+|------------|-------|
+| Maximum hops | 8 in variable-length patterns |
+| Result size | 64 MB (truncated if larger) |
+| Query timeout | 20 minutes |
+| Graph instances | 10 per workspace |
+| Graph size | 500 million nodes+edges (performance degrades) |
+
+**Not Supported:**
+- OPTIONAL MATCH
+- UNION DISTINCT (only UNION ALL)
+- Unbounded quantifiers (use `{1,8}` max)
+- Undirected edge patterns
+
+## 6. Timeseries Data Constraints
+
+| Requirement | Details |
+|-------------|---------|
+| Format | Columnar (row = one timestamped observation) |
+| Required columns | Timestamp, EntityKey, metric values |
+| Timestamp format | ISO 8601 (YYYY-MM-DDTHH:MM:SSZ) |
+| Static binding first | Must have static binding before timeseries |
+| Key contextualization | Static key must match column in timeseries data |

@@ -1,0 +1,31 @@
+EventId,Event_Type,Event_Severity,Event_Description,Event_Timestamp,Event_Resolution,AssemblyId
+EVT-001,Inspection,Minor,Routine quality check passed,2025-11-10T10:00:00,Passed,ASM-001
+EVT-002,Defect,Major,Battery cell voltage irregularity detected,2025-11-11T14:30:00,Replaced component,ASM-004
+EVT-003,Inspection,Minor,Final assembly inspection passed,2025-11-15T16:00:00,Passed,ASM-005
+EVT-004,Defect,Minor,Paint imperfection on body panel,2025-11-12T11:00:00,Repainted,ASM-003
+EVT-005,Audit,Minor,ISO compliance audit completed,2025-11-13T09:00:00,Compliant,ASM-006
+EVT-006,Inspection,Minor,Engine assembly torque verification,2025-11-11T15:00:00,Passed,ASM-006
+EVT-007,Defect,Critical,Brake system pressure test failure,2025-11-14T10:00:00,Full replacement,ASM-027
+EVT-008,Recall,Critical,ADAS sensor calibration issue,2025-11-15T08:00:00,Recall initiated,ASM-011
+EVT-009,Inspection,Minor,Chassis weld integrity check,2025-11-12T13:00:00,Passed,ASM-007
+EVT-010,Defect,Major,Interior trim alignment issue,2025-11-16T11:30:00,Realigned,ASM-010
+EVT-011,Inspection,Minor,Battery thermal management test,2025-11-09T16:00:00,Passed,ASM-009
+EVT-012,Defect,Minor,Wiring harness connector loose,2025-11-13T14:00:00,Reconnected,ASM-021
+EVT-013,Audit,Minor,Safety system verification,2025-11-14T09:30:00,Approved,ASM-022
+EVT-014,Inspection,Minor,Motor efficiency test completed,2025-11-10T12:00:00,Passed,ASM-001
+EVT-015,Defect,Major,Suspension damper leak detected,2025-11-15T10:00:00,Replaced unit,ASM-017
+EVT-016,Inspection,Minor,Body panel gap measurement,2025-11-13T15:30:00,Within tolerance,ASM-008
+EVT-017,Defect,Minor,Infotainment screen flicker,2025-11-17T09:00:00,Software update,ASM-025
+EVT-018,Recall,Major,Power inverter overheating issue,2025-11-18T11:00:00,Investigation ongoing,ASM-024
+EVT-019,Inspection,Minor,Final road test completed,2025-11-16T14:00:00,Passed,ASM-015
+EVT-020,Defect,Minor,Climate control sensor drift,2025-11-19T10:30:00,Recalibrated,ASM-030
+EVT-021,Audit,Minor,Environmental compliance check,2025-11-17T08:00:00,Compliant,ASM-011
+EVT-022,Inspection,Minor,Steering alignment verification,2025-11-11T11:00:00,Passed,ASM-012
+EVT-023,Defect,Major,ECU firmware corruption,2025-11-18T14:00:00,Reflashed,ASM-016
+EVT-024,Inspection,Minor,Glass installation inspection,2025-11-14T16:30:00,Passed,ASM-013
+EVT-025,Defect,Minor,Door seal gap inconsistency,2025-11-15T12:00:00,Adjusted,ASM-018
+EVT-026,Audit,Minor,Production line safety audit,2025-11-19T09:00:00,Passed,ASM-026
+EVT-027,Inspection,Minor,Battery pack thermal test,2025-11-12T10:30:00,Passed,ASM-014
+EVT-028,Defect,Critical,Airbag deployment sensor fault,2025-11-20T08:00:00,Full replacement,ASM-019
+EVT-029,Inspection,Minor,Headlight alignment check,2025-11-16T13:00:00,Adjusted,ASM-023
+EVT-030,Defect,Minor,Dashboard display dead pixels,2025-11-21T11:00:00,Screen replaced,ASM-028

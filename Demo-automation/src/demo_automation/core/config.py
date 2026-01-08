@@ -292,7 +292,13 @@ class DemoConfiguration:
         if not final_workspace_id:
             # Try environment variable
             final_workspace_id = os.environ.get("FABRIC_WORKSPACE_ID", "")
-            fabric_config["workspace_id"] = final_workspace_id
+        if not final_workspace_id:
+            # Try global config file
+            from .global_config import GlobalConfig
+            global_config = GlobalConfig.load()
+            if global_config.workspace_id:
+                final_workspace_id = global_config.workspace_id
+        fabric_config["workspace_id"] = final_workspace_id
 
         # Auto-discover paths
         ontology_file = cls._discover_ontology_file(demo_path)

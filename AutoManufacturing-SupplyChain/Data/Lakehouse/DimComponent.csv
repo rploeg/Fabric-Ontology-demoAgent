@@ -1,0 +1,26 @@
+ComponentId,Component_Name,Component_PartNumber,Component_Category,Component_UnitCost,Component_LeadTimeDays,SupplierId
+CMP-001,Lithium Battery Cell,BAT-LI-100,Electrical,850.00,21,SUP-001
+CMP-002,Electric Motor,MOT-EL-200,Electrical,1200.00,14,SUP-001
+CMP-003,Battery Management System,BMS-CTR-300,Electrical,450.00,10,SUP-002
+CMP-004,Power Inverter,INV-PWR-400,Electrical,680.00,12,SUP-002
+CMP-005,Onboard Charger,CHG-OBC-500,Electrical,320.00,8,SUP-003
+CMP-006,Steel Frame,FRM-STL-100,Structural,1500.00,7,SUP-004
+CMP-007,Aluminum Body Panel,PNL-ALU-200,Structural,280.00,5,SUP-004
+CMP-008,Suspension System,SUS-FRT-300,Mechanical,420.00,14,SUP-005
+CMP-009,Brake Assembly,BRK-DSC-400,Safety,350.00,10,SUP-005
+CMP-010,Steering Column,STR-COL-500,Mechanical,290.00,12,SUP-006
+CMP-011,ECU Main Controller,ECU-MAN-100,Electronics,780.00,18,SUP-007
+CMP-012,Infotainment Display,DIS-INF-200,Electronics,520.00,15,SUP-007
+CMP-013,ADAS Sensor Package,SEN-ADA-300,Safety,890.00,21,SUP-008
+CMP-014,Rear Camera System,CAM-RER-400,Safety,180.00,7,SUP-008
+CMP-015,Wiring Harness,WIR-HAR-500,Electrical,240.00,10,SUP-003
+CMP-016,Thermal Management,THR-MNG-100,Mechanical,560.00,14,SUP-009
+CMP-017,Seat Assembly,SET-FRT-200,Interior,680.00,12,SUP-010
+CMP-018,Dashboard Module,DSH-MOD-300,Interior,450.00,10,SUP-010
+CMP-019,Airbag System,AIR-BAG-400,Safety,320.00,14,SUP-006
+CMP-020,Glass Windshield,GLS-WND-500,Structural,210.00,5,SUP-004
+CMP-021,Tire Assembly,TIR-RAD-100,Mechanical,180.00,7,SUP-005
+CMP-022,LED Headlight,LED-HDL-200,Electrical,290.00,10,SUP-003
+CMP-023,Cooling System,COL-SYS-300,Mechanical,380.00,12,SUP-009
+CMP-024,Door Handle Assembly,HDL-DOR-400,Mechanical,45.00,5,SUP-006
+CMP-025,Climate Control,CLI-CTR-500,Electronics,410.00,14,SUP-007

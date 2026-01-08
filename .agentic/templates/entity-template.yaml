@@ -50,21 +50,46 @@ entity:
       key_column: "{KeyColumnInTable}"
 
 # =============================================================================
-# Property Naming Rules
+# ENTITY TYPE NAMING RULES (from Microsoft Fabric Ontology Docs)
 # =============================================================================
-# 1. Max length: 26 characters
+# 1. Length: 1–26 characters
 # 2. Pattern: ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$
-# 3. Must be unique across ALL entity types in the ontology
-# 4. Avoid GQL reserved words
-# 5. Recommendation: Use entity prefix (e.g., Product_Name, Batch_Status)
+# 3. Must start and end with alphanumeric character
+# 4. Can contain hyphens and underscores
 
 # =============================================================================
-# Type Constraints
+# PROPERTY NAMING RULES (from Microsoft Fabric Ontology Docs)
 # =============================================================================
-# Key types:     string, int ONLY (never datetime, boolean, double)
-# Property types: string, int, double, boolean, datetime
+# 1. Length: 1–26 characters
+# 2. Pattern: ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$
+# 3. ⚠️ MUST be UNIQUE across ALL entity types in the ENTIRE ontology
+# 4. Must start and end with alphanumeric character
+# 5. Avoid GQL reserved words (see list below)
+# 6. Recommendation: Use entity prefix for uniqueness (e.g., Product_Name, Batch_Status)
+
+# =============================================================================
+# GQL RESERVED WORDS TO AVOID AS PROPERTY/ENTITY NAMES
+# =============================================================================
+# MATCH, RETURN, FILTER, WHERE, LET, ORDER, LIMIT, OFFSET, DISTINCT,
+# GROUP, BY, ASC, DESC, AND, OR, NOT, TRUE, FALSE, NULL, IS, IN,
+# STARTS, ENDS, CONTAINS, WITH, AS, NODE, EDGE, PATH, TRAIL, UNION, ALL,
+# count, sum, avg, min, max, coalesce, size, labels, nodes, edges
+
+# =============================================================================
+# TYPE CONSTRAINTS (from Microsoft Fabric Graph Docs)
+# =============================================================================
+# KEY TYPES:      string OR int ONLY (never datetime, boolean, or double)
+# PROPERTY TYPES: string, int, double, boolean, datetime
 # 
-# ⚠️ NEVER use 'decimal' - it returns NULL in Graph queries
+# Graph Supported Data Types:
+#   - Boolean (true/false)
+#   - Double (64-bit floating point)
+#   - Integer (64-bit signed integers)
+#   - String (Unicode character strings)
+#   - Zoned DateTime (timestamps with timezone)
+#
+# ⚠️ NEVER use 'decimal' - Fabric Graph does NOT support Decimal type (returns NULL)
+# Use 'double' instead for all monetary/precision values
 
 # =============================================================================
 # Example: Product Entity

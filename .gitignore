@@ -1,32 +1,113 @@
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
 
 # Editors/IDE
 .vscode/
 .idea/
 *.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
 
-# Python / notebooks / data (future-proof)
+# Python / notebooks / data
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .ipynb_checkpoints/
+.venv/
+venv/
+env/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+*.egg-info/
+*.egg
+.eggs/
+
+# Environment and secrets
 .env
 .env.*
 !.env.example
-.venv/
-venv/
+*.env
+.envrc
+secrets.yaml
+secrets.yml
+secrets.json
+*secret*
+*secrets*
+!*secrets*.md
+
+# Azure / Fabric credentials and config
+.azure/
+.fabric-demo/
+config.yaml
+!Demo-automation/src/demo_automation/core/config.yaml
+*.pem
+*.key
+*.pfx
+*.p12
+*.cer
+*.crt
+service_principal.json
+credentials.json
+auth_token*
+*.token
+
+# API keys and tokens
+*api_key*
+*apikey*
+*API_KEY*
+*APIKEY*
+*.credentials
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.ppk
 
 # Logs and temp
 *.log
+logs/
 *.tmp
+*.temp
 *.swp
 *.swo
+*~
 
-# Build / dist (generic)
+# Build / dist
 dist/
 build/
 .out/
+*.whl
 
+# Demo state files (may contain resource IDs)
+.setup-state.json
+.cleanup-state.json
+*.state.json
+
+# Generated demo folders (keep templates, exclude generated)
+demo-*/
+!.agentic/templates/
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Local config overrides
+local.yaml
+local.yml
+*.local.yaml
+*.local.yml

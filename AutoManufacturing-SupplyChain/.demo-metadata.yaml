@@ -1,0 +1,126 @@
+_generator:
+  spec_name: fabric-ontology-demo-v2
+  spec_version: "3.3"
+  generated_at: "2026-01-07T12:00:00Z"
+  generator_phase: complete
+
+metadata:
+  name: "AutoManufacturing-SupplyChain"
+  version: "1.0"
+  created: "2026-01-07"
+  author: Fabric Ontology Demo Agent
+  specVersion: "3.3"
+
+demo:
+  company: "NextGen Motors"
+  industry: "Automotive"
+  domain: "Manufacturing and Supply Chain"
+  description: "End-to-end traceability demo for automotive manufacturing connecting vehicles, assemblies, components, and suppliers with quality events and logistics tracking"
+  entity_count: 8
+  relationship_count: 10
+  has_timeseries: true
+  useCases:
+    - "Defect-to-supplier traceability"
+    - "Supply chain risk assessment"
+    - "Quality-telemetry correlation"
+    - "Logistics and component tracking"
+    - "Vehicle genealogy for compliance"
+
+ontology:
+  file: Ontology/auto-manufacturing.ttl
+  namespace: "http://example.com/automanufacturing#"
+  entities:
+    - name: Vehicle
+      key: VehicleId
+      keyType: string
+      hasTimeseries: false
+    - name: Assembly
+      key: AssemblyId
+      keyType: string
+      hasTimeseries: true
+    - name: Component
+      key: ComponentId
+      keyType: string
+      hasTimeseries: false
+    - name: Supplier
+      key: SupplierId
+      keyType: string
+      hasTimeseries: false
+    - name: Facility
+      key: FacilityId
+      keyType: string
+      hasTimeseries: true
+    - name: ProductionOrder
+      key: OrderId
+      keyType: string
+      hasTimeseries: false
+    - name: QualityEvent
+      key: EventId
+      keyType: string
+      hasTimeseries: false
+    - name: Shipment
+      key: ShipmentId
+      keyType: string
+      hasTimeseries: false
+
+data:
+  lakehouse:
+    folder: Data/Lakehouse
+    tables:
+      - name: DimVehicle
+        file: DimVehicle.csv
+        rowCount: 20
+      - name: DimAssembly
+        file: DimAssembly.csv
+        rowCount: 30
+      - name: DimComponent
+        file: DimComponent.csv
+        rowCount: 25
+      - name: DimSupplier
+        file: DimSupplier.csv
+        rowCount: 10
+      - name: DimFacility
+        file: DimFacility.csv
+        rowCount: 15
+      - name: DimProductionOrder
+        file: DimProductionOrder.csv
+        rowCount: 20
+      - name: FactQualityEvent
+        file: FactQualityEvent.csv
+        rowCount: 30
+      - name: FactShipment
+        file: FactShipment.csv
+        rowCount: 25
+      - name: EdgeAssemblyComponent
+        file: EdgeAssemblyComponent.csv
+        rowCount: 80
+      - name: EdgeShipmentComponent
+        file: EdgeShipmentComponent.csv
+        rowCount: 57
+      - name: EdgeShipmentOrigin
+        file: EdgeShipmentOrigin.csv
+        rowCount: 25
+      - name: EdgeShipmentDestination
+        file: EdgeShipmentDestination.csv
+        rowCount: 25
+  eventhouse:
+    folder: Data/Eventhouse
+    database: AutoManufacturingDB
+    tables:
+      - name: AssemblyTelemetry
+        file: AssemblyTelemetry.csv
+        rowCount: 50
+      - name: FacilityTelemetry
+        file: FacilityTelemetry.csv
+        rowCount: 50
+
+bindings:
+  file: Bindings/bindings.yaml
+
+constraints_applied:
+  - "All property names ≤26 characters"
+  - "No decimal types (using double)"
+  - "Entity keys are string type only"
+  - "Forward slashes in all file paths"
+  - "ISO 8601 datetime format"
+  - "No NULL values in key columns"

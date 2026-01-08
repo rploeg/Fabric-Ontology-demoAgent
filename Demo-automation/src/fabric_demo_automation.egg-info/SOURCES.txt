@@ -1,6 +1,7 @@
 README.md
 pyproject.toml
 src/demo_automation/__init__.py
+src/demo_automation/__main__.py
 src/demo_automation/cli.py
 src/demo_automation/orchestrator.py
 src/demo_automation/state_manager.py

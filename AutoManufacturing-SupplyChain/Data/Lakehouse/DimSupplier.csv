@@ -1,0 +1,11 @@
+SupplierId,Supplier_Name,Supplier_Tier,Supplier_Country,Supplier_Rating,Supplier_Certified,FacilityId
+SUP-001,VoltPower Energy Systems,1,China,4.5,true,FAC-005
+SUP-002,ElectroDrive Components,1,Germany,4.8,true,FAC-006
+SUP-003,WireConnect Solutions,2,Mexico,4.2,true,FAC-007
+SUP-004,SteelFrame Industries,1,USA,4.6,true,FAC-008
+SUP-005,AutoMotion Parts,1,Japan,4.9,true,FAC-009
+SUP-006,PrecisionMech Corp,2,South Korea,4.3,true,FAC-010
+SUP-007,SmartDrive Electronics,1,Taiwan,4.7,true,FAC-011
+SUP-008,SafetyFirst Sensors,1,Israel,4.8,true,FAC-012
+SUP-009,ThermoTech Systems,2,Canada,4.4,true,FAC-013
+SUP-010,ComfortZone Interiors,2,India,4.1,false,FAC-014

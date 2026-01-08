@@ -1,0 +1,411 @@
+@prefix : <http://example.com/automanufacturing#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# =============================================================================
+# Ontology Declaration
+# =============================================================================
+
+<http://example.com/automanufacturing> a owl:Ontology ;
+    rdfs:label "NextGen Motors - Automotive Manufacturing & Supply Chain Ontology" ;
+    rdfs:comment "Ontology for automotive manufacturing traceability and supply chain management" .
+
+# =============================================================================
+# Entity Classes
+# =============================================================================
+
+:Vehicle a owl:Class ;
+    rdfs:label "Vehicle" ;
+    rdfs:comment "Key: VehicleId (string)" .
+
+:Assembly a owl:Class ;
+    rdfs:label "Assembly" ;
+    rdfs:comment "Key: AssemblyId (string)" .
+
+:Component a owl:Class ;
+    rdfs:label "Component" ;
+    rdfs:comment "Key: ComponentId (string)" .
+
+:Supplier a owl:Class ;
+    rdfs:label "Supplier" ;
+    rdfs:comment "Key: SupplierId (string)" .
+
+:Facility a owl:Class ;
+    rdfs:label "Facility" ;
+    rdfs:comment "Key: FacilityId (string)" .
+
+:ProductionOrder a owl:Class ;
+    rdfs:label "ProductionOrder" ;
+    rdfs:comment "Key: OrderId (string)" .
+
+:QualityEvent a owl:Class ;
+    rdfs:label "QualityEvent" ;
+    rdfs:comment "Key: EventId (string)" .
+
+:Shipment a owl:Class ;
+    rdfs:label "Shipment" ;
+    rdfs:comment "Key: ShipmentId (string)" .
+
+# =============================================================================
+# Vehicle Properties
+# =============================================================================
+
+:VehicleId a owl:DatatypeProperty ;
+    rdfs:label "VehicleId" ;
+    rdfs:domain :Vehicle ;
+    rdfs:range xsd:string .
+
+:Vehicle_VIN a owl:DatatypeProperty ;
+    rdfs:label "Vehicle_VIN" ;
+    rdfs:domain :Vehicle ;
+    rdfs:range xsd:string .
+
+:Vehicle_Model a owl:DatatypeProperty ;
+    rdfs:label "Vehicle_Model" ;
+    rdfs:domain :Vehicle ;
+    rdfs:range xsd:string .
+
+:Vehicle_Year a owl:DatatypeProperty ;
+    rdfs:label "Vehicle_Year" ;
+    rdfs:domain :Vehicle ;
+    rdfs:range xsd:integer .
+
+:Vehicle_Status a owl:DatatypeProperty ;
+    rdfs:label "Vehicle_Status" ;
+    rdfs:domain :Vehicle ;
+    rdfs:range xsd:string .
+
+:Vehicle_CompletionDate a owl:DatatypeProperty ;
+    rdfs:label "Vehicle_CompletionDate" ;
+    rdfs:domain :Vehicle ;
+    rdfs:range xsd:dateTime .
+
+# =============================================================================
+# Assembly Properties
+# =============================================================================
+
+:AssemblyId a owl:DatatypeProperty ;
+    rdfs:label "AssemblyId" ;
+    rdfs:domain :Assembly ;
+    rdfs:range xsd:string .
+
+:Assembly_Type a owl:DatatypeProperty ;
+    rdfs:label "Assembly_Type" ;
+    rdfs:domain :Assembly ;
+    rdfs:range xsd:string .
+
+:Assembly_SerialNum a owl:DatatypeProperty ;
+    rdfs:label "Assembly_SerialNum" ;
+    rdfs:domain :Assembly ;
+    rdfs:range xsd:string .
+
+:Assembly_Status a owl:DatatypeProperty ;
+    rdfs:label "Assembly_Status" ;
+    rdfs:domain :Assembly ;
+    rdfs:range xsd:string .
+
+:Assembly_StartDate a owl:DatatypeProperty ;
+    rdfs:label "Assembly_StartDate" ;
+    rdfs:domain :Assembly ;
+    rdfs:range xsd:dateTime .
+
+:Temperature a owl:DatatypeProperty ;
+    rdfs:label "Temperature" ;
+    rdfs:comment "Assembly temperature in Celsius (timeseries)" ;
+    rdfs:domain :Assembly ;
+    rdfs:range xsd:double .
+
+:Torque a owl:DatatypeProperty ;
+    rdfs:label "Torque" ;
+    rdfs:comment "Torque measurement in Nm (timeseries)" ;
+    rdfs:domain :Assembly ;
+    rdfs:range xsd:double .
+
+:CycleTime a owl:DatatypeProperty ;
+    rdfs:label "CycleTime" ;
+    rdfs:comment "Cycle time in seconds (timeseries)" ;
+    rdfs:domain :Assembly ;
+    rdfs:range xsd:double .
+
+# =============================================================================
+# Component Properties
+# =============================================================================
+
+:ComponentId a owl:DatatypeProperty ;
+    rdfs:label "ComponentId" ;
+    rdfs:domain :Component ;
+    rdfs:range xsd:string .
+
+:Component_Name a owl:DatatypeProperty ;
+    rdfs:label "Component_Name" ;
+    rdfs:domain :Component ;
+    rdfs:range xsd:string .
+
+:Component_PartNumber a owl:DatatypeProperty ;
+    rdfs:label "Component_PartNumber" ;
+    rdfs:domain :Component ;
+    rdfs:range xsd:string .
+
+:Component_Category a owl:DatatypeProperty ;
+    rdfs:label "Component_Category" ;
+    rdfs:domain :Component ;
+    rdfs:range xsd:string .
+
+:Component_UnitCost a owl:DatatypeProperty ;
+    rdfs:label "Component_UnitCost" ;
+    rdfs:domain :Component ;
+    rdfs:range xsd:double .
+
+:Component_LeadTimeDays a owl:DatatypeProperty ;
+    rdfs:label "Component_LeadTimeDays" ;
+    rdfs:domain :Component ;
+    rdfs:range xsd:integer .
+
+# =============================================================================
+# Supplier Properties
+# =============================================================================
+
+:SupplierId a owl:DatatypeProperty ;
+    rdfs:label "SupplierId" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:string .
+
+:Supplier_Name a owl:DatatypeProperty ;
+    rdfs:label "Supplier_Name" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:string .
+
+:Supplier_Tier a owl:DatatypeProperty ;
+    rdfs:label "Supplier_Tier" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:integer .
+
+:Supplier_Country a owl:DatatypeProperty ;
+    rdfs:label "Supplier_Country" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:string .
+
+:Supplier_Rating a owl:DatatypeProperty ;
+    rdfs:label "Supplier_Rating" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:double .
+
+:Supplier_Certified a owl:DatatypeProperty ;
+    rdfs:label "Supplier_Certified" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:boolean .
+
+# =============================================================================
+# Facility Properties
+# =============================================================================
+
+:FacilityId a owl:DatatypeProperty ;
+    rdfs:label "FacilityId" ;
+    rdfs:domain :Facility ;
+    rdfs:range xsd:string .
+
+:Facility_Name a owl:DatatypeProperty ;
+    rdfs:label "Facility_Name" ;
+    rdfs:domain :Facility ;
+    rdfs:range xsd:string .
+
+:Facility_Type a owl:DatatypeProperty ;
+    rdfs:label "Facility_Type" ;
+    rdfs:domain :Facility ;
+    rdfs:range xsd:string .
+
+:Facility_Location a owl:DatatypeProperty ;
+    rdfs:label "Facility_Location" ;
+    rdfs:domain :Facility ;
+    rdfs:range xsd:string .
+
+:Facility_Capacity a owl:DatatypeProperty ;
+    rdfs:label "Facility_Capacity" ;
+    rdfs:domain :Facility ;
+    rdfs:range xsd:integer .
+
+:EnergyConsumption a owl:DatatypeProperty ;
+    rdfs:label "EnergyConsumption" ;
+    rdfs:comment "Energy usage in kWh (timeseries)" ;
+    rdfs:domain :Facility ;
+    rdfs:range xsd:double .
+
+:Humidity a owl:DatatypeProperty ;
+    rdfs:label "Humidity" ;
+    rdfs:comment "Relative humidity percentage (timeseries)" ;
+    rdfs:domain :Facility ;
+    rdfs:range xsd:double .
+
+:ProductionRate a owl:DatatypeProperty ;
+    rdfs:label "ProductionRate" ;
+    rdfs:comment "Units produced per hour (timeseries)" ;
+    rdfs:domain :Facility ;
+    rdfs:range xsd:double .
+
+# =============================================================================
+# ProductionOrder Properties
+# =============================================================================
+
+:OrderId a owl:DatatypeProperty ;
+    rdfs:label "OrderId" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:string .
+
+:Order_Number a owl:DatatypeProperty ;
+    rdfs:label "Order_Number" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:string .
+
+:Order_Quantity a owl:DatatypeProperty ;
+    rdfs:label "Order_Quantity" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:integer .
+
+:Order_Priority a owl:DatatypeProperty ;
+    rdfs:label "Order_Priority" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:string .
+
+:Order_DueDate a owl:DatatypeProperty ;
+    rdfs:label "Order_DueDate" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:dateTime .
+
+:Order_Status a owl:DatatypeProperty ;
+    rdfs:label "Order_Status" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:string .
+
+# =============================================================================
+# QualityEvent Properties
+# =============================================================================
+
+:EventId a owl:DatatypeProperty ;
+    rdfs:label "EventId" ;
+    rdfs:domain :QualityEvent ;
+    rdfs:range xsd:string .
+
+:Event_Type a owl:DatatypeProperty ;
+    rdfs:label "Event_Type" ;
+    rdfs:domain :QualityEvent ;
+    rdfs:range xsd:string .
+
+:Event_Severity a owl:DatatypeProperty ;
+    rdfs:label "Event_Severity" ;
+    rdfs:domain :QualityEvent ;
+    rdfs:range xsd:string .
+
+:Event_Description a owl:DatatypeProperty ;
+    rdfs:label "Event_Description" ;
+    rdfs:domain :QualityEvent ;
+    rdfs:range xsd:string .
+
+:Event_Timestamp a owl:DatatypeProperty ;
+    rdfs:label "Event_Timestamp" ;
+    rdfs:domain :QualityEvent ;
+    rdfs:range xsd:dateTime .
+
+:Event_Resolution a owl:DatatypeProperty ;
+    rdfs:label "Event_Resolution" ;
+    rdfs:domain :QualityEvent ;
+    rdfs:range xsd:string .
+
+# =============================================================================
+# Shipment Properties
+# =============================================================================
+
+:ShipmentId a owl:DatatypeProperty ;
+    rdfs:label "ShipmentId" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:string .
+
+:Shipment_TrackingNum a owl:DatatypeProperty ;
+    rdfs:label "Shipment_TrackingNum" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:string .
+
+:Shipment_Status a owl:DatatypeProperty ;
+    rdfs:label "Shipment_Status" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:string .
+
+:Shipment_DepartureDate a owl:DatatypeProperty ;
+    rdfs:label "Shipment_DepartureDate" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:dateTime .
+
+:Shipment_ArrivalDate a owl:DatatypeProperty ;
+    rdfs:label "Shipment_ArrivalDate" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:dateTime .
+
+:Shipment_Carrier a owl:DatatypeProperty ;
+    rdfs:label "Shipment_Carrier" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:string .
+
+# =============================================================================
+# Object Properties (Relationships)
+# =============================================================================
+
+:assembledInto a owl:ObjectProperty ;
+    rdfs:label "ASSEMBLED_INTO" ;
+    rdfs:comment "Assembly is assembled into a Vehicle" ;
+    rdfs:domain :Assembly ;
+    rdfs:range :Vehicle .
+
+:usesComponent a owl:ObjectProperty ;
+    rdfs:label "USES_COMPONENT" ;
+    rdfs:comment "Assembly uses Component in manufacturing" ;
+    rdfs:domain :Assembly ;
+    rdfs:range :Component .
+
+:suppliedBy a owl:ObjectProperty ;
+    rdfs:label "SUPPLIED_BY" ;
+    rdfs:comment "Component is supplied by Supplier" ;
+    rdfs:domain :Component ;
+    rdfs:range :Supplier .
+
+:producedAt a owl:ObjectProperty ;
+    rdfs:label "PRODUCED_AT" ;
+    rdfs:comment "Vehicle is produced at Facility" ;
+    rdfs:domain :Vehicle ;
+    rdfs:range :Facility .
+
+:orderedFor a owl:ObjectProperty ;
+    rdfs:label "ORDERED_FOR" ;
+    rdfs:comment "ProductionOrder is ordered for Vehicle" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range :Vehicle .
+
+:affects a owl:ObjectProperty ;
+    rdfs:label "AFFECTS" ;
+    rdfs:comment "QualityEvent affects Assembly" ;
+    rdfs:domain :QualityEvent ;
+    rdfs:range :Assembly .
+
+:originatedFrom a owl:ObjectProperty ;
+    rdfs:label "ORIGINATED_FROM" ;
+    rdfs:comment "Shipment originated from Facility" ;
+    rdfs:domain :Shipment ;
+    rdfs:range :Facility .
+
+:deliveredTo a owl:ObjectProperty ;
+    rdfs:label "DELIVERED_TO" ;
+    rdfs:comment "Shipment delivered to Facility" ;
+    rdfs:domain :Shipment ;
+    rdfs:range :Facility .
+
+:contains a owl:ObjectProperty ;
+    rdfs:label "CONTAINS" ;
+    rdfs:comment "Shipment contains Component" ;
+    rdfs:domain :Shipment ;
+    rdfs:range :Component .
+
+:operatesFrom a owl:ObjectProperty ;
+    rdfs:label "OPERATES_FROM" ;
+    rdfs:comment "Supplier operates from Facility" ;
+    rdfs:domain :Supplier ;
+    rdfs:range :Facility .

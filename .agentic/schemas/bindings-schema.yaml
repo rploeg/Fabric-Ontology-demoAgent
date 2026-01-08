@@ -195,18 +195,37 @@ definitions:
         type: string
         description: |
           ⚠️ CRITICAL: Column that identifies the SOURCE entity.
-          This is the foreign key in the source table that links TO the source entity.
-          Must match a value that exists in the source entity's key column.
+          This MUST be the SOURCE entity's OWN PRIMARY KEY, not a foreign key.
+          
+          The Fabric API validates that sourceKeyRefBindings.targetPropertyId
+          must be present in the source entity's EntityIdParts array.
           
           Example for "Customer OWNS CreditCard":
             - sourceTable: DimCreditCard
-            - sourceKeyColumn: CustomerId (FK to Customer)
-            - targetKeyColumn: CardId (CreditCard's own key)
+            - sourceKeyColumn: CustomerId (FK to Customer) ❌ WRONG!
+            - sourceKeyColumn: CardId (CreditCard's own key) ❌ Also wrong!
+          
+          Correct pattern for relationship binding:
+            - Source entity: Customer
+            - Target entity: CreditCard
+            - sourceTable: DimCreditCard (contains both keys)
+            - sourceKeyColumn: CustomerId (identifies which Customer)
+            - targetKeyColumn: CardId (identifies which CreditCard)
       targetKeyColumn:
         type: string
         description: |
-          Column that identifies the TARGET entity.
-          This is typically the target entity's own key column or a foreign key to it.
+          ⚠️ CRITICAL: Column that identifies the TARGET entity.
+          This MUST be named EXACTLY the same as the target entity's key property.
+          
+          The Fabric API validates that targetKeyRefBindings.targetPropertyId
+          must be present in the target EntityType's EntityIdParts array.
+          
+          If the target entity is "Facility" with key "FacilityId":
+            - targetKeyColumn: FacilityId ✅ CORRECT
+            - targetKeyColumn: OriginFacilityId ❌ WRONG (different name)
+          
+          If your table has FK columns with different names (e.g., OriginFacilityId),
+          you MUST create a separate edge table with the column renamed to match.
 
 # =============================================================================
 # EXAMPLE - Credit Fraud Demo
@@ -297,28 +316,42 @@ example:
 # VALIDATION NOTES
 # =============================================================================
 # 
-# ⚠️ CRITICAL: Lakehouse Schema Requirement
+# ⚠️ CRITICAL: Lakehouse Requirements
 # 
-# Lakehouses used for ontology bindings must NOT have "Lakehouse schemas (Public Preview)"
-# enabled. The automation tool sets sourceSchema to null in all contextualizations,
-# which is incompatible with schema-enabled Lakehouses.
+# 1. OneLake Security: MUST be DISABLED on the Lakehouse
+#    - If enabled, the Lakehouse cannot be used as a data source for ontology bindings
+#    - You will see "Lakehouse not available as data source" error
 #
-# If schemas are enabled, you will see "An error occurred while loading the columns"
-# when configuring relationship bindings in the Fabric UI.
+# 2. Lakehouse Schemas (Public Preview): MUST be DISABLED
+#    - The automation tool sets sourceSchema to null in all contextualizations
+#    - If schemas are enabled, you will see "An error occurred while loading the columns"
+#      when configuring relationship bindings in the Fabric UI
 #
-# Relationship Binding Rules (from Microsoft Fabric Ontology Tutorial):
+# 3. One Static Binding Per Entity
+#    - Each entity type supports only ONE static data binding
+#    - You cannot combine static data from multiple sources for a single entity
+#    - However, entity types DO support multiple timeseries bindings
+#
+# ⚠️ CRITICAL: Relationship Binding Rules
+#
+# sourceKeyColumn Rules:
+# 1. The source table must contain columns that link BOTH entities
+# 2. sourceKeyColumn = Column that identifies which SOURCE entity instance
+# 3. This must be a value that exists in the source entity's key
 # 
-# 1. The relationship source table must contain columns that link BOTH entities
-# 2. sourceKeyColumn = Column that matches SOURCE entity's key
-# 3. targetKeyColumn = Column that matches TARGET entity's key
-# 
+# targetKeyColumn Rules (MOST COMMON ERROR SOURCE):
+# 1. targetKeyColumn MUST be named EXACTLY the same as target entity's key property
+# 2. The Fabric API validates this - mismatches cause binding failure
+# 3. If your table has FK columns with different names (OriginFacilityId, DestFacilityId),
+#    create SEPARATE EDGE TABLES with columns renamed to match the target's key
+#
 # Common pattern for 1:N relationships:
 #   - Relationship: Parent → Child
-#   - Source table: Child dimension/fact table
-#   - sourceKeyColumn: ParentId (FK in child table)
-#   - targetKeyColumn: ChildId (PK in child table)
+#   - Source table: Child dimension/fact table (or edge table)
+#   - sourceKeyColumn: ParentId (FK in table)
+#   - targetKeyColumn: ChildId (PK - must match Child entity's key name)
 #
 # Example: Customer OWNS CreditCard
 #   - DimCreditCard table has: CardId (PK), CustomerId (FK)
 #   - sourceKeyColumn: CustomerId (identifies which Customer)
-#   - targetKeyColumn: CardId (identifies which CreditCard)
+#   - targetKeyColumn: CardId (identifies which CreditCard - must match CreditCard's key)

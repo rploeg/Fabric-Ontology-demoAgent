@@ -1610,8 +1610,11 @@ class DemoOrchestrator:
             
             logger.info(f"Built {len(binding_parts)} parts for update")
             
-            # Check for duplicate bindings per entity
-            entity_binding_counts = {}
+            # Check for duplicate STATIC bindings per entity
+            # Per Microsoft docs: Each entity supports ONE static binding, but MULTIPLE timeseries bindings
+            entity_static_counts = {}
+            entity_timeseries_counts = {}
+            
             for part in binding_parts:
                 path = part.get('path', 'unknown')
                 logger.info(f"Part path: {path}")
@@ -1621,7 +1624,20 @@ class DemoOrchestrator:
                     parts = path.split('/')
                     if len(parts) >= 2:
                         entity_id = parts[1]
-                        entity_binding_counts[entity_id] = entity_binding_counts.get(entity_id, 0) + 1
+                        # Decode to check binding type
+                        try:
+                            import base64
+                            decoded = base64.b64decode(part.get('payload', '')).decode('utf-8')
+                            import json
+                            binding_data = json.loads(decoded)
+                            binding_type = binding_data.get('dataBindingConfiguration', {}).get('dataBindingType', '')
+                            if binding_type == 'NonTimeSeries':
+                                entity_static_counts[entity_id] = entity_static_counts.get(entity_id, 0) + 1
+                            elif binding_type == 'TimeSeries':
+                                entity_timeseries_counts[entity_id] = entity_timeseries_counts.get(entity_id, 0) + 1
+                        except Exception:
+                            # If we can't decode, count conservatively as static
+                            entity_static_counts[entity_id] = entity_static_counts.get(entity_id, 0) + 1
                 # Decode and log binding content for debugging
                 if 'DataBindings' in path or 'Contextualizations' in path:
                     try:
@@ -1631,12 +1647,13 @@ class DemoOrchestrator:
                     except Exception:
                         pass
             
-            # Log entities with multiple bindings
-            for entity_id, count in entity_binding_counts.items():
+            # Log entities with multiple STATIC bindings (this is the real constraint)
+            for entity_id, count in entity_static_counts.items():
+                ts_count = entity_timeseries_counts.get(entity_id, 0)
                 if count > 1:
-                    logger.error(f"Entity {entity_id} has {count} bindings - only 1 allowed!")
+                    logger.error(f"Entity {entity_id} has {count} STATIC bindings - only 1 static allowed!")
                 else:
-                    logger.debug(f"Entity {entity_id}: {count} binding(s)")
+                    logger.debug(f"Entity {entity_id}: {count} static binding(s), {ts_count} timeseries binding(s)")
             
             # Upload to Fabric
             self.fabric_client.update_ontology_definition(

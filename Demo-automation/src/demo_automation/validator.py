@@ -11,6 +11,7 @@ Supports two binding formats:
 
 import csv
 import logging
+import re
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Optional, Set, Dict, Any
@@ -19,6 +20,23 @@ from enum import Enum
 import yaml
 
 logger = logging.getLogger(__name__)
+
+# GQL Reserved words that should not be used as property/entity names
+GQL_RESERVED_WORDS = {
+    "match", "return", "filter", "where", "let", "order", "limit", "offset",
+    "distinct", "group", "by", "asc", "desc", "and", "or", "not", "true", "false",
+    "null", "is", "in", "starts", "ends", "contains", "with", "as", "node", "edge",
+    "path", "trail", "union", "all", "count", "sum", "avg", "min", "max", "coalesce",
+    "size", "labels", "nodes", "edges", "upper", "lower", "trim", "char_length"
+}
+
+# Valid property/entity name pattern (1-26 chars, alphanumeric with hyphens/underscores)
+NAME_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$|^[a-zA-Z0-9]$')
+
+# Valid data types for Graph
+VALID_PROPERTY_TYPES = {"string", "str", "int", "integer", "long", "double", "float", "boolean", "bool", "datetime"}
+VALID_KEY_TYPES = {"string", "str", "int", "integer", "long"}
+INVALID_TYPES = {"decimal"}  # Decimal returns NULL in Graph queries
 
 
 class ValidationSeverity(Enum):
@@ -106,8 +124,7 @@ class DemoPackageValidator:
     Expected structure (from fabric-ontology-demo-v2.yaml):
     ```
     {DemoName}/
-    ├── .demo-metadata.yaml           (optional, v3.1+)
-    ├── demo.yaml                     (optional)
+    ├── .demo-metadata.yaml           (required, v3.1+)
     ├── ontology/
     │   ├── *.ttl                     (required)
     │   └── ontology-structure.md
@@ -141,6 +158,10 @@ class DemoPackageValidator:
         """
         self.demo_path = Path(demo_path).resolve()
         self.result = ValidationResult(demo_path=self.demo_path)
+        # Track property names for uniqueness check
+        self._all_property_names: Set[str] = set()
+        # Track entity keys for relationship validation
+        self._entity_keys: Dict[str, str] = {}  # entity_name -> key_column
 
     def validate(self) -> ValidationResult:
         """
@@ -164,8 +185,12 @@ class DemoPackageValidator:
         self._check_data_files()
         self._check_csv_structure()
 
-        # Binding checks
+        # Binding checks (also populates _entity_keys and _all_property_names)
         self._check_bindings()
+
+        # Cross-validation checks
+        self._check_property_uniqueness()
+        self._check_ttl_constraints()
 
         # Metadata checks
         self._check_metadata()
@@ -237,8 +262,8 @@ class DemoPackageValidator:
                 path="ontology/",
             )
 
-        # Check for structure documentation
-        structure_md = ontology_dir / "ontology-structure.md"
+        # Check for structure documentation (at root level, not in ontology/)
+        structure_md = self.demo_path / "ontology-structure.md"
         if not structure_md.exists():
             self.result.add_info(
                 "ontology-structure.md not found",
@@ -345,13 +370,75 @@ class DemoPackageValidator:
                         suggestion="Consider having a column ending with 'ID' for entity keys",
                     )
 
-                # Count rows (sample)
-                row_count = sum(1 for _ in reader)
+                # Read all rows for validation
+                rows = list(reader)
+                row_count = len(rows)
+                
                 if row_count == 0:
                     self.result.add_warning(
                         f"CSV has no data rows",
                         path=str(csv_path.relative_to(self.demo_path)),
                     )
+                    return
+                
+                # Find potential key columns (ending with Id or ID)
+                key_columns = [i for i, h in enumerate(headers) if h.lower().endswith('id')]
+                
+                # Determine the likely PRIMARY key column
+                # For Dim/Edge tables: first ID column or column matching table name
+                # For Fact tables: usually don't have a unique primary key (or use composite)
+                file_name = csv_path.stem.lower()
+                is_fact_or_edge = file_name.startswith('fact') or file_name.startswith('edge')
+                is_dim = file_name.startswith('dim')
+                is_timeseries = 'telemetry' in file_name or 'eventhouse' in str(csv_path).lower()
+                
+                # For fact/edge/timeseries tables, we don't enforce unique IDs
+                # (they contain foreign keys that can repeat)
+                if not is_fact_or_edge and not is_timeseries:
+                    # For dimension tables, check the FIRST ID column for uniqueness
+                    # This is typically the primary key
+                    primary_key_idx = key_columns[0] if key_columns else None
+                    
+                    if primary_key_idx is not None:
+                        col_name = headers[primary_key_idx]
+                        values = [row[primary_key_idx] for row in rows if primary_key_idx < len(row)]
+                        
+                        # Check for NULL values
+                        null_rows = [i + 2 for i, v in enumerate(values) 
+                                    if not v.strip() or v.strip().lower() in ('null', 'none', '')]
+                        if null_rows:
+                            self.result.add_error(
+                                f"Primary key column '{col_name}' has NULL/empty values in rows: {null_rows[:5]}{'...' if len(null_rows) > 5 else ''}",
+                                path=str(csv_path.relative_to(self.demo_path)),
+                                suggestion="Primary key columns must not contain NULL values",
+                            )
+                        
+                        # Check for duplicates
+                        if len(values) != len(set(values)):
+                            duplicates = [v for v in set(values) if values.count(v) > 1]
+                            self.result.add_error(
+                                f"Primary key column '{col_name}' has duplicate values: {duplicates[:3]}{'...' if len(duplicates) > 3 else ''}",
+                                path=str(csv_path.relative_to(self.demo_path)),
+                                suggestion="Primary key values must be unique within dimension tables",
+                            )
+                
+                # Check timestamp format for eventhouse files
+                if "eventhouse" in str(csv_path).lower():
+                    # Only check columns explicitly named Timestamp (not "time" which could be CycleTime, etc.)
+                    timestamp_cols = [i for i, h in enumerate(headers) if h.lower() == 'timestamp']
+                    for col_idx in timestamp_cols:
+                        col_name = headers[col_idx]
+                        # Check first few rows for ISO 8601 format
+                        for row_idx, row in enumerate(rows[:5]):
+                            if col_idx < len(row):
+                                value = row[col_idx]
+                                if value and not re.match(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}', value):
+                                    self.result.add_warning(
+                                        f"Timestamp column '{col_name}' may not be in ISO 8601 format",
+                                        path=str(csv_path.relative_to(self.demo_path)),
+                                        suggestion="Use format: YYYY-MM-DDTHH:MM:SSZ",
+                                    )
+                                    break
 
         except Exception as e:
             self.result.add_error(
@@ -417,12 +504,17 @@ class DemoPackageValidator:
             # Load CSV headers for cross-validation
             csv_headers = self._load_csv_headers()
             
+            # Track static bindings across all sources
+            all_static_bindings: Dict[str, List[str]] = {}
+            
             # Validate lakehouse bindings
             lakehouse = bindings_data.get("lakehouse", {})
             if lakehouse:
                 self._validate_yaml_source_bindings(
                     lakehouse, "lakehouse", csv_headers.get("lakehouse", {})
                 )
+                # Collect static bindings
+                self._collect_static_bindings(lakehouse, "lakehouse", all_static_bindings)
             
             # Validate eventhouse bindings
             eventhouse = bindings_data.get("eventhouse", {})
@@ -430,6 +522,17 @@ class DemoPackageValidator:
                 self._validate_yaml_source_bindings(
                     eventhouse, "eventhouse", csv_headers.get("eventhouse", {})
                 )
+                # Collect static bindings
+                self._collect_static_bindings(eventhouse, "eventhouse", all_static_bindings)
+            
+            # Check cross-source binding constraint: 1 static binding per entity across ALL sources
+            for entity_name, sources in all_static_bindings.items():
+                if len(sources) > 1:
+                    self.result.add_error(
+                        f"Entity '{entity_name}' has static bindings in multiple sources: "
+                        f"{', '.join(sources)} - Fabric allows only 1 static binding per entity total",
+                        suggestion="An entity can have 1 static binding (lakehouse OR eventhouse) + multiple timeseries bindings",
+                    )
             
             if not lakehouse and not eventhouse:
                 self.result.add_warning(
@@ -448,6 +551,29 @@ class DemoPackageValidator:
                 path="bindings/bindings.yaml",
             )
 
+    def _collect_static_bindings(
+        self,
+        source_data: dict,
+        source_type: str,
+        all_static_bindings: Dict[str, List[str]],
+    ) -> None:
+        """Collect static bindings for cross-source validation."""
+        entities = source_data.get("entities", [])
+        for entity in entities:
+            entity_name = entity.get("entity", "")
+            # Detect TimeSeries binding: if timestampColumn is present, it's timeseries
+            # Otherwise, check bindingType field (default to NonTimeSeries/static)
+            has_timestamp = entity.get("timestampColumn") is not None
+            binding_type = entity.get("bindingType", "NonTimeSeries")
+            
+            # Only count as static if no timestamp column AND bindingType isn't TimeSeries
+            is_static = not has_timestamp and binding_type == "NonTimeSeries"
+            
+            if is_static:
+                if entity_name not in all_static_bindings:
+                    all_static_bindings[entity_name] = []
+                all_static_bindings[entity_name].append(source_type)
+
     def _validate_yaml_source_bindings(
         self,
         source_data: dict,
@@ -463,8 +589,35 @@ class DemoPackageValidator:
             f"relationship bindings for {source_type}"
         )
         
+        # Track static bindings per entity to enforce Fabric limit of 1 static binding per entity
+        entity_static_bindings: Dict[str, List[str]] = {}
+        
         for entity in entities:
+            entity_name = entity.get("entity", "")
+            # Detect TimeSeries binding: if timestampColumn is present, it's timeseries
+            has_timestamp = entity.get("timestampColumn") is not None
+            binding_type = entity.get("bindingType", "NonTimeSeries")
+            
+            # Only count as static if no timestamp column AND bindingType isn't TimeSeries
+            is_static = not has_timestamp and binding_type == "NonTimeSeries"
+            
+            if is_static:
+                if entity_name not in entity_static_bindings:
+                    entity_static_bindings[entity_name] = []
+                entity_static_bindings[entity_name].append(
+                    f"{source_type}/{entity.get('sourceTable', 'unknown')}"
+                )
+            
             self._validate_yaml_entity(entity, source_type, csv_headers)
+        
+        # Check for multiple static bindings per entity
+        for entity_name, binding_sources in entity_static_bindings.items():
+            if len(binding_sources) > 1:
+                self.result.add_error(
+                    f"Entity '{entity_name}' has {len(binding_sources)} static bindings: "
+                    f"{', '.join(binding_sources)} - Fabric allows only 1 static binding per entity",
+                    suggestion="Remove duplicate static bindings or change to TimeSeries type",
+                )
         
         for relationship in relationships:
             self._validate_yaml_relationship(relationship, source_type, csv_headers)
@@ -485,6 +638,9 @@ class DemoPackageValidator:
             )
             return
         
+        # Validate entity name constraints
+        self._validate_name_constraints(entity_name, "Entity name", f"bindings.yaml ({source_type})")
+        
         if not table_name:
             self.result.add_error(
                 f"Entity '{entity_name}' missing 'sourceTable' field",
@@ -504,12 +660,15 @@ class DemoPackageValidator:
         
         # Check key column
         key_column = entity.get("keyColumn")
-        if key_column and key_column not in available_columns:
-            self.result.add_error(
-                f"Entity '{entity_name}' key column '{key_column}' "
-                f"not found in {table_name}.csv",
-                suggestion=f"Available columns: {', '.join(sorted(available_columns)[:10])}",
-            )
+        if key_column:
+            if key_column not in available_columns:
+                self.result.add_error(
+                    f"Entity '{entity_name}' key column '{key_column}' "
+                    f"not found in {table_name}.csv",
+                    suggestion=f"Available columns: {', '.join(sorted(available_columns)[:10])}",
+                )
+            # Track entity key for relationship validation
+            self._entity_keys[entity_name] = key_column
         
         # Check timestamp column (for timeseries)
         timestamp_col = entity.get("timestampColumn")
@@ -524,6 +683,26 @@ class DemoPackageValidator:
         for prop in properties:
             source_col = prop.get("column")
             target_prop = prop.get("property")
+            prop_type = prop.get("type", "")
+            
+            # Validate property name
+            if target_prop:
+                self._validate_name_constraints(target_prop, "Property name", f"bindings.yaml ({entity_name})")
+                
+                # Check property uniqueness across all entities
+                if target_prop in self._all_property_names:
+                    self.result.add_error(
+                        f"Property '{target_prop}' is duplicated - property names must be unique across ALL entities",
+                        path=f"bindings.yaml ({entity_name})",
+                        suggestion="Rename property with entity prefix, e.g., '{entity_name}_{target_prop}'",
+                    )
+                self._all_property_names.add(target_prop)
+            
+            # Validate property type
+            if prop_type:
+                is_key = prop.get("is_key", False) or (source_col == key_column)
+                self._validate_data_type(prop_type, f"bindings.yaml ({entity_name}.{target_prop})", is_key=is_key)
+            
             if source_col and source_col not in available_columns:
                 self.result.add_warning(
                     f"Entity '{entity_name}' property '{target_prop}' "
@@ -540,6 +719,8 @@ class DemoPackageValidator:
         """Validate a single relationship binding from YAML."""
         rel_name = relationship.get("relationship")
         table_name = relationship.get("sourceTable")
+        source_entity = relationship.get("sourceEntity", "")
+        target_entity = relationship.get("targetEntity", "")
         
         if not rel_name:
             self.result.add_warning(
@@ -570,6 +751,17 @@ class DemoPackageValidator:
                 f"'{source_key}' not found in {table_name}.csv",
             )
         
+        # CRITICAL: Check sourceKeyColumn matches source entity's key name
+        if source_entity and source_key and self._entity_keys.get(source_entity):
+            expected_source_key = self._entity_keys[source_entity]
+            if source_key != expected_source_key:
+                self.result.add_error(
+                    f"Relationship '{rel_name}': sourceKeyColumn '{source_key}' "
+                    f"does NOT match source entity '{source_entity}' key '{expected_source_key}'",
+                    path=f"bindings.yaml (relationships)",
+                    suggestion=f"Rename column to '{expected_source_key}' or create an edge table with the correct column name",
+                )
+        
         # Check target key column
         target_key = relationship.get("targetKeyColumn")
         if target_key and target_key not in available_columns:
@@ -577,6 +769,17 @@ class DemoPackageValidator:
                 f"Relationship '{rel_name}' target key column "
                 f"'{target_key}' not found in {table_name}.csv",
             )
+        
+        # CRITICAL: Check targetKeyColumn matches target entity's key name
+        if target_entity and target_key and self._entity_keys.get(target_entity):
+            expected_key = self._entity_keys[target_entity]
+            if target_key != expected_key:
+                self.result.add_error(
+                    f"Relationship '{rel_name}': targetKeyColumn '{target_key}' "
+                    f"does NOT match target entity '{target_entity}' key '{expected_key}'",
+                    path=f"bindings.yaml (relationships)",
+                    suggestion=f"Rename column to '{expected_key}' or create an edge table with the correct column name",
+                )
 
     def _validate_bindings_markdown_legacy(self, bindings_dir: Path) -> None:
         """Validate binding markdown files (legacy format)."""
@@ -815,16 +1018,151 @@ class DemoPackageValidator:
 
     def _check_metadata(self) -> None:
         """Check for metadata files."""
-        demo_yaml = self.demo_path / "demo.yaml"
-        if not demo_yaml.exists():
-            self.result.add_info(
-                "demo.yaml not found",
-                suggestion="Run 'fabric-demo init' to create configuration",
-            )
-
+        # .demo-metadata.yaml is the primary metadata format (v3.1+)
+        # demo.yaml is legacy/optional - only used for workspace config overrides
         metadata_yaml = self.demo_path / ".demo-metadata.yaml"
         if metadata_yaml.exists():
             self.result.add_info("Found .demo-metadata.yaml (v3.1+ format)")
+            self._validate_metadata_yaml(metadata_yaml)
+
+    def _validate_metadata_yaml(self, metadata_path: Path) -> None:
+        """Validate .demo-metadata.yaml content."""
+        try:
+            with open(metadata_path, "r", encoding="utf-8") as f:
+                metadata = yaml.safe_load(f)
+            
+            if not metadata:
+                return
+            
+            # Check entity key types
+            ontology = metadata.get("ontology", {})
+            entities = ontology.get("entities", [])
+            for entity in entities:
+                key_type = entity.get("keyType", "").lower()
+                if key_type and key_type not in VALID_KEY_TYPES:
+                    self.result.add_error(
+                        f"Entity '{entity.get('name')}' has invalid keyType '{key_type}'",
+                        path=".demo-metadata.yaml",
+                        suggestion="Key types must be 'string' or 'int' only",
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to validate metadata: {e}")
+
+    def _check_property_uniqueness(self) -> None:
+        """Check that property names are unique across all entities."""
+        # This is populated during binding validation
+        # Report as info since validation happens during binding check
+        if self._all_property_names:
+            self.result.add_info(
+                f"Tracked {len(self._all_property_names)} unique property names across entities"
+            )
+
+    def _check_ttl_constraints(self) -> None:
+        """Validate TTL ontology file constraints."""
+        ontology_dir = None
+        for variant in ["ontology", "Ontology"]:
+            candidate = self.demo_path / variant
+            if candidate.is_dir():
+                ontology_dir = candidate
+                break
+        
+        if not ontology_dir:
+            return
+        
+        ttl_files = list(ontology_dir.glob("*.ttl"))
+        if not ttl_files:
+            return
+        
+        ttl_path = ttl_files[0]
+        try:
+            with open(ttl_path, "r", encoding="utf-8") as f:
+                ttl_content = f.read()
+            
+            # Check for xsd:decimal (not supported)
+            if "xsd:decimal" in ttl_content.lower():
+                self.result.add_error(
+                    "TTL contains xsd:decimal which is NOT supported by Fabric Graph",
+                    path=str(ttl_path.relative_to(self.demo_path)),
+                    suggestion="Replace xsd:decimal with xsd:double",
+                )
+            
+            # Check for Key: comments in entity classes
+            class_pattern = re.compile(r':(\w+)\s+a\s+owl:Class\s*;[^.]*rdfs:comment\s+"([^"]*)"', re.MULTILINE | re.DOTALL)
+            key_pattern = re.compile(r'Key:\s*(\w+)')
+            
+            for match in class_pattern.finditer(ttl_content):
+                entity_name = match.group(1)
+                comment = match.group(2)
+                key_match = key_pattern.search(comment)
+                if not key_match:
+                    self.result.add_warning(
+                        f"Entity '{entity_name}' missing 'Key: PropertyName' in rdfs:comment",
+                        path=str(ttl_path.relative_to(self.demo_path)),
+                        suggestion='Add rdfs:comment "Key: EntityId (type)" to entity class',
+                    )
+                else:
+                    key_name = key_match.group(1)
+                    # Verify the key property exists as a DatatypeProperty
+                    if f":{key_name} a owl:DatatypeProperty" not in ttl_content:
+                        self.result.add_warning(
+                            f"Entity '{entity_name}' references key '{key_name}' but no matching DatatypeProperty found",
+                            path=str(ttl_path.relative_to(self.demo_path)),
+                        )
+                    
+        except Exception as e:
+            logger.warning(f"Failed to validate TTL: {e}")
+
+    def _validate_name_constraints(self, name: str, name_type: str, context: str) -> None:
+        """Validate name against Fabric Ontology constraints."""
+        if not name:
+            return
+        
+        # Check length (1-26 characters)
+        if len(name) > 26:
+            self.result.add_error(
+                f"{name_type} '{name}' exceeds 26 character limit ({len(name)} chars)",
+                path=context,
+                suggestion="Shorten name to 26 characters or less",
+            )
+        
+        # Check pattern (alphanumeric, hyphens, underscores)
+        if len(name) > 1 and not NAME_PATTERN.match(name):
+            self.result.add_warning(
+                f"{name_type} '{name}' doesn't match naming pattern",
+                path=context,
+                suggestion="Use alphanumeric characters, hyphens, underscores; start/end with alphanumeric",
+            )
+        
+        # Check for GQL reserved words
+        if name.lower() in GQL_RESERVED_WORDS:
+            self.result.add_warning(
+                f"{name_type} '{name}' is a GQL reserved word",
+                path=context,
+                suggestion="Rename to avoid GQL reserved words or escape with backticks",
+            )
+
+    def _validate_data_type(self, data_type: str, context: str, is_key: bool = False) -> None:
+        """Validate data type against Fabric Graph constraints."""
+        if not data_type:
+            return
+        
+        type_lower = data_type.lower()
+        
+        # Check for invalid types
+        if type_lower in INVALID_TYPES:
+            self.result.add_error(
+                f"Data type '{data_type}' is NOT supported by Fabric Graph (returns NULL)",
+                path=context,
+                suggestion="Use 'double' instead of 'decimal' for precision values",
+            )
+        
+        # Check key types
+        if is_key and type_lower not in VALID_KEY_TYPES:
+            self.result.add_error(
+                f"Key type '{data_type}' is invalid - keys must be string or int only",
+                path=context,
+                suggestion="Change key type to 'string' or 'int'",
+            )
 
 
 def validate_demo_package(demo_path: Path) -> ValidationResult:
