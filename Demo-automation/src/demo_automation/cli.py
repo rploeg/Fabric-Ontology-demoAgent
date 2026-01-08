@@ -332,6 +332,34 @@ If the state file is missing, use --force-by-name to delete resources by name.
         description="Open the fabric-demo documentation in your default browser.",
     )
 
+    # recover command
+    recover_parser = subparsers.add_parser(
+        "recover",
+        help="Recover state file from existing Fabric resources",
+        description="""
+Rebuild the state file by discovering existing resources in Fabric.
+
+Use this when the .setup-state.yaml file is lost but resources still exist.
+The command searches for resources matching the demo naming convention and
+recreates the state file so cleanup and other commands work correctly.
+        """,
+    )
+    recover_parser.add_argument(
+        "demo_path",
+        type=str,
+        help="Path to the demo folder",
+    )
+    recover_parser.add_argument(
+        "--workspace-id", "-w",
+        type=str,
+        help="Fabric workspace ID",
+    )
+    recover_parser.add_argument(
+        "--force", "-f",
+        action="store_true",
+        help="Overwrite existing state file",
+    )
+
     return parser
 
 
@@ -487,6 +515,151 @@ def run_docs(args: argparse.Namespace) -> int:
     
     console.print("[green]✓[/green] Documentation opened in browser")
     return 0
+
+
+def run_recover(args: argparse.Namespace) -> int:
+    """Recover state file from existing Fabric resources."""
+    from pathlib import Path
+    from .platform import FabricClient
+    from .state_manager import SetupStateManager
+    from .core.config import DemoConfiguration
+    
+    demo_path = Path(args.demo_path).resolve()
+    
+    if not demo_path.exists():
+        console.print(f"[red]Error:[/red] Demo folder not found: {demo_path}")
+        return 1
+    
+    # Check for existing state file
+    state_file = demo_path / ".setup-state.yaml"
+    if state_file.exists() and not getattr(args, 'force', False):
+        console.print(f"[yellow]State file already exists:[/yellow] {state_file}")
+        console.print("Use --force to overwrite.")
+        return 1
+    
+    # Load global config
+    global_config = GlobalConfig.load()
+    workspace_id = global_config.get_workspace_id(getattr(args, 'workspace_id', None))
+    
+    if not workspace_id:
+        console.print("[red]Error:[/red] No workspace ID configured.")
+        console.print("\nSet workspace ID via one of:")
+        console.print("  • fabric-demo config init")
+        console.print("  • Environment variable: FABRIC_WORKSPACE_ID")
+        console.print("  • CLI argument: --workspace-id")
+        return 1
+    
+    # Try to load demo config for name
+    try:
+        config = DemoConfiguration.from_demo_path(demo_path)
+        demo_name = config.name
+    except Exception:
+        # Fall back to folder name
+        demo_name = demo_path.name
+    
+    console.print(f"[bold]Recovering state for:[/bold] {demo_name}")
+    console.print(f"[dim]Workspace: {workspace_id}[/dim]\n")
+    
+    try:
+        with FabricClient(
+            workspace_id=workspace_id,
+            tenant_id=global_config.tenant_id,
+        ) as client:
+            discovered = {}
+            
+            # Search for Lakehouse
+            console.print("Searching for Lakehouse...", end=" ")
+            lakehouses = client.list_lakehouses()
+            for lh in lakehouses:
+                if lh.get('displayName', '').startswith(demo_name):
+                    discovered["lakehouse"] = {
+                        "id": lh.get('id'),
+                        "name": lh.get('displayName'),
+                    }
+                    console.print(f"[green]Found: {lh.get('displayName')}[/green]")
+                    break
+            else:
+                console.print("[dim]Not found[/dim]")
+            
+            # Search for Eventhouse
+            console.print("Searching for Eventhouse...", end=" ")
+            eventhouses = client.list_eventhouses()
+            for eh in eventhouses:
+                if eh.get('displayName', '').startswith(demo_name):
+                    discovered["eventhouse"] = {
+                        "id": eh.get('id'),
+                        "name": eh.get('displayName'),
+                    }
+                    console.print(f"[green]Found: {eh.get('displayName')}[/green]")
+                    break
+            else:
+                console.print("[dim]Not found[/dim]")
+            
+            # Search for KQL Database (separate from eventhouse)
+            console.print("Searching for KQL Database...", end=" ")
+            try:
+                kql_dbs = client.list_kql_databases()
+                for db in kql_dbs:
+                    if db.get('displayName', '').startswith(demo_name):
+                        discovered["kql_database"] = {
+                            "id": db.get('id'),
+                            "name": db.get('displayName'),
+                        }
+                        console.print(f"[green]Found: {db.get('displayName')}[/green]")
+                        break
+                else:
+                    console.print("[dim]Not found[/dim]")
+            except Exception:
+                console.print("[dim]Not found[/dim]")
+            
+            # Search for Ontology
+            console.print("Searching for Ontology...", end=" ")
+            ontologies = client.list_ontologies()
+            for ont in ontologies:
+                if ont.get('displayName', '').startswith(demo_name):
+                    discovered["ontology"] = {
+                        "id": ont.get('id'),
+                        "name": ont.get('displayName'),
+                    }
+                    console.print(f"[green]Found: {ont.get('displayName')}[/green]")
+                    break
+            else:
+                console.print("[dim]Not found[/dim]")
+            
+            if not discovered:
+                console.print("\n[yellow]No matching resources found in workspace.[/yellow]")
+                console.print("Make sure resources follow the naming convention (prefixed with demo name).")
+                return 1
+            
+            # Create recovered state
+            console.print("\nCreating state file...", end=" ")
+            SetupStateManager.recover_from_fabric(
+                demo_path=demo_path,
+                workspace_id=workspace_id,
+                demo_name=demo_name,
+                discovered_resources=discovered,
+            )
+            console.print("[green]Done[/green]")
+            
+            # Show summary
+            console.print("\n[bold green]✓ State recovered successfully[/bold green]")
+            console.print("\nRecovered resources:")
+            for resource_type, info in discovered.items():
+                console.print(f"  • {resource_type}: {info['name']} [dim]({info['id']})[/dim]")
+            
+            console.print(f"\n[dim]State file: {state_file}[/dim]")
+            console.print("\nYou can now use:")
+            console.print("  • fabric-demo status <path>  - View status")
+            console.print("  • fabric-demo cleanup <path> - Clean up resources")
+            
+            return 0
+            
+    except Exception as e:
+        console.print(f"\n[red]Error:[/red] {e}")
+        if getattr(args, 'debug', False):
+            import traceback
+            console.print(traceback.format_exc())
+        return 1
 
 
 def run_list(args: argparse.Namespace) -> int:
@@ -1360,6 +1533,7 @@ def main() -> int:
         "list": run_list,
         "cleanup": run_cleanup,
         "docs": run_docs,
+        "recover": run_recover,
     }
 
     handler = commands.get(args.command)

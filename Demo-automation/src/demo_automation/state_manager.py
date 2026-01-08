@@ -6,6 +6,7 @@ after partial failures or interruptions.
 """
 
 import uuid
+import shutil
 import logging
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
@@ -21,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 # State file name (gitignored)
 STATE_FILE_NAME = ".setup-state.yaml"
+STATE_BACKUP_SUFFIX = ".backup"
+STATE_SCHEMA_VERSION = "1.0"
 
 
 class StepStatus(Enum):
@@ -98,6 +101,7 @@ class SetupState:
     status: SetupStatus = SetupStatus.PENDING
     completed_at: Optional[str] = None
     steps: Dict[str, StepState] = field(default_factory=dict)
+    schema_version: str = STATE_SCHEMA_VERSION
     
     # Resource IDs discovered during setup
     lakehouse_id: Optional[str] = None
@@ -112,6 +116,7 @@ class SetupState:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for YAML serialization."""
         result = {
+            "schema_version": self.schema_version,
             "setup_id": self.setup_id,
             "demo_name": self.demo_name,
             "workspace_id": self.workspace_id,
@@ -152,6 +157,12 @@ class SetupState:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SetupState":
         """Create from dictionary."""
+        # Handle schema migration
+        schema_version = data.get("schema_version", "0.0")
+        if schema_version != STATE_SCHEMA_VERSION:
+            logger.info(f"Migrating state from schema {schema_version} to {STATE_SCHEMA_VERSION}")
+            data = cls._migrate_schema(data, schema_version)
+        
         state = cls(
             setup_id=data.get("setup_id", str(uuid.uuid4())),
             demo_name=data.get("demo_name", ""),
@@ -159,6 +170,7 @@ class SetupState:
             started_at=data.get("started_at", ""),
             status=SetupStatus(data.get("status", "pending")),
             completed_at=data.get("completed_at"),
+            schema_version=STATE_SCHEMA_VERSION,
         )
         
         # Load steps
@@ -181,6 +193,16 @@ class SetupState:
             state.ontology_name = resources["ontology"].get("name")
             
         return state
+
+    @classmethod
+    def _migrate_schema(cls, data: Dict[str, Any], from_version: str) -> Dict[str, Any]:
+        """Migrate state data from older schema versions."""
+        # Currently only version 1.0 exists, so migration is a no-op
+        # Future migrations would be added here:
+        # if from_version < "1.1":
+        #     data = cls._migrate_1_0_to_1_1(data)
+        data["schema_version"] = STATE_SCHEMA_VERSION
+        return data
 
     def get_completed_steps(self) -> List[str]:
         """Get list of completed step names."""
@@ -278,12 +300,21 @@ class SetupStateManager:
             logger.warning(f"Failed to load state file: {e}")
             return None
 
-    def save_state(self) -> None:
-        """Save current state to file."""
+    def save_state(self, create_backup: bool = True) -> None:
+        """
+        Save current state to file.
+        
+        Args:
+            create_backup: If True, create a backup before saving (default: True)
+        """
         if self._state is None:
             return
         
         try:
+            # Create backup of existing state file
+            if create_backup and self.state_file.exists():
+                self._create_backup()
+            
             with open(self.state_file, "w", encoding="utf-8") as f:
                 yaml.dump(
                     self.state.to_dict(),
@@ -295,6 +326,45 @@ class SetupStateManager:
             logger.debug(f"Saved state to {self.state_file}")
         except Exception as e:
             logger.error(f"Failed to save state: {e}")
+
+    def _create_backup(self) -> None:
+        """Create a backup of the current state file."""
+        if not self.state_file.exists():
+            return
+        
+        backup_file = self.demo_path / f"{STATE_FILE_NAME}{STATE_BACKUP_SUFFIX}"
+        try:
+            shutil.copy2(self.state_file, backup_file)
+            logger.debug(f"Created state backup: {backup_file}")
+        except Exception as e:
+            logger.warning(f"Failed to create state backup: {e}")
+
+    def restore_from_backup(self) -> bool:
+        """
+        Restore state from backup file.
+        
+        Returns:
+            True if backup was restored, False otherwise
+        """
+        backup_file = self.demo_path / f"{STATE_FILE_NAME}{STATE_BACKUP_SUFFIX}"
+        if not backup_file.exists():
+            logger.warning("No backup file found to restore")
+            return False
+        
+        try:
+            shutil.copy2(backup_file, self.state_file)
+            self._state = None  # Force reload
+            self.load_state()
+            logger.info(f"Restored state from backup: {backup_file}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to restore from backup: {e}")
+            return False
+
+    def has_backup(self) -> bool:
+        """Check if a backup file exists."""
+        backup_file = self.demo_path / f"{STATE_FILE_NAME}{STATE_BACKUP_SUFFIX}"
+        return backup_file.exists()
 
     def clear_state(self) -> None:
         """Remove the state file."""
@@ -469,3 +539,75 @@ class SetupStateManager:
                 "ontology": self.state.ontology_id,
             },
         }
+    @classmethod
+    def recover_from_fabric(
+        cls,
+        demo_path: Path,
+        workspace_id: str,
+        demo_name: str,
+        discovered_resources: Dict[str, Any],
+    ) -> "SetupStateManager":
+        """
+        Create a state manager with recovered state from discovered Fabric resources.
+        
+        This is used when a state file is lost but resources still exist in Fabric.
+        
+        Args:
+            demo_path: Path to the demo folder
+            workspace_id: Fabric workspace ID
+            demo_name: Name of the demo
+            discovered_resources: Dict with 'lakehouse', 'eventhouse', 'kql_database', 'ontology'
+                                  Each containing 'id' and 'name' keys
+        
+        Returns:
+            SetupStateManager with recovered state
+        """
+        manager = cls(demo_path, workspace_id, demo_name)
+        
+        # Create a new state marked as recovered
+        manager._state = SetupState(
+            setup_id=str(uuid.uuid4()),
+            demo_name=demo_name,
+            workspace_id=workspace_id,
+            started_at=datetime.now(timezone.utc).isoformat(),
+            status=SetupStatus.COMPLETED,
+            completed_at=datetime.now(timezone.utc).isoformat(),
+            schema_version=STATE_SCHEMA_VERSION,
+        )
+        
+        # Populate resource IDs from discovered resources
+        if "lakehouse" in discovered_resources:
+            manager._state.lakehouse_id = discovered_resources["lakehouse"].get("id")
+            manager._state.lakehouse_name = discovered_resources["lakehouse"].get("name")
+        
+        if "eventhouse" in discovered_resources:
+            manager._state.eventhouse_id = discovered_resources["eventhouse"].get("id")
+            manager._state.eventhouse_name = discovered_resources["eventhouse"].get("name")
+        
+        if "kql_database" in discovered_resources:
+            manager._state.kql_database_id = discovered_resources["kql_database"].get("id")
+            manager._state.kql_database_name = discovered_resources["kql_database"].get("name")
+        
+        if "ontology" in discovered_resources:
+            manager._state.ontology_id = discovered_resources["ontology"].get("id")
+            manager._state.ontology_name = discovered_resources["ontology"].get("name")
+        
+        # Mark all steps as completed (recovered)
+        all_steps = [
+            "validate", "create_lakehouse", "upload_files", "load_tables",
+            "create_eventhouse", "ingest_data", "create_ontology",
+            "bind_static", "bind_timeseries", "bind_relationships", "verify"
+        ]
+        for step_name in all_steps:
+            manager._state.steps[step_name] = StepState(
+                name=step_name,
+                status=StepStatus.COMPLETED,
+                completed_at=datetime.now(timezone.utc).isoformat(),
+                details={"recovered": True},
+            )
+        
+        # Save the recovered state
+        manager.save_state(create_backup=False)
+        logger.info(f"Created recovered state file for {demo_name}")
+        
+        return manager

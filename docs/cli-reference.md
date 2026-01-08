@@ -200,6 +200,35 @@ Open documentation in your browser.
 fabric-demo docs
 ```
 
+### `fabric-demo recover <path>`
+
+Rebuild the state file from existing Fabric resources.
+
+```bash
+# Recover state for a demo
+fabric-demo recover ./MedicalManufacturing
+
+# Specify workspace
+fabric-demo recover ./MedicalManufacturing --workspace-id <guid>
+
+# Overwrite existing state file
+fabric-demo recover ./MedicalManufacturing --force
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--workspace-id`, `-w` | Fabric workspace ID |
+| `--force`, `-f` | Overwrite existing state file |
+
+**Use when:**
+- State file (.setup-state.yaml) is lost or corrupted
+- You manually deleted the state file but resources still exist
+- You need to enable cleanup for resources created outside the tool
+
+The command searches for resources matching the demo naming convention (prefixed with demo name) and recreates the state file.
+
 ---
 
 ## Examples
@@ -230,7 +259,10 @@ fabric-demo setup ./MedicalManufacturing --resume
 # If you need to start fresh
 fabric-demo setup ./MedicalManufacturing --clear-state
 
-# If state file is corrupted/deleted
+# If state file is corrupted/deleted but resources exist
+fabric-demo recover ./MedicalManufacturing
+
+# If state file is lost, cleanup by resource name
 fabric-demo cleanup ./MedicalManufacturing --force-by-name
 ```
 

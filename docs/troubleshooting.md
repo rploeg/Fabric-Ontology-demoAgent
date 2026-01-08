@@ -199,7 +199,13 @@ When viewing relationship bindings in Fabric UI.
    cat ./MedicalManufacturing/.setup-state.yaml
    ```
 
-2. Use force-by-name cleanup (deletes by resource name):
+2. **Recover the state file** from Fabric resources (recommended):
+   ```bash
+   fabric-demo recover ./MedicalManufacturing
+   fabric-demo cleanup ./MedicalManufacturing
+   ```
+
+3. Or use force-by-name cleanup (deletes by resource name):
    ```bash
    fabric-demo cleanup ./MedicalManufacturing --force-by-name --confirm
    ```
@@ -213,6 +219,38 @@ The tool handles this automatically, but if manual cleanup is needed:
 1. In Fabric UI, delete bindings first
 2. Then delete the ontology
 3. Finally delete data sources
+
+### State File Lost or Corrupted
+
+If the state file (`.setup-state.yaml`) is lost, corrupted, or accidentally deleted:
+
+**Option 1: Recover from Fabric (Recommended)**
+
+```bash
+# Rebuild state file from existing resources
+fabric-demo recover ./MedicalManufacturing
+
+# Then cleanup normally
+fabric-demo cleanup ./MedicalManufacturing
+```
+
+**Option 2: Restore from backup**
+
+The tool automatically creates a backup before each save:
+
+```bash
+# Check for backup
+ls ./MedicalManufacturing/.setup-state.yaml.backup
+
+# Manually copy if exists
+cp .setup-state.yaml.backup .setup-state.yaml
+```
+
+**Option 3: Force cleanup by name**
+
+```bash
+fabric-demo cleanup ./MedicalManufacturing --force-by-name
+```
 
 ### State File Lost After Cleanup
 
