@@ -5,55 +5,63 @@ Create and deploy Microsoft Fabric Ontology demos with automated tooling and AI 
 **[📚 Full Documentation →](docs/index.md)** | [CLI Reference](docs/cli-reference.md) | [Troubleshooting](docs/troubleshooting.md)
 
 ## Disclaimer
-⚠️ Disclaimer: This is a personal project to learn about AI development and is not an official Microsoft product. It is not supported, endorsed, or maintained by Microsoft Corporation. Use at your own risk. see `LICENSE`.
+
+⚠️ This is a personal project to learn about AI development and is not an official Microsoft product. It is not supported, endorsed, or maintained by Microsoft Corporation. Use at your own risk. See `LICENSE`.
+
+## Prerequisites
+
+- Python 3.10+
+- Microsoft Fabric workspace with Ontology preview enabled
+- Azure authentication (interactive or service principal)
 
 ## Project Structure
 
-- **[.agentic](.agentic)** — AI agent specs for generating demos
-- **[Demo-automation](Demo-automation)** — CLI tool ([docs](Demo-automation/README.md))
-- **[docs](docs)** — Documentation
-- **demo-*** — Generated demos (e.g., `AutoManufacturing-SupplyChain/`)
-
+```
+├── .agentic/              # AI agent specs for generating demos
+├── Demo-automation/       # CLI tool (uses Fabric Ontology SDK v0.2.0)
+├── docs/                  # Documentation
+├── AutoManufacturing-SupplyChain/  # Example demo
+└── FreshMart/             # Example demo
+```
 
 ## Quick Start
 
-1. git clone this repo and open folder in VS code.
+### 1. Clone and Open
 
-2. Generating New Demos with github copilot
+```bash
+git clone https://github.com/falloutxAY/Fabric-Ontology-demoAgent.git
+cd Fabric-Ontology-demoAgent
+```
 
-Use [.agentic](.agentic) specifications with any AI agent to create custom demos.
+### 2. Generate New Demos with AI
+
+Use [.agentic](.agentic) specifications with any AI agent to create custom demos:
 
 ```
 Using #file:.agentic, create a demo for "water treatment plant monitoring"
 ```
 
-It will output to a folder. See [agent-workflow.md](docs/agent-workflow.md) for the process. 
+See [agent-workflow.md](docs/agent-workflow.md) for the generation process.
 
-
-3. Generate demo in Fabric Ontology
+### 3. Deploy to Fabric
 
 ```bash
-# Install dependencies
+# Install CLI tool
 cd Demo-automation && pip install -e .
 
-# Configure (one-time)
+# Configure workspace (one-time)
 python -m demo_automation config init
 
-# Validate the demo package
+# Validate and deploy
 python -m demo_automation validate ../AutoManufacturing-SupplyChain
-
-# Deploy generated demo to Fabric
 python -m demo_automation setup ../AutoManufacturing-SupplyChain
 
-# Cleanup
+# Cleanup when done
 python -m demo_automation cleanup ../AutoManufacturing-SupplyChain
 ```
 
 **[🚀 Full Setup Guide →](docs/index.md)** | **[Authentication Options →](docs/configuration.md#authentication-methods)**
 
-## Manual Demo setup in Fabric Ontology
-
-Generate demo assets using `.agentic` specifications, then follow the {demo}/README.md for setup instructions.
-
 ## License
+
 MIT — see `LICENSE`.
