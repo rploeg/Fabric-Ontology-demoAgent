@@ -6,6 +6,18 @@
 
 ---
 
+## Progress Tracker
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1 | ✅ Complete | Setup & Dependencies - SDK adapter module |
+| Phase 2 | ✅ Complete | Replace Binding Builder - SDK binding bridge |
+| Phase 3 | ⏳ Not Started | Modify Orchestrator |
+| Phase 4 | ⏳ Not Started | Integrate SDK Validation |
+| Phase 5 | ⏳ Not Started | Clean Up |
+
+---
+
 ## Executive Summary
 
 This plan outlines the migration of `Fabric-Ontology-demoAgent/Demo-automation` to use the `fabric-ontology-sdk` package for all ontology-related operations. The migration will:
