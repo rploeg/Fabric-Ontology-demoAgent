@@ -38,7 +38,7 @@ cd Fabric-Ontology-demoAgent
 Use [.agentic](.agentic) specifications with any AI agent to create custom demos:
 
 ```
-Using #file:.agentic, create a demo for "water treatment plant monitoring"
+Using #file:.agentic, create a demo for "Car manufacturing, add supply chain"
 ```
 
 See [agent-workflow.md](docs/agent-workflow.md) for the generation process.
