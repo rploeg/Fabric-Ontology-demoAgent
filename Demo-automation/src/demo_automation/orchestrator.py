@@ -29,15 +29,31 @@ from .core.global_config import GlobalConfig
 from .platform import FabricClient, OneLakeDataClient, LakehouseClient, EventhouseClient
 from .platform.fabric_client import RateLimitConfig
 from .binding import (
-    OntologyBindingBuilder,
+    OntologyBindingBuilder,  # Legacy - deprecated, kept for backwards compatibility
     BindingType,
     parse_demo_bindings,
     get_eventhouse_table_configs,
     parse_bindings_yaml,
     YamlBindingsConfig,
+    # SDK Bridge (recommended)
+    SDKBindingBridge,
+    EntityBindingConfig,
+    RelationshipContextConfig,
 )
 from .state_manager import SetupStateManager, SetupStatus as PersistentSetupStatus
 from .ontology import parse_ttl_file
+from .ontology.sdk_converter import (
+    ttl_to_sdk_builder,
+    ttl_entity_to_sdk_info,
+    ttl_relationship_to_sdk_info,
+    ttl_result_to_sdk_infos,
+    create_bridge_from_ttl,
+)
+from .sdk_adapter import (
+    create_sdk_client,
+    create_ontology_builder,
+    map_ttl_type_to_string,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -2241,6 +2257,124 @@ class DemoOrchestrator:
         
         return (entity_name_to_id, entity_id_to_properties, relationship_name_to_id,
                 existing_entity_binding_ids, existing_rel_ctx_ids)
+
+    # =========================================================================
+    # SDK Bridge Helpers (Phase 3)
+    # =========================================================================
+
+    def _create_sdk_binding_bridge(
+        self,
+        cluster_uri: Optional[str] = None,
+    ) -> SDKBindingBridge:
+        """
+        Create an SDK binding bridge configured for this demo.
+        
+        This method creates a new SDKBindingBridge with the current workspace,
+        lakehouse, and eventhouse configuration.
+        
+        Args:
+            cluster_uri: Optional eventhouse cluster URI
+            
+        Returns:
+            Configured SDKBindingBridge instance
+        """
+        return SDKBindingBridge(
+            workspace_id=self.config.fabric.workspace_id,
+            lakehouse_id=self.state.lakehouse_id,
+            eventhouse_id=self.state.eventhouse_id,
+            database_name=self.state.kql_database_name,
+            cluster_uri=cluster_uri,
+        )
+
+    def _build_entity_binding_config(
+        self,
+        entity_binding,
+        binding_type: str = "static",
+        timestamp_column: Optional[str] = None,
+        database_name: Optional[str] = None,
+        cluster_uri: Optional[str] = None,
+    ) -> EntityBindingConfig:
+        """
+        Build an EntityBindingConfig from a parsed YAML entity binding.
+        
+        Args:
+            entity_binding: Parsed entity binding from YAML config
+            binding_type: "static" or "timeseries"
+            timestamp_column: Timestamp column for timeseries bindings
+            database_name: Database name for eventhouse bindings
+            cluster_uri: Cluster URI for eventhouse bindings
+            
+        Returns:
+            EntityBindingConfig ready for SDKBindingBridge
+        """
+        column_mappings = {
+            pm.target_property: pm.source_column
+            for pm in entity_binding.property_mappings
+        }
+        
+        return EntityBindingConfig(
+            entity_name=entity_binding.entity_name,
+            binding_type=binding_type,
+            table_name=entity_binding.table_name,
+            key_column=entity_binding.key_column,
+            column_mappings=column_mappings,
+            timestamp_column=timestamp_column,
+            database_name=database_name,
+            cluster_uri=cluster_uri,
+        )
+
+    def _build_relationship_context_config(
+        self,
+        rel_binding,
+        source_type: str = "lakehouse",
+        database_name: Optional[str] = None,
+    ) -> RelationshipContextConfig:
+        """
+        Build a RelationshipContextConfig from a parsed YAML relationship binding.
+        
+        Args:
+            rel_binding: Parsed relationship binding from YAML config
+            source_type: "lakehouse" or "eventhouse"
+            database_name: Database name for eventhouse contextualizations
+            
+        Returns:
+            RelationshipContextConfig ready for SDKBindingBridge
+        """
+        return RelationshipContextConfig(
+            relationship_name=rel_binding.relationship_name,
+            source_entity=rel_binding.source_entity,
+            target_entity=rel_binding.target_entity,
+            source_type=source_type,
+            table_name=rel_binding.table_name,
+            source_key_column=rel_binding.source_key_column,
+            target_key_column=rel_binding.target_key_column,
+            database_name=database_name,
+        )
+
+    def _get_eventhouse_cluster_uri(self) -> Optional[str]:
+        """
+        Get the Eventhouse cluster URI for the current eventhouse.
+        
+        Returns:
+            Cluster URI string or None if not available
+        """
+        if not self.state.eventhouse_id:
+            return None
+        
+        try:
+            eventhouse_info = self.fabric_client.get_eventhouse(self.state.eventhouse_id)
+            # Extract cluster URI from eventhouse properties
+            properties = eventhouse_info.get("properties", {})
+            query_uri = properties.get("queryServiceUri")
+            if query_uri:
+                return query_uri
+            
+            # Fallback: construct from eventhouse name
+            workspace_name = self.config.fabric.workspace_id
+            return f"https://{self.state.eventhouse_name}.kusto.fabric.microsoft.com"
+        except Exception as e:
+            logger.warning(f"Could not get eventhouse cluster URI: {e}")
+            return None
 
     def _step_verify_setup(self) -> StepResult:
         """
