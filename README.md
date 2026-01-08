@@ -81,18 +81,18 @@ Use the Demo-automation CLI tool for fully automated deployment:
 3. **Setup a demo** (e.g., CreditFraud):
    ```bash
    # Validate the demo package
-   fabric-demo validate ../CreditFraud
+   python -m demo_automation validate ../CreditFraud
    
    # Run automated setup (11 steps)
-   fabric-demo setup ../CreditFraud --workspace-id <your-workspace-id>
+   python -m demo_automation setup ../CreditFraud --workspace-id <your-workspace-id>
    
    # Check status
-   fabric-demo status ../CreditFraud
+   python -m demo_automation status ../CreditFraud
    ```
 
 4. **Cleanup when done**:
    ```bash
-   fabric-demo cleanup ../CreditFraud --confirm
+   python -m demo_automation cleanup ../CreditFraud --confirm
    ```
 
 See [Demo-automation/README.md](Demo-automation/README.md) for full documentation.
@@ -118,7 +118,7 @@ Use the `.agentic` folder specifications to prompt an AI agent:
 
 3. **Deploy using automation**:
    ```bash
-   fabric-demo setup ./demo-<scenario-name> --workspace-id <your-workspace-id>
+   python -m demo_automation setup ./demo-<scenario-name> --workspace-id <your-workspace-id>
    ```
 
 ### Option 3: Manual Setup
@@ -152,10 +152,10 @@ For manual control or custom scenarios:
 ## Troubleshooting
 
 ### Demo Automation Issues
-- **"fabric-demo not recognized"**: See [Demo-automation/README.md](Demo-automation/README.md#troubleshooting-fabric-demo-not-recognized) for PATH setup
-- **Resume after failure**: Use `fabric-demo setup <path> --resume` to continue from last successful step
-- **Clear state and restart**: Use `fabric-demo setup <path> --clear-state` to start fresh
-- **Cleanup safely**: Use `fabric-demo cleanup <path> --confirm` to remove only created resources
+- **"fabric-demo not recognized"**: Use `python -m demo_automation` instead (no PATH config needed)
+- **Resume after failure**: Use `python -m demo_automation setup <path> --resume` to continue from last successful step
+- **Clear state and restart**: Use `python -m demo_automation setup <path> --clear-state` to start fresh
+- **Cleanup safely**: Use `python -m demo_automation cleanup <path> --confirm` to remove only created resources
 
 ### AI Agent Generation
 As this is based on an agent, the output is non-deterministic. Happy prompting!

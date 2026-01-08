@@ -12,6 +12,7 @@ src/demo_automation/binding/yaml_parser.py
 src/demo_automation/core/__init__.py
 src/demo_automation/core/config.py
 src/demo_automation/core/errors.py
+src/demo_automation/core/global_config.py
 src/demo_automation/ontology/__init__.py
 src/demo_automation/ontology/ttl_converter.py
 src/demo_automation/platform/__init__.py

@@ -1,0 +1,403 @@
+# FreshMart Supermarket - Bindings Configuration
+# Version: 1.0
+# Generated: January 2026
+# This file is the SOURCE OF TRUTH for automation
+# ⚠️ MUST use nested lakehouse/eventhouse structure for parser compatibility
+
+_schema_version: "1.0"
+
+metadata:
+  name: FreshMart Supermarket Demo
+  version: "1.0"
+  description: Supply chain traceability and food safety ontology for supermarket operations
+  domain: Retail/Grocery
+
+# =============================================================================
+# LAKEHOUSE CONFIGURATION
+# =============================================================================
+
+lakehouse:
+  name: FreshMart_Lakehouse
+  
+  entities:
+    # -------------------------------------------------------------------------
+    # Store Entity
+    # -------------------------------------------------------------------------
+    - entity: Store
+      sourceTable: DimStore
+      keyColumn: StoreId
+      file: Data/Lakehouse/DimStore.csv
+      properties:
+        - property: StoreId
+          column: StoreId
+          type: string
+          is_key: true
+        - property: StoreName
+          column: StoreName
+          type: string
+        - property: Address
+          column: Address
+          type: string
+        - property: City
+          column: City
+          type: string
+        - property: State
+          column: State
+          type: string
+        - property: ZipCode
+          column: ZipCode
+          type: string
+        - property: OpenDate
+          column: OpenDate
+          type: datetime
+        - property: SquareFootage
+          column: SquareFootage
+          type: int
+
+    # -------------------------------------------------------------------------
+    # Product Entity
+    # -------------------------------------------------------------------------
+    - entity: Product
+      sourceTable: DimProduct
+      keyColumn: ProductId
+      file: Data/Lakehouse/DimProduct.csv
+      properties:
+        - property: ProductId
+          column: ProductId
+          type: string
+          is_key: true
+        - property: ProductName
+          column: ProductName
+          type: string
+        - property: UPC
+          column: UPC
+          type: string
+        - property: UnitPrice
+          column: UnitPrice
+          type: double
+        - property: UnitCost
+          column: UnitCost
+          type: double
+        - property: ShelfLife
+          column: ShelfLife
+          type: int
+
+    # -------------------------------------------------------------------------
+    # Supplier Entity
+    # -------------------------------------------------------------------------
+    - entity: Supplier
+      sourceTable: DimSupplier
+      keyColumn: SupplierId
+      file: Data/Lakehouse/DimSupplier.csv
+      properties:
+        - property: SupplierId
+          column: SupplierId
+          type: string
+          is_key: true
+        - property: SupplierName
+          column: SupplierName
+          type: string
+        - property: ContactEmail
+          column: ContactEmail
+          type: string
+        - property: Phone
+          column: Phone
+          type: string
+        - property: Country
+          column: Country
+          type: string
+        - property: Rating
+          column: Rating
+          type: double
+
+    # -------------------------------------------------------------------------
+    # ProductBatch Entity
+    # -------------------------------------------------------------------------
+    - entity: ProductBatch
+      sourceTable: DimProductBatch
+      keyColumn: BatchId
+      file: Data/Lakehouse/DimProductBatch.csv
+      properties:
+        - property: BatchId
+          column: BatchId
+          type: string
+          is_key: true
+        - property: LotNumber
+          column: LotNumber
+          type: string
+        - property: ManufactureDate
+          column: ManufactureDate
+          type: datetime
+        - property: ExpiryDate
+          column: ExpiryDate
+          type: datetime
+        - property: Quantity
+          column: Quantity
+          type: int
+        - property: BatchStatus
+          column: BatchStatus
+          type: string
+
+    # -------------------------------------------------------------------------
+    # Category Entity
+    # -------------------------------------------------------------------------
+    - entity: Category
+      sourceTable: DimCategory
+      keyColumn: CategoryId
+      file: Data/Lakehouse/DimCategory.csv
+      properties:
+        - property: CategoryId
+          column: CategoryId
+          type: string
+          is_key: true
+        - property: CategoryName
+          column: CategoryName
+          type: string
+        - property: Department
+          column: Department
+          type: string
+        - property: IsPerishable
+          column: IsPerishable
+          type: boolean
+
+    # -------------------------------------------------------------------------
+    # Employee Entity
+    # -------------------------------------------------------------------------
+    - entity: Employee
+      sourceTable: DimEmployee
+      keyColumn: EmployeeId
+      file: Data/Lakehouse/DimEmployee.csv
+      properties:
+        - property: EmployeeId
+          column: EmployeeId
+          type: string
+          is_key: true
+        - property: FirstName
+          column: FirstName
+          type: string
+        - property: LastName
+          column: LastName
+          type: string
+        - property: Role
+          column: Role
+          type: string
+        - property: HireDate
+          column: HireDate
+          type: datetime
+        - property: IsActive
+          column: IsActive
+          type: boolean
+
+    # -------------------------------------------------------------------------
+    # PurchaseOrder Entity
+    # -------------------------------------------------------------------------
+    - entity: PurchaseOrder
+      sourceTable: FactPurchaseOrder
+      keyColumn: OrderId
+      file: Data/Lakehouse/FactPurchaseOrder.csv
+      properties:
+        - property: OrderId
+          column: OrderId
+          type: string
+          is_key: true
+        - property: OrderDate
+          column: OrderDate
+          type: datetime
+        - property: ExpectedDelivery
+          column: ExpectedDelivery
+          type: datetime
+        - property: TotalAmount
+          column: TotalAmount
+          type: double
+        - property: OrderStatus
+          column: OrderStatus
+          type: string
+
+    # -------------------------------------------------------------------------
+    # QualityInspection Entity
+    # -------------------------------------------------------------------------
+    - entity: QualityInspection
+      sourceTable: FactQualityInspection
+      keyColumn: InspectionId
+      file: Data/Lakehouse/FactQualityInspection.csv
+      properties:
+        - property: InspectionId
+          column: InspectionId
+          type: string
+          is_key: true
+        - property: InspectionDate
+          column: InspectionDate
+          type: datetime
+        - property: Result
+          column: Result
+          type: string
+        - property: Notes
+          column: Notes
+          type: string
+        - property: Score
+          column: Score
+          type: int
+
+  # ===========================================================================
+  # RELATIONSHIP BINDINGS
+  # ===========================================================================
+
+  relationships:
+    # -------------------------------------------------------------------------
+    # BELONGS_TO: Product → Category
+    # The DimProduct table contains CategoryId as a foreign key
+    # -------------------------------------------------------------------------
+    - relationship: BELONGS_TO
+      sourceEntity: Product
+      targetEntity: Category
+      sourceTable: DimProduct
+      sourceKeyColumn: ProductId
+      targetKeyColumn: CategoryId
+
+    # -------------------------------------------------------------------------
+    # SUPPLIED_BY: Product → Supplier
+    # The DimProduct table contains SupplierId as a foreign key
+    # -------------------------------------------------------------------------
+    - relationship: SUPPLIED_BY
+      sourceEntity: Product
+      targetEntity: Supplier
+      sourceTable: DimProduct
+      sourceKeyColumn: ProductId
+      targetKeyColumn: SupplierId
+
+    # -------------------------------------------------------------------------
+    # STOCKS: Store → Product
+    # The FactStoreInventory table is a junction table (many-to-many)
+    # -------------------------------------------------------------------------
+    - relationship: STOCKS
+      sourceEntity: Store
+      targetEntity: Product
+      sourceTable: FactStoreInventory
+      sourceKeyColumn: StoreId
+      targetKeyColumn: ProductId
+
+    # -------------------------------------------------------------------------
+    # EMPLOYS: Store → Employee
+    # The DimEmployee table contains StoreId as a foreign key
+    # -------------------------------------------------------------------------
+    - relationship: EMPLOYS
+      sourceEntity: Store
+      targetEntity: Employee
+      sourceTable: DimEmployee
+      sourceKeyColumn: StoreId
+      targetKeyColumn: EmployeeId
+
+    # -------------------------------------------------------------------------
+    # CONTAINS: ProductBatch → Product
+    # The DimProductBatch table contains ProductId as a foreign key
+    # -------------------------------------------------------------------------
+    - relationship: CONTAINS
+      sourceEntity: ProductBatch
+      targetEntity: Product
+      sourceTable: DimProductBatch
+      sourceKeyColumn: BatchId
+      targetKeyColumn: ProductId
+
+    # -------------------------------------------------------------------------
+    # RECEIVED_AT: ProductBatch → Store
+    # The DimProductBatch table contains StoreId as a foreign key
+    # -------------------------------------------------------------------------
+    - relationship: RECEIVED_AT
+      sourceEntity: ProductBatch
+      targetEntity: Store
+      sourceTable: DimProductBatch
+      sourceKeyColumn: BatchId
+      targetKeyColumn: StoreId
+
+    # -------------------------------------------------------------------------
+    # ORDERED_BY: PurchaseOrder → Store
+    # The FactPurchaseOrder table contains StoreId as a foreign key
+    # -------------------------------------------------------------------------
+    - relationship: ORDERED_BY
+      sourceEntity: PurchaseOrder
+      targetEntity: Store
+      sourceTable: FactPurchaseOrder
+      sourceKeyColumn: OrderId
+      targetKeyColumn: StoreId
+
+    # -------------------------------------------------------------------------
+    # FULFILLED_BY: PurchaseOrder → Supplier
+    # The FactPurchaseOrder table contains SupplierId as a foreign key
+    # -------------------------------------------------------------------------
+    - relationship: FULFILLED_BY
+      sourceEntity: PurchaseOrder
+      targetEntity: Supplier
+      sourceTable: FactPurchaseOrder
+      sourceKeyColumn: OrderId
+      targetKeyColumn: SupplierId
+
+    # -------------------------------------------------------------------------
+    # INSPECTED: QualityInspection → ProductBatch
+    # The FactQualityInspection table contains BatchId as a foreign key
+    # -------------------------------------------------------------------------
+    - relationship: INSPECTED
+      sourceEntity: QualityInspection
+      targetEntity: ProductBatch
+      sourceTable: FactQualityInspection
+      sourceKeyColumn: InspectionId
+      targetKeyColumn: BatchId
+
+    # -------------------------------------------------------------------------
+    # PERFORMED_BY: QualityInspection → Employee
+    # The FactQualityInspection table contains EmployeeId as a foreign key
+    # -------------------------------------------------------------------------
+    - relationship: PERFORMED_BY
+      sourceEntity: QualityInspection
+      targetEntity: Employee
+      sourceTable: FactQualityInspection
+      sourceKeyColumn: InspectionId
+      targetKeyColumn: EmployeeId
+
+# =============================================================================
+# EVENTHOUSE CONFIGURATION (Timeseries Data)
+# =============================================================================
+
+eventhouse:
+  name: FreshMart_Telemetry
+  database: FreshMartDB
+  
+  entities:
+    # -------------------------------------------------------------------------
+    # Store Telemetry (timeseries for Store entity)
+    # -------------------------------------------------------------------------
+    - entity: Store
+      sourceTable: StoreTelemetry
+      keyColumn: StoreId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/StoreTelemetry.csv
+      rowCount: 54
+      properties:
+        - property: FootTraffic
+          column: FootTraffic
+          type: int
+        - property: SalesVelocity
+          column: SalesVelocity
+          type: double
+        - property: AvgTransactionValue
+          column: AvgTransactionValue
+          type: double
+
+    # -------------------------------------------------------------------------
+    # ProductBatch Telemetry (timeseries for ProductBatch entity)
+    # -------------------------------------------------------------------------
+    - entity: ProductBatch
+      sourceTable: BatchTelemetry
+      keyColumn: BatchId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/BatchTelemetry.csv
+      rowCount: 63
+      properties:
+        - property: StorageTemperature
+          column: StorageTemperature
+          type: double
+        - property: Humidity
+          column: Humidity
+          type: double
+        - property: DaysToExpiry
+          column: DaysToExpiry
+          type: int

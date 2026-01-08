@@ -1,0 +1,9 @@
+CategoryId,CategoryName,Department,IsPerishable
+CAT001,Fresh Produce,Produce,true
+CAT002,Dairy Products,Dairy,true
+CAT003,Frozen Foods,Frozen,true
+CAT004,Bakery Items,Bakery,true
+CAT005,Meat and Poultry,Meat,true
+CAT006,Seafood,Meat,true
+CAT007,Canned Goods,Grocery,false
+CAT008,Beverages,Grocery,false

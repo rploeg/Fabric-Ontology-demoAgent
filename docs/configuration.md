@@ -1,6 +1,8 @@
 # Configuration Guide
 
-Complete guide to configuring the `fabric-demo` CLI tool.
+Complete guide to configuring the demo automation CLI tool.
+
+> 💡 **Recommended**: Use `python -m demo_automation` instead of `fabric-demo` to avoid PATH configuration issues.
 
 ---
 
@@ -26,7 +28,7 @@ Location:
 
 ```bash
 # Interactive wizard (recommended)
-fabric-demo config init
+python -m demo_automation config init
 
 # Or create manually
 mkdir -p ~/.fabric-demo
@@ -82,7 +84,7 @@ rate_limiting:
 ### View Current Configuration
 
 ```bash
-fabric-demo config show
+python -m demo_automation config show
 ```
 
 Output:
@@ -287,7 +289,7 @@ options:
 
 ### "Workspace ID not configured"
 
-Run `fabric-demo config init` or set the environment variable:
+Run `python -m demo_automation config init` or set the environment variable:
 
 ```bash
 export FABRIC_WORKSPACE_ID=your-workspace-id
@@ -302,7 +304,7 @@ Valid values are: `interactive`, `service_principal`, `default`
 Check the file location:
 
 ```bash
-fabric-demo config path
+python -m demo_automation config path
 ```
 
 Verify YAML syntax with:

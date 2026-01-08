@@ -99,9 +99,25 @@ Generate:
 **Output**: `{scenario}.ttl` file saved to `{DemoName}/Ontology/{scenario}.ttl` with:
 - Namespace declarations
 - Entity class definitions
-- Entity key definitions (rdfs:comment noting "Key: string" or "Key: int")
+- Entity key definitions (rdfs:comment noting "Key: {PropertyName}")
 - Datatype properties with xsd types
 - Object properties for relationships
+
+### ⚠️ CRITICAL: Key Property Format for Parser
+
+The TTL converter parses `rdfs:comment` to extract key property names. Use this **exact format**:
+
+```turtle
+:Product a owl:Class ;
+    rdfs:label "Product" ;
+    rdfs:comment "Key: ProductId (string)" .  # Parser extracts "ProductId"
+
+:ProductId a owl:DatatypeProperty ;
+    rdfs:domain :Product ;
+    rdfs:range xsd:string .
+```
+
+The parser uses regex `Key:\s*(\w+)` to extract the key property name.
 
 ### Type Mapping
 
@@ -160,9 +176,59 @@ Generate:
 
 Generate machine-readable bindings file first. This is the **SOURCE OF TRUTH** for automation.
 
-See: [schemas/bindings-schema.yaml](schemas/bindings-schema.yaml)
+See: [schemas/bindings-schema.yaml](schemas/bindings-schema.yaml) for full schema.
 
 **Pathing**: All file references inside `bindings.yaml` must use `Data/Lakehouse/` for Lakehouse tables and `Data/Eventhouse/` for Eventhouse tables.
+
+#### ⚠️ CRITICAL: Required YAML Structure (Parser-Compatible)
+
+The `fabric-demo` CLI parser expects this **exact nested structure**:
+
+```yaml
+_schema_version: "1.0"
+
+metadata:
+  name: "{DemoName}"
+  version: "1.0"
+  description: "{description}"
+
+lakehouse:
+  name: "{DemoName}_Lakehouse"
+  entities:
+    - entity: EntityName           # Entity type name (matches ontology)
+      sourceTable: DimEntityName   # Table name
+      keyColumn: EntityId          # Primary key column
+      file: Data/Lakehouse/DimEntityName.csv
+      properties:
+        - property: PropertyName   # Ontology property name
+          column: ColumnName       # Source column name
+          type: string             # string|int|double|boolean|datetime
+          
+  relationships:
+    - relationship: RELATIONSHIP_NAME
+      sourceEntity: SourceEntity
+      targetEntity: TargetEntity
+      sourceTable: FactOrChildTable
+      sourceKeyColumn: SourceEntityId   # FK to source entity
+      targetKeyColumn: TargetEntityId   # Key/FK to target entity
+
+eventhouse:
+  name: "{DemoName}_Telemetry"
+  database: "{DemoName}DB"
+  entities:
+    - entity: EntityWithTimeseries
+      sourceTable: EntityTelemetry
+      keyColumn: EntityId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/EntityTelemetry.csv
+      rowCount: 50
+      properties:
+        - property: MetricName
+          column: MetricColumn
+          type: double
+```
+
+> ⚠️ **Parser Requirement**: The root keys MUST be `_schema_version`, `lakehouse`, and `eventhouse` (not a flat `entities:` list). The parser looks for `lakehouse.entities` and `eventhouse.entities` specifically.
 
 #### ⚠️ CRITICAL: Relationship Binding Rules (from MS Fabric Ontology Tutorial)
 
@@ -267,7 +333,55 @@ Include:
 
 ### Output 2: .demo-metadata.yaml (REQUIRED) — save to `{DemoName}/.demo-metadata.yaml`
 
-See: [schemas/metadata-schema.yaml](schemas/metadata-schema.yaml)
+See: [schemas/metadata-schema.yaml](schemas/metadata-schema.yaml) for full schema.
+
+#### Required Structure:
+
+```yaml
+metadata:
+  name: "{DemoName}"
+  version: "1.0"
+  created: "YYYY-MM-DD"
+  author: Fabric Ontology Demo Agent
+  specVersion: "3.3"
+
+demo:
+  company: "{CompanyName}"
+  industry: "{Industry}"
+  domain: "{Domain}"
+  description: "{description}"
+  useCases:
+    - "Use case 1"
+    - "Use case 2"
+
+ontology:
+  file: Ontology/{demo-slug}.ttl           # Use forward slashes
+  namespace: http://example.com/ontology#
+  entities:
+    - name: EntityName
+      key: EntityId
+      keyType: string                       # string or int
+      hasTimeseries: false
+
+data:
+  lakehouse:
+    folder: Data/Lakehouse                  # Use forward slashes
+    tables:
+      - name: DimEntity
+        file: DimEntity.csv
+        rowCount: 20
+  eventhouse:
+    folder: Data/Eventhouse
+    tables:
+      - name: EntityTelemetry
+        file: EntityTelemetry.csv
+        rowCount: 50
+
+bindings:
+  file: Bindings/bindings.yaml              # Use forward slashes
+```
+
+> ⚠️ **Path Format**: Use **forward slashes** (`/`) in all file paths within YAML files. The Python `pathlib.Path` handles cross-platform conversion automatically.
 
 > ⚠️ **Critical**: This file enables the fabric-demo automation tool to validate compatibility.
 
@@ -280,9 +394,48 @@ Final message should include:
 1. **Summary** of all generated files (including .demo-metadata.yaml)
 2. **Next steps** for user:
    - Manual setup: Follow README.md
-   - Automated setup: Run `fabric-demo setup {DemoName}/`
+   - Automated setup: Run `python -m demo_automation setup {DemoName}/`
 3. **Common pitfalls** to avoid
 4. **Links** to documentation
+
+> 💡 **CLI Invocation**: Use `python -m demo_automation` instead of `fabric-demo` to avoid PATH configuration issues. Both are equivalent.
+
+---
+
+## ⚠️ CRITICAL: Parser Compatibility Checklist
+
+Before finishing, verify ALL of the following for `fabric-demo setup` to work:
+
+### bindings.yaml
+- [ ] Root keys are `_schema_version`, `lakehouse`, `eventhouse` (NOT flat `entities:`)
+- [ ] `_schema_version: "1.0"` is present at root level
+- [ ] Entities under `lakehouse.entities[]` use `sourceTable`, `keyColumn`, `properties[]`
+- [ ] Relationships under `lakehouse.relationships[]` use `relationship`, `sourceEntity`, `targetEntity`, `sourceTable`, `sourceKeyColumn`, `targetKeyColumn`
+- [ ] Eventhouse entities under `eventhouse.entities[]` include `timestampColumn`
+- [ ] All paths use **forward slashes** (`Data/Lakehouse/`, not `Data\Lakehouse\`)
+
+### TTL Ontology
+- [ ] Each entity class has `rdfs:comment "Key: {PropertyName} (type)"` 
+- [ ] Key property name in comment matches an actual DatatypeProperty
+- [ ] No `xsd:decimal` types (use `xsd:double` instead)
+
+### Folder Structure
+- [ ] Case matches exactly: `Bindings/`, `Data/`, `Ontology/` (parser is case-insensitive but consistency matters)
+- [ ] `Data/Lakehouse/` contains Dim*.csv and Fact*.csv files
+- [ ] `Data/Eventhouse/` contains *Telemetry.csv files
+- [ ] `Ontology/` contains {demo-slug}.ttl file
+
+### CSV Files
+- [ ] All CSVs have headers in first row
+- [ ] Key columns contain unique values (no duplicates)
+- [ ] Foreign keys reference valid parent records
+- [ ] No NULL values in key columns
+- [ ] Timestamps in ISO 8601 format
+
+### .demo-metadata.yaml
+- [ ] `ontology.file` path uses forward slashes
+- [ ] `data.lakehouse.folder` path uses forward slashes
+- [ ] All entity names match TTL class names exactly
 
 
 # REFERENCES

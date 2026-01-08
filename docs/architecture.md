@@ -11,7 +11,7 @@ System design documentation for contributors and maintainers.
 │                              User Interface                                  │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
 │  │                         CLI (cli.py)                                  │  │
-│  │  fabric-demo setup | validate | cleanup | config | list | run-step   │  │
+│  │  python -m demo_automation setup | validate | cleanup | config | ... │  │
 │  └──────────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────────┘
                                       │

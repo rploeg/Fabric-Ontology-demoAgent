@@ -10,15 +10,17 @@ cd Demo-automation
 pip install -e .
 
 # 2. Configure your workspace (one-time setup)
-fabric-demo config init
+python -m demo_automation config init
 
 # 3. Validate and setup a demo
-fabric-demo validate ../CreditFraud
-fabric-demo setup ../CreditFraud
+python -m demo_automation validate ../CreditFraud
+python -m demo_automation setup ../CreditFraud
 
 # 4. When done, cleanup
-fabric-demo cleanup ../CreditFraud
+python -m demo_automation cleanup ../CreditFraud
 ```
+
+> 💡 **Note**: Use `python -m demo_automation` instead of `fabric-demo` to avoid PATH configuration issues. Both commands are equivalent.
 
 ## Configuration
 
@@ -33,13 +35,13 @@ The tool supports multiple configuration sources (in order of precedence):
 
 ```bash
 # Interactive configuration wizard
-fabric-demo config init
+python -m demo_automation config init
 
 # View current configuration
-fabric-demo config show
+python -m demo_automation config show
 
 # Show config file location
-fabric-demo config path
+python -m demo_automation config path
 ```
 
 ### Environment Variables
@@ -94,10 +96,12 @@ pip install -e .
 pip install -e ".[dev]"
 
 # Verify installation
-fabric-demo --help
+python -m demo_automation --help
 ```
 
-### Troubleshooting: "fabric-demo not recognized"
+### Alternative: Using `fabric-demo` Command
+
+If you prefer the shorter `fabric-demo` command, you need to configure PATH:
 
 If you get the error `fabric-demo: The term 'fabric-demo' is not recognized`, the Python Scripts folder is not in your PATH.
 
@@ -122,36 +126,36 @@ $env:PATH += ";$env:APPDATA\Python\Python314\Scripts"
 & "$env:APPDATA\Python\Python314\Scripts\fabric-demo.exe" setup ./PillManufacturing
 ```
 
-**Option 3: Run as Python Module**
+**Option 3: Run as Python Module (Recommended)**
 
 ```bash
-# From the Demo-automation folder
-python -m demo_automation.cli --help
-python -m demo_automation.cli validate ../MedicalManufacturing
-python -m demo_automation.cli setup ../PillManufacturing --workspace-id <id>
+# Works from anywhere without PATH configuration
+python -m demo_automation --help
+python -m demo_automation validate ../MedicalManufacturing
+python -m demo_automation setup ../PillManufacturing --workspace-id <id>
 ```
 
 ## Commands Reference
 
 ```bash
 # Configuration
-fabric-demo config init          # Interactive setup wizard
-fabric-demo config show          # Show current configuration
-fabric-demo config path          # Show config file location
+python -m demo_automation config init          # Interactive setup wizard
+python -m demo_automation config show          # Show current configuration
+python -m demo_automation config path          # Show config file location
 
 # Demo Operations
-fabric-demo init ./Demo          # Create demo.yaml template
-fabric-demo validate ./Demo      # Validate demo package
-fabric-demo setup ./Demo         # Run full setup
-fabric-demo status ./Demo        # Check setup progress
-fabric-demo list                 # List resources in workspace
-fabric-demo cleanup ./Demo       # Remove demo resources
+python -m demo_automation init ./Demo          # Create demo.yaml template
+python -m demo_automation validate ./Demo      # Validate demo package
+python -m demo_automation setup ./Demo         # Run full setup
+python -m demo_automation status ./Demo        # Check setup progress
+python -m demo_automation list                 # List resources in workspace
+python -m demo_automation cleanup ./Demo       # Remove demo resources
 
 # Advanced
-fabric-demo setup ./Demo --dry-run           # Preview without changes
-fabric-demo setup ./Demo --resume            # Resume from failure
-fabric-demo run-step ./Demo --step 8         # Run single step
-fabric-demo cleanup ./Demo --force-by-name   # Cleanup without state file
+python -m demo_automation setup ./Demo --dry-run           # Preview without changes
+python -m demo_automation setup ./Demo --resume            # Resume from failure
+python -m demo_automation run-step ./Demo --step 8         # Run single step
+python -m demo_automation cleanup ./Demo --force-by-name   # Cleanup without state file
 ```
 
 ## Running Individual Steps
@@ -160,13 +164,13 @@ Each step can be executed independently using the `run-step` command:
 
 ```bash
 # Run a step by number (1-11)
-fabric-demo run-step ./MedicalManufacturing --step 2  # Create Lakehouse
-fabric-demo run-step ./MedicalManufacturing --step 8  # Bind static properties
+python -m demo_automation run-step ./MedicalManufacturing --step 2  # Create Lakehouse
+python -m demo_automation run-step ./MedicalManufacturing --step 8  # Bind static properties
 
 # Run a step by name
-fabric-demo run-step ./MedicalManufacturing --step create_lakehouse
-fabric-demo run-step ./MedicalManufacturing --step bind_static
-fabric-demo run-step ./MedicalManufacturing --step verify
+python -m demo_automation run-step ./MedicalManufacturing --step create_lakehouse
+python -m demo_automation run-step ./MedicalManufacturing --step bind_static
+python -m demo_automation run-step ./MedicalManufacturing --step verify
 
 # Force re-run of a completed step
 fabric-demo run-step ./MedicalManufacturing --step 8 --force

@@ -52,25 +52,27 @@ def setup_logging(verbose: bool = False) -> None:
 def create_parser() -> argparse.ArgumentParser:
     """Create the main CLI parser."""
     parser = argparse.ArgumentParser(
-        prog="fabric-demo",
+        prog="demo_automation",
         description="Fabric Ontology Demo Automation Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
+Usage: python -m demo_automation <command> [options]
+
 Examples:
   # First-time setup
-  fabric-demo config init                     # Configure workspace ID
+  python -m demo_automation config init                     # Configure workspace ID
   
   # Working with demos
-  fabric-demo validate ./MedicalManufacturing
-  fabric-demo setup ./MedicalManufacturing
-  fabric-demo status ./MedicalManufacturing
-  fabric-demo list                            # List demos in workspace
-  fabric-demo cleanup ./MedicalManufacturing
+  python -m demo_automation validate ./MedicalManufacturing
+  python -m demo_automation setup ./MedicalManufacturing
+  python -m demo_automation status ./MedicalManufacturing
+  python -m demo_automation list                            # List demos in workspace
+  python -m demo_automation cleanup ./MedicalManufacturing
   
   # Advanced usage
-  fabric-demo setup ./Demo --workspace-id abc  # Override workspace
-  fabric-demo run-step ./Demo --step 8         # Run single step
-  fabric-demo cleanup ./Demo --force-by-name   # Cleanup without state file
+  python -m demo_automation setup ./Demo --workspace-id abc  # Override workspace
+  python -m demo_automation run-step ./Demo --step 8         # Run single step
+  python -m demo_automation cleanup ./Demo --force-by-name   # Cleanup without state file
         """,
     )
 

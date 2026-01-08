@@ -1,6 +1,8 @@
 # Troubleshooting Guide
 
-Solutions to common issues with the `fabric-demo` tool.
+Solutions to common issues with the demo automation tool.
+
+> 💡 **Recommended**: Use `python -m demo_automation` instead of `fabric-demo` to avoid PATH configuration issues.
 
 ---
 
@@ -10,7 +12,15 @@ Solutions to common issues with the `fabric-demo` tool.
 
 The Python Scripts folder is not in your PATH.
 
-**Option 1: Add to PATH (Recommended)**
+**Option 1: Use Python Module (Recommended)**
+
+```bash
+cd Demo-automation
+python -m demo_automation --help
+python -m demo_automation setup ../MedicalManufacturing
+```
+
+**Option 2: Add to PATH**
 
 ```powershell
 # Find install location (shown during pip install)
@@ -21,14 +31,6 @@ $env:PATH += ";$env:APPDATA\Python\Python314\Scripts"
 
 # Add permanently (restart terminal after)
 [Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$env:APPDATA\Python\Python314\Scripts", "User")
-```
-
-**Option 2: Run as Python Module**
-
-```bash
-cd Demo-automation
-python -m demo_automation.cli --help
-python -m demo_automation.cli setup ../MedicalManufacturing
 ```
 
 **Option 3: Use Full Path**
@@ -114,7 +116,7 @@ options:
 Or delete existing resources first:
 
 ```bash
-fabric-demo cleanup ./MedicalManufacturing --confirm
+python -m demo_automation cleanup ./MedicalManufacturing --confirm
 ```
 
 ### "Rate limit exceeded" / 429 Error
@@ -139,13 +141,13 @@ The Fabric API is throttling requests.
 Use resume to continue from where you left off:
 
 ```bash
-fabric-demo setup ./MedicalManufacturing --resume
+python -m demo_automation setup ./MedicalManufacturing --resume
 ```
 
 If you want to start fresh:
 
 ```bash
-fabric-demo setup ./MedicalManufacturing --clear-state
+python -m demo_automation setup ./MedicalManufacturing --clear-state
 ```
 
 ---
@@ -173,7 +175,7 @@ When viewing relationship bindings in Fabric UI.
 
 1. Verify property names in `Ontology/*.ttl` match `bindings.yaml`
 2. Check column names in `Data/Lakehouse/*.csv` files
-3. Re-run validation: `fabric-demo validate ./MedicalManufacturing`
+3. Re-run validation: `python -m demo_automation validate ./MedicalManufacturing`
 
 ### "Entity key column not found"
 
@@ -201,13 +203,13 @@ When viewing relationship bindings in Fabric UI.
 
 2. **Recover the state file** from Fabric resources (recommended):
    ```bash
-   fabric-demo recover ./MedicalManufacturing
-   fabric-demo cleanup ./MedicalManufacturing
+   python -m demo_automation recover ./MedicalManufacturing
+   python -m demo_automation cleanup ./MedicalManufacturing
    ```
 
 3. Or use force-by-name cleanup (deletes by resource name):
    ```bash
-   fabric-demo cleanup ./MedicalManufacturing --force-by-name --confirm
+   python -m demo_automation cleanup ./MedicalManufacturing --force-by-name --confirm
    ```
 
 ### "Cannot delete ontology - bindings exist"
@@ -228,10 +230,10 @@ If the state file (`.setup-state.yaml`) is lost, corrupted, or accidentally dele
 
 ```bash
 # Rebuild state file from existing resources
-fabric-demo recover ./MedicalManufacturing
+python -m demo_automation recover ./MedicalManufacturing
 
 # Then cleanup normally
-fabric-demo cleanup ./MedicalManufacturing
+python -m demo_automation cleanup ./MedicalManufacturing
 ```
 
 **Option 2: Restore from backup**
@@ -249,7 +251,7 @@ cp .setup-state.yaml.backup .setup-state.yaml
 **Option 3: Force cleanup by name**
 
 ```bash
-fabric-demo cleanup ./MedicalManufacturing --force-by-name
+python -m demo_automation cleanup ./MedicalManufacturing --force-by-name
 ```
 
 ### State File Lost After Cleanup
@@ -258,7 +260,7 @@ The state file is preserved with `cleaned_up` status after cleanup. If you delet
 
 ```bash
 # Use force-by-name to cleanup by resource name
-fabric-demo cleanup ./MedicalManufacturing --force-by-name
+python -m demo_automation cleanup ./MedicalManufacturing --force-by-name
 ```
 
 ---
@@ -322,8 +324,8 @@ The bindings file doesn't match the expected schema.
 
 3. Run individual steps to identify bottleneck:
    ```bash
-   fabric-demo run-step ./Demo --step 3  # Upload files
-   fabric-demo run-step ./Demo --step 6  # Ingest data
+   python -m demo_automation run-step ./Demo --step 3  # Upload files
+   python -m demo_automation run-step ./Demo --step 6  # Ingest data
    ```
 
 ### "Connection timeout"
@@ -344,7 +346,7 @@ The bindings file doesn't match the expected schema.
 Get full stack traces:
 
 ```bash
-fabric-demo setup ./MedicalManufacturing --debug
+python -m demo_automation setup ./MedicalManufacturing --debug
 ```
 
 ### Check Setup Status
@@ -352,7 +354,7 @@ fabric-demo setup ./MedicalManufacturing --debug
 See which steps completed:
 
 ```bash
-fabric-demo status ./MedicalManufacturing
+python -m demo_automation status ./MedicalManufacturing
 ```
 
 ### View State File

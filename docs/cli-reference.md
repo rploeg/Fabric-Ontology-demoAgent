@@ -1,6 +1,8 @@
 # CLI Reference
 
-Complete reference for all `fabric-demo` commands.
+Complete reference for the demo automation CLI.
+
+> 💡 **Recommended**: Use `python -m demo_automation` instead of `fabric-demo` to avoid PATH configuration issues. Both are equivalent.
 
 ---
 
@@ -18,32 +20,32 @@ These options work with any command:
 
 ## Configuration Commands
 
-### `fabric-demo config init`
+### `config init`
 
 Interactive wizard to create or update global configuration.
 
 ```bash
-fabric-demo config init
+python -m demo_automation config init
 ```
 
 Creates `~/.fabric-demo/config.yaml` with your default workspace ID and preferences.
 
-### `fabric-demo config show`
+### `config show`
 
 Display current configuration with source indicators.
 
 ```bash
-fabric-demo config show
+python -m demo_automation config show
 ```
 
 Output shows where each value comes from (env, config file, or default).
 
-### `fabric-demo config path`
+### `config path`
 
 Show the path to the global configuration file.
 
 ```bash
-fabric-demo config path
+python -m demo_automation config path
 # Output: ~/.fabric-demo/config.yaml
 ```
 
@@ -51,12 +53,12 @@ fabric-demo config path
 
 ## Demo Commands
 
-### `fabric-demo validate <path>`
+### `validate <path>`
 
 Validate a demo package structure and contents.
 
 ```bash
-fabric-demo validate ./MedicalManufacturing
+python -m demo_automation validate ./MedicalManufacturing
 ```
 
 Checks:
@@ -65,25 +67,25 @@ Checks:
 - CSV files are present
 - bindings.yaml matches expected schema
 
-### `fabric-demo setup <path>`
+### `setup <path>`
 
 Run the complete 11-step setup workflow.
 
 ```bash
 # Basic usage (uses config file for workspace ID)
-fabric-demo setup ./MedicalManufacturing
+python -m demo_automation setup ./MedicalManufacturing
 
 # Specify workspace ID explicitly
-fabric-demo setup ./MedicalManufacturing --workspace-id <guid>
+python -m demo_automation setup ./MedicalManufacturing --workspace-id <guid>
 
 # Preview without making changes
-fabric-demo setup ./MedicalManufacturing --dry-run
+python -m demo_automation setup ./MedicalManufacturing --dry-run
 
 # Resume from a failed run
-fabric-demo setup ./MedicalManufacturing --resume
+python -m demo_automation setup ./MedicalManufacturing --resume
 
 # Clear state and start fresh
-fabric-demo setup ./MedicalManufacturing --clear-state
+python -m demo_automation setup ./MedicalManufacturing --clear-state
 ```
 
 **Options:**
@@ -96,44 +98,44 @@ fabric-demo setup ./MedicalManufacturing --clear-state
 | `--resume` | Continue from last successful step |
 | `--clear-state` | Delete state file and start fresh |
 
-### `fabric-demo status <path>`
+### `status <path>`
 
 Check the setup progress of a demo.
 
 ```bash
-fabric-demo status ./MedicalManufacturing
+python -m demo_automation status ./MedicalManufacturing
 ```
 
 Shows which steps have completed, failed, or are pending.
 
-### `fabric-demo list`
+### `list`
 
 List ontology-related resources in your workspace.
 
 ```bash
 # List all resources
-fabric-demo list
+python -m demo_automation list
 
 # Specify workspace
-fabric-demo list --workspace-id <guid>
+python -m demo_automation list --workspace-id <guid>
 ```
 
-### `fabric-demo cleanup <path>`
+### `cleanup <path>`
 
 Remove resources created by the setup command.
 
 ```bash
 # Interactive confirmation (default)
-fabric-demo cleanup ./MedicalManufacturing
+python -m demo_automation cleanup ./MedicalManufacturing
 
 # Skip confirmation
-fabric-demo cleanup ./MedicalManufacturing --confirm
+python -m demo_automation cleanup ./MedicalManufacturing --confirm
 
 # Skip confirmation with -y shorthand
-fabric-demo cleanup ./MedicalManufacturing -y
+python -m demo_automation cleanup ./MedicalManufacturing -y
 
 # Cleanup by name (when state file is missing)
-fabric-demo cleanup ./MedicalManufacturing --force-by-name
+python -m demo_automation cleanup ./MedicalManufacturing --force-by-name
 ```
 
 **Options:**
@@ -153,19 +155,19 @@ fabric-demo cleanup ./MedicalManufacturing --force-by-name
 
 ## Advanced Commands
 
-### `fabric-demo run-step <path> --step <n>`
+### `run-step <path> --step <n>`
 
 Execute a single step from the workflow.
 
 ```bash
 # Run by step number
-fabric-demo run-step ./MedicalManufacturing --step 2
+python -m demo_automation run-step ./MedicalManufacturing --step 2
 
 # Run by step name
-fabric-demo run-step ./MedicalManufacturing --step create_lakehouse
+python -m demo_automation run-step ./MedicalManufacturing --step create_lakehouse
 
 # Force re-run of completed step
-fabric-demo run-step ./MedicalManufacturing --step 8 --force
+python -m demo_automation run-step ./MedicalManufacturing --step 8 --force
 ```
 
 **Available Steps:**
@@ -184,35 +186,35 @@ fabric-demo run-step ./MedicalManufacturing --step 8 --force
 | 10 | `bind_relationships` | Bind relationship contextualizations |
 | 11 | `verify` | Verify all resources and bindings |
 
-### `fabric-demo init <path>`
+### `init <path>`
 
 Create a `demo.yaml` template in a folder.
 
 ```bash
-fabric-demo init ./MyNewDemo
+python -m demo_automation init ./MyNewDemo
 ```
 
-### `fabric-demo docs`
+### `docs`
 
 Open documentation in your browser.
 
 ```bash
-fabric-demo docs
+python -m demo_automation docs
 ```
 
-### `fabric-demo recover <path>`
+### `recover <path>`
 
 Rebuild the state file from existing Fabric resources.
 
 ```bash
 # Recover state for a demo
-fabric-demo recover ./MedicalManufacturing
+python -m demo_automation recover ./MedicalManufacturing
 
 # Specify workspace
-fabric-demo recover ./MedicalManufacturing --workspace-id <guid>
+python -m demo_automation recover ./MedicalManufacturing --workspace-id <guid>
 
 # Overwrite existing state file
-fabric-demo recover ./MedicalManufacturing --force
+python -m demo_automation recover ./MedicalManufacturing --force
 ```
 
 **Options:**
@@ -237,49 +239,49 @@ The command searches for resources matching the demo naming convention (prefixed
 
 ```bash
 # One-time setup
-fabric-demo config init
+python -m demo_automation config init
 
 # Deploy a demo
-fabric-demo validate ./MedicalManufacturing
-fabric-demo setup ./MedicalManufacturing
+python -m demo_automation validate ./MedicalManufacturing
+python -m demo_automation setup ./MedicalManufacturing
 
 # Check progress
-fabric-demo status ./MedicalManufacturing
+python -m demo_automation status ./MedicalManufacturing
 
 # Cleanup when done
-fabric-demo cleanup ./MedicalManufacturing
+python -m demo_automation cleanup ./MedicalManufacturing
 ```
 
 ### Recovery from Failure
 
 ```bash
 # If setup fails mid-way
-fabric-demo setup ./MedicalManufacturing --resume
+python -m demo_automation setup ./MedicalManufacturing --resume
 
 # If you need to start fresh
-fabric-demo setup ./MedicalManufacturing --clear-state
+python -m demo_automation setup ./MedicalManufacturing --clear-state
 
 # If state file is corrupted/deleted but resources exist
-fabric-demo recover ./MedicalManufacturing
+python -m demo_automation recover ./MedicalManufacturing
 
 # If state file is lost, cleanup by resource name
-fabric-demo cleanup ./MedicalManufacturing --force-by-name
+python -m demo_automation cleanup ./MedicalManufacturing --force-by-name
 ```
 
 ### Debugging
 
 ```bash
 # See exactly what would happen
-fabric-demo setup ./MedicalManufacturing --dry-run
+python -m demo_automation setup ./MedicalManufacturing --dry-run
 
 # Run a specific step
-fabric-demo run-step ./MedicalManufacturing --step bind_static
+python -m demo_automation run-step ./MedicalManufacturing --step bind_static
 
 # Force re-run a step
-fabric-demo run-step ./MedicalManufacturing --step 8 --force
+python -m demo_automation run-step ./MedicalManufacturing --step 8 --force
 
 # Show full error details
-fabric-demo setup ./MedicalManufacturing --debug
+python -m demo_automation setup ./MedicalManufacturing --debug
 ```
 
 ---

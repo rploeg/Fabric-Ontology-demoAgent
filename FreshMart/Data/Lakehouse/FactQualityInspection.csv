@@ -1,0 +1,41 @@
+InspectionId,InspectionDate,Result,Notes,Score,BatchId,EmployeeId
+QI001,2025-12-01T09:00:00,Pass,All parameters within acceptable range,95,BAT001,EMP002
+QI002,2025-12-02T10:30:00,Pass,Fresh produce in excellent condition,92,BAT002,EMP002
+QI003,2025-12-01T14:00:00,Conditional,Minor discoloration on some leaves,78,BAT003,EMP002
+QI004,2025-12-03T08:45:00,Pass,Temperature maintained properly,94,BAT004,EMP004
+QI005,2025-12-01T11:15:00,Pass,Yogurt cultures active and healthy,96,BAT005,EMP004
+QI006,2025-12-04T09:30:00,Pass,Cheese aging properly,90,BAT006,EMP004
+QI007,2025-11-16T10:00:00,Pass,Frozen items at correct temperature,93,BAT007,EMP006
+QI008,2025-11-21T13:45:00,Pass,Ice cream consistency good,91,BAT008,EMP006
+QI009,2025-11-11T08:30:00,Pass,Vegetables properly frozen,94,BAT009,EMP006
+QI010,2025-12-05T09:15:00,Pass,Bread freshly baked,97,BAT010,EMP008
+QI011,2025-12-06T10:00:00,Pass,Croissants flaky and fresh,95,BAT011,EMP008
+QI012,2025-12-04T14:30:00,Pass,Whole wheat bread texture good,93,BAT012,EMP008
+QI013,2025-12-05T08:00:00,Conditional,Slight temperature variance noted,82,BAT013,EMP010
+QI014,2025-12-06T09:45:00,Pass,Chicken properly refrigerated,94,BAT014,EMP010
+QI015,2025-12-05T11:30:00,Pass,Pork chops fresh and well-trimmed,91,BAT015,EMP010
+QI016,2025-12-07T08:15:00,Pass,Salmon fillet color excellent,96,BAT016,EMP012
+QI017,2025-12-06T10:45:00,Fail,Shrimp showing early spoilage signs,45,BAT017,EMP012
+QI018,2025-12-07T13:00:00,Pass,Tilapia properly iced,92,BAT018,EMP012
+QI019,2025-11-02T09:00:00,Pass,Canned goods intact no dents,98,BAT019,EMP014
+QI020,2025-11-06T10:30:00,Pass,Black beans cans sealed properly,97,BAT020,EMP014
+QI021,2025-11-11T14:15:00,Pass,Soup cans in good condition,96,BAT021,EMP014
+QI022,2025-12-01T08:45:00,Pass,Orange juice freshly squeezed,94,BAT022,EMP016
+QI023,2025-10-02T11:00:00,Pass,Sparkling water carbonation good,95,BAT023,EMP016
+QI024,2025-11-16T09:30:00,Pass,Apple juice pasteurized correctly,93,BAT024,EMP016
+QI025,2025-12-02T10:15:00,Pass,Carrots crisp and fresh,92,BAT025,EMP018
+QI026,2025-12-05T13:45:00,Conditional,Some avocados overripe,75,BAT026,EMP018
+QI027,2025-11-21T08:30:00,Pass,Butter properly refrigerated,94,BAT027,EMP018
+QI028,2025-12-01T09:45:00,Pass,Bacon packaging intact,93,BAT028,EMP020
+QI029,2025-12-03T14:00:00,Pass,Bananas at optimal ripeness,91,BAT029,EMP020
+QI030,2025-12-04T10:30:00,Pass,Milk fresh and properly stored,95,BAT030,EMP022
+QI031,2025-12-02T08:15:00,Fail,Ground beef temperature too high,38,BAT031,EMP022
+QI032,2025-12-05T11:45:00,Conditional,Salmon minor discoloration,70,BAT032,EMP022
+QI033,2025-12-01T09:00:00,Pass,Bananas fresh from shipment,94,BAT033,EMP024
+QI034,2025-12-03T13:30:00,Pass,Spinach crisp no wilting,92,BAT034,EMP024
+QI035,2025-12-04T10:00:00,Pass,Bread aroma fresh,96,BAT035,EMP024
+QI036,2025-11-26T08:30:00,Fail,Spinach showing bacterial growth,25,BAT036,EMP002
+QI037,2025-11-21T09:15:00,Fail,Ground beef contamination suspected,30,BAT037,EMP004
+QI038,2025-11-23T10:45:00,Fail,Salmon recall due to supplier issue,20,BAT038,EMP006
+QI039,2025-12-01T14:30:00,Pass,Chicken breast properly chilled,93,BAT039,EMP002
+QI040,2025-12-02T09:00:00,Pass,Greek yogurt cultures healthy,95,BAT040,EMP008

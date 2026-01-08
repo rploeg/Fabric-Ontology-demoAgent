@@ -53,10 +53,10 @@ Once generation is complete:
 
 ```bash
 # Validate the generated package
-fabric-demo validate ./demo-water-treatment
+python -m demo_automation validate ./demo-water-treatment
 
 # Deploy to Fabric
-fabric-demo setup ./demo-water-treatment
+python -m demo_automation setup ./demo-water-treatment
 ```
 
 ---
@@ -227,7 +227,7 @@ Please re-read #file:.agentic/agent-instructions.md and follow the constraints e
 
 Check the agent created all required files:
 ```bash
-fabric-demo validate ./demo-name
+python -m demo_automation validate ./demo-name
 ```
 
 ### Bindings Don't Match TTL

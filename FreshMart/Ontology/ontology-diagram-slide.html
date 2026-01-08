@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreshMart Supermarket - Ontology Diagram</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #ffffff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #b8c5d6;
+            font-size: 1.1rem;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(90deg, #00d4ff, #00ff88);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .metric-label {
+            color: #b8c5d6;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        .diagram-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .legend-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .legend-section h3 {
+            color: #00d4ff;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 0.85rem;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        
+        .entity-lakehouse { background: #4CAF50; }
+        .entity-eventhouse { background: #2196F3; }
+        .relationship { background: #FF9800; }
+        
+        .use-cases {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        
+        .use-cases h2 {
+            color: #00d4ff;
+            margin-bottom: 20px;
+        }
+        
+        .use-case-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .use-case-card {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #00ff88;
+        }
+        
+        .use-case-card h4 {
+            color: #00ff88;
+            margin-bottom: 10px;
+        }
+        
+        .use-case-card p {
+            color: #b8c5d6;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        
+        .traversal-path {
+            font-family: 'Courier New', monospace;
+            background: rgba(0, 212, 255, 0.1);
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #00d4ff;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #6b7c93;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛒 FreshMart Supermarket</h1>
+            <p>Supply Chain Traceability & Food Safety Ontology</p>
+        </div>
+        
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value">8</div>
+                <div class="metric-label">Entity Types</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">10</div>
+                <div class="metric-label">Relationships</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">2</div>
+                <div class="metric-label">Timeseries Entities</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">6</div>
+                <div class="metric-label">Timeseries Metrics</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">5</div>
+                <div class="metric-label">Max Traversal Hops</div>
+            </div>
+        </div>
+        
+        <div class="diagram-container">
+            <div class="mermaid">
+erDiagram
+    Store {
+        string StoreId PK
+        string StoreName
+        string Address
+        string City
+        string State
+        string ZipCode
+        datetime OpenDate
+        int SquareFootage
+    }
+    
+    Product {
+        string ProductId PK
+        string ProductName
+        string UPC
+        double UnitPrice
+        double UnitCost
+        int ShelfLife
+    }
+    
+    Supplier {
+        string SupplierId PK
+        string SupplierName
+        string ContactEmail
+        string Phone
+        string Country
+        double Rating
+    }
+    
+    ProductBatch {
+        string BatchId PK
+        string LotNumber
+        datetime ManufactureDate
+        datetime ExpiryDate
+        int Quantity
+        string Status
+    }
+    
+    Category {
+        string CategoryId PK
+        string CategoryName
+        string Department
+        boolean IsPerishable
+    }
+    
+    Employee {
+        string EmployeeId PK
+        string FirstName
+        string LastName
+        string Role
+        datetime HireDate
+        boolean IsActive
+    }
+    
+    PurchaseOrder {
+        string OrderId PK
+        datetime OrderDate
+        datetime ExpectedDelivery
+        double TotalAmount
+        string Status
+    }
+    
+    QualityInspection {
+        string InspectionId PK
+        datetime InspectionDate
+        string Result
+        string Notes
+        int Score
+    }
+
+    Product ||--o{ Category : BELONGS_TO
+    Product ||--o{ Supplier : SUPPLIED_BY
+    Store ||--o{ Product : STOCKS
+    Store ||--o{ Employee : EMPLOYS
+    ProductBatch ||--|| Product : CONTAINS
+    ProductBatch ||--|| Store : RECEIVED_AT
+    PurchaseOrder ||--|| Store : ORDERED_BY
+    PurchaseOrder ||--|| Supplier : FULFILLED_BY
+    QualityInspection ||--|| ProductBatch : INSPECTED
+    QualityInspection ||--|| Employee : PERFORMED_BY
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-section">
+                <h3>📦 Lakehouse Entities</h3>
+                <div class="legend-item">
+                    <div class="legend-color entity-lakehouse"></div>
+                    <span>Store - Physical locations</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color entity-lakehouse"></div>
+                    <span>Product - SKUs catalog</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color entity-lakehouse"></div>
+                    <span>Supplier - Vendor partners</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color entity-lakehouse"></div>
+                    <span>ProductBatch - Shipment lots</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color entity-lakehouse"></div>
+                    <span>Category - Product classification</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color entity-lakehouse"></div>
+                    <span>Employee - Store staff</span>
+                </div>
+            </div>
+            
+            <div class="legend-section">
+                <h3>📊 Timeseries Data (Eventhouse)</h3>
+                <div class="legend-item">
+                    <div class="legend-color entity-eventhouse"></div>
+                    <span>Store: FootTraffic, SalesVelocity, AvgTransactionValue</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color entity-eventhouse"></div>
+                    <span>ProductBatch: StorageTemperature, Humidity, DaysToExpiry</span>
+                </div>
+            </div>
+            
+            <div class="legend-section">
+                <h3>🔗 Key Relationships</h3>
+                <div class="legend-item">
+                    <div class="legend-color relationship"></div>
+                    <span>BELONGS_TO - Product → Category</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color relationship"></div>
+                    <span>SUPPLIED_BY - Product → Supplier</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color relationship"></div>
+                    <span>STOCKS - Store → Product</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color relationship"></div>
+                    <span>INSPECTED - QualityInspection → ProductBatch</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="use-cases">
+            <h2>🎯 Multi-Hop Traversal Scenarios</h2>
+            <div class="use-case-grid">
+                <div class="use-case-card">
+                    <h4>🚨 Food Recall Traceability</h4>
+                    <p>Identify all stores that received products from a recalled supplier batch.</p>
+                    <div class="traversal-path">Supplier → Product → ProductBatch → Store</div>
+                </div>
+                <div class="use-case-card">
+                    <h4>📋 Quality Chain Analysis</h4>
+                    <p>Track failed inspections back to originating suppliers for accountability.</p>
+                    <div class="traversal-path">QualityInspection → ProductBatch → Product → Supplier</div>
+                </div>
+                <div class="use-case-card">
+                    <h4>📈 Inventory Optimization</h4>
+                    <p>Analyze product category performance across high-traffic stores.</p>
+                    <div class="traversal-path">Store → Product → Category</div>
+                </div>
+                <div class="use-case-card">
+                    <h4>👤 Employee Accountability</h4>
+                    <p>Track inspection compliance by employee across product batches.</p>
+                    <div class="traversal-path">Employee → QualityInspection → ProductBatch</div>
+                </div>
+                <div class="use-case-card">
+                    <h4>🔄 End-to-End Genealogy</h4>
+                    <p>Complete supply chain trace from purchase order to quality outcome.</p>
+                    <div class="traversal-path">PurchaseOrder → Supplier → Product → ProductBatch → QualityInspection</div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>FreshMart Supermarket Ontology Demo | Microsoft Fabric IQ | January 2026</p>
+        </footer>
+    </div>
+    
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            er: {
+                diagramPadding: 20,
+                layoutDirection: 'TB',
+                minEntityWidth: 100,
+                minEntityHeight: 75,
+                entityPadding: 15,
+                stroke: '#333',
+                fill: '#f9f9f9',
+                fontSize: 12,
+                useMaxWidth: true
+            }
+        });
+    </script>
+</body>
+</html>

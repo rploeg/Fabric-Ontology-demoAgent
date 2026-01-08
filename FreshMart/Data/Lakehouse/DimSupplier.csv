@@ -1,0 +1,11 @@
+SupplierId,SupplierName,ContactEmail,Phone,Country,Rating
+SUP001,Pacific Farms Produce,contact@pacificfarms.com,206-555-0101,USA,4.8
+SUP002,Northwest Dairy Co,sales@nwdairy.com,206-555-0102,USA,4.5
+SUP003,Arctic Fresh Frozen,orders@arcticfresh.com,206-555-0103,USA,4.2
+SUP004,Golden Grain Bakery,info@goldengrain.com,206-555-0104,USA,4.7
+SUP005,Valley Meats Inc,sales@valleymeats.com,206-555-0105,USA,4.6
+SUP006,Ocean Harvest Seafood,contact@oceanharvest.com,206-555-0106,USA,4.3
+SUP007,Continental Canning,orders@continentalcan.com,312-555-0107,USA,4.1
+SUP008,RefreshCo Beverages,sales@refreshco.com,404-555-0108,USA,4.4
+SUP009,Green Valley Organics,info@greenvalley.com,503-555-0109,USA,4.9
+SUP010,Mountain Fresh Dairy,contact@mountainfresh.com,406-555-0110,USA,4.0

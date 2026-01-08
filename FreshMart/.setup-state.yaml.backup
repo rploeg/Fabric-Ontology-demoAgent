@@ -1,0 +1,162 @@
+schema_version: '1.0'
+setup_id: 3adf2e32-d9ba-46ec-9768-937a137f563e
+demo_name: FreshMart
+workspace_id: bf5fab96-5f75-44a9-a8e2-850ad6ea59ce
+started_at: '2026-01-08T06:00:04.053540+00:00'
+status: in_progress
+steps:
+  validate:
+    status: completed
+    started_at: '2026-01-08T06:00:04.055639+00:00'
+    completed_at: '2026-01-08T06:00:04.064985+00:00'
+  create_lakehouse:
+    status: completed
+    artifact_id: 7f5e454b-693b-4227-9a22-19ba5f4404dc
+    artifact_name: FreshMart_Lakehouse
+    started_at: '2026-01-08T06:00:04.074580+00:00'
+    completed_at: '2026-01-08T06:00:16.943169+00:00'
+  upload_files:
+    status: completed
+    started_at: '2026-01-08T06:00:16.966398+00:00'
+    completed_at: '2026-01-08T06:00:23.300501+00:00'
+    details:
+      uploaded:
+      - DimCategory.csv
+      - DimEmployee.csv
+      - DimProduct.csv
+      - DimProductBatch.csv
+      - DimStore.csv
+      - DimSupplier.csv
+      - FactPurchaseOrder.csv
+      - FactQualityInspection.csv
+      - FactStoreInventory.csv
+      skipped: []
+  load_tables:
+    status: completed
+    started_at: '2026-01-08T06:00:23.329640+00:00'
+    completed_at: '2026-01-08T06:03:08.908065+00:00'
+    details:
+      loaded:
+      - DimCategory
+      - DimEmployee
+      - DimProduct
+      - DimProductBatch
+      - DimStore
+      - DimSupplier
+      - FactPurchaseOrder
+      - FactQualityInspection
+      - FactStoreInventory
+      skipped: []
+  create_eventhouse:
+    status: completed
+    artifact_id: befc0b6a-ac2b-4d9e-bfe3-1d1e5823b644
+    artifact_name: FreshMart_Telemetry
+    started_at: '2026-01-08T06:03:08.936126+00:00'
+    completed_at: '2026-01-08T06:03:16.786955+00:00'
+  ingest_data:
+    status: completed
+    started_at: '2026-01-08T06:03:16.817617+00:00'
+    completed_at: '2026-01-08T06:03:44.786157+00:00'
+    details:
+      ingested_tables:
+      - BatchTelemetry
+      - StoreTelemetry
+  create_ontology:
+    status: completed
+    artifact_id: 6492a712-4d0c-40e7-b379-20ec463299a1
+    artifact_name: FreshMart_Ontology
+    started_at: '2026-01-08T06:03:44.819856+00:00'
+    completed_at: '2026-01-08T06:04:56.347445+00:00'
+    details:
+      entity_count: 8
+      relationship_count: 10
+      ttl_file: C:\Users\ansyeo\OneDrive - Microsoft\01 Azure\Ontology\Ontology Demo
+        generator\Fabric-Ontology-demoAgent\FreshMart\ontology\freshmart.ttl
+  configure_bindings:
+    status: skipped
+    started_at: '2026-01-08T06:04:56.380693+00:00'
+    completed_at: '2026-01-08T06:05:21.348042+00:00'
+    details:
+      skip_reason: No valid bindings could be configured (entity IDs not found in
+        ontology)
+  verify:
+    status: completed
+    started_at: '2026-01-08T06:05:21.387168+00:00'
+    completed_at: '2026-01-08T06:05:52.670032+00:00'
+    details:
+      passed:
+      - '✓ Lakehouse exists: FreshMart_Lakehouse'
+      - ✓ Lakehouse has all 9 expected tables
+      - '✓ Eventhouse exists: FreshMart_Telemetry'
+      - '✓ KQL Database exists: FreshMart_Telemetry'
+      - ✓ Eventhouse has all 2 expected tables
+      - ✓ All eventhouse tables have data
+      - '✓ Ontology exists: FreshMart_Ontology'
+      - ✓ Ontology has 0 entities, 0 relationships, 0 properties
+      failed: []
+      warnings:
+      - ⚠ Bindings not configured (ontology exists but bindings may need manual setup)
+      verification:
+        lakehouse:
+          id: 7f5e454b-693b-4227-9a22-19ba5f4404dc
+          name: FreshMart_Lakehouse
+          expected_tables:
+          - DimProduct
+          - DimStore
+          - DimCategory
+          - DimProductBatch
+          - DimEmployee
+          - FactPurchaseOrder
+          - FactQualityInspection
+          - FactStoreInventory
+          - DimSupplier
+          existing_tables:
+          - DimProduct
+          - DimStore
+          - DimCategory
+          - DimProductBatch
+          - DimEmployee
+          - FactPurchaseOrder
+          - FactQualityInspection
+          - FactStoreInventory
+          - DimSupplier
+          missing_tables: []
+        eventhouse:
+          id: befc0b6a-ac2b-4d9e-bfe3-1d1e5823b644
+          name: FreshMart_Telemetry
+          kql_database_id: 152e0cac-60e6-4072-bec9-b56db4c411fe
+          kql_database_name: FreshMart_Telemetry
+          expected_tables:
+          - StoreTelemetry
+          - BatchTelemetry
+          existing_tables:
+          - 0
+          - 1
+          - 2
+          - StoreTelemetry
+          - BatchTelemetry
+          - '{"Visualization":null,"Title":null,"XColumn":null,"Series":null,"YColumns":null,"AnomalyColumns":null,"XTitle":null,"YTitle":null,"XAxis":null,"YAxis":null,"Legend":null,"YSplit":null,"Accumulate":false,"IsQuerySorted":false,"Kind":null,"Ymin":"NaN","Ymax":"NaN","Xmin":null,"Xmax":null}'
+          - '2026-01-08T06:05:28.1786376Z'
+          missing_tables: []
+          table_row_counts:
+            StoreTelemetry: 54
+            BatchTelemetry: 63
+        ontology:
+          id: 6492a712-4d0c-40e7-b379-20ec463299a1
+          name: FreshMart_Ontology
+          entity_count: 0
+          relationship_count: 0
+          property_count: 0
+resources:
+  lakehouse:
+    id: 7f5e454b-693b-4227-9a22-19ba5f4404dc
+    name: FreshMart_Lakehouse
+  eventhouse:
+    id: befc0b6a-ac2b-4d9e-bfe3-1d1e5823b644
+    name: FreshMart_Telemetry
+  kql_database:
+    id: 152e0cac-60e6-4072-bec9-b56db4c411fe
+    name: FreshMart_Telemetry
+  ontology:
+    id: 6492a712-4d0c-40e7-b379-20ec463299a1
+    name: FreshMart_Ontology

@@ -25,7 +25,7 @@ pip install -e .
 ### Step 2: Configure Your Workspace
 
 ```bash
-fabric-demo config init
+python -m demo_automation config init
 ```
 
 This interactive wizard saves your workspace ID to `~/.fabric-demo/config.yaml` so you don't need to type it every time.
@@ -34,10 +34,10 @@ This interactive wizard saves your workspace ID to `~/.fabric-demo/config.yaml` 
 
 ```bash
 # Validate the demo package
-fabric-demo validate ../MedicalManufacturing
+python -m demo_automation validate ../MedicalManufacturing
 
 # Run the 11-step automated setup
-fabric-demo setup ../MedicalManufacturing
+python -m demo_automation setup ../MedicalManufacturing
 ```
 
 The tool will:
@@ -56,7 +56,7 @@ The tool will:
 ### Step 5: Cleanup When Done
 
 ```bash
-fabric-demo cleanup ../MedicalManufacturing
+python -m demo_automation cleanup ../MedicalManufacturing
 ```
 
 ---
@@ -80,7 +80,7 @@ fabric-demo cleanup ../MedicalManufacturing
 Use pre-built demo packages with the automation tool:
 
 ```bash
-fabric-demo setup ./MedicalManufacturing --workspace-id <your-id>
+python -m demo_automation setup ./MedicalManufacturing --workspace-id <your-id>
 ```
 
 ### 2. Generate New Demos with AI (Flexible)
