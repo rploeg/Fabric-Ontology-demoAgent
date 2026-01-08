@@ -32,6 +32,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "rich>=13.7.0",
     "rdflib>=7.0.0",
+    # Fabric Ontology SDK for ontology operations
+    "fabric-ontology-sdk @ git+https://github.com/falloutxAY/Fabric-Ontology-SDK.git@main",
 ]
 
 [project.optional-dependencies]
