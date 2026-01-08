@@ -1,0 +1,277 @@
+# =============================================================================
+# Credit Fraud Detection - Demo Metadata
+# =============================================================================
+# This file enables fabric-demo automation tool to validate compatibility
+# and automate deployment of this ontology demo.
+# =============================================================================
+
+metadata:
+  name: CreditFraud
+  displayName: Credit Fraud Detection
+  version: "1.0"
+  created: "2026-01-06"
+  updated: "2026-01-06"
+  author: Fabric Ontology Demo Agent
+  
+company:
+  name: FinanceGuard Bank
+  industry: Financial Services
+  domain: Credit Card Fraud Detection
+
+description:
+  short: Graph-based credit card fraud detection ontology
+  long: |
+    This ontology models credit card fraud detection for FinanceGuard Bank.
+    It enables fraud ring detection, device compromise analysis, impossible
+    travel detection, and compliance reporting using graph traversal queries.
+
+# =============================================================================
+# ONTOLOGY STATISTICS
+# =============================================================================
+
+ontology:
+  file: credit-fraud.ttl
+  namespace: http://financeguard.com/ontology/creditfraud#
+  prefix: fg
+  
+  entities:
+    count: 7
+    list:
+      - name: Customer
+        key: CustomerId
+        keyType: string
+        hasTimeseries: false
+        
+      - name: CreditCard
+        key: CardId
+        keyType: string
+        hasTimeseries: true
+        timeseriesProperties:
+          - TxnVelocity
+          - DailySpend
+          - DeclineRate
+          
+      - name: Transaction
+        key: TransactionId
+        keyType: string
+        hasTimeseries: false
+        
+      - name: Merchant
+        key: MerchantId
+        keyType: string
+        hasTimeseries: false
+        
+      - name: FraudAlert
+        key: AlertId
+        keyType: string
+        hasTimeseries: false
+        
+      - name: Device
+        key: DeviceId
+        keyType: string
+        hasTimeseries: true
+        timeseriesProperties:
+          - LoginAttempts
+          - FailedLogins
+          - SessionDuration
+          
+      - name: GeoLocation
+        key: LocationId
+        keyType: string
+        hasTimeseries: false
+
+  relationships:
+    count: 10
+    list:
+      - name: OWNS
+        source: Customer
+        target: CreditCard
+        
+      - name: HAS_TRANSACTION
+        source: CreditCard
+        target: Transaction
+        
+      - name: OCCURRED_AT
+        source: Transaction
+        target: Merchant
+        
+      - name: TRIGGERED
+        source: Transaction
+        target: FraudAlert
+        
+      - name: USED_DEVICE
+        source: Transaction
+        target: Device
+        
+      - name: LOCATED_IN_TXN
+        source: Transaction
+        target: GeoLocation
+        
+      - name: REGISTERED_DEVICE
+        source: Customer
+        target: Device
+        
+      - name: LOCATED_IN_MERCHANT
+        source: Merchant
+        target: GeoLocation
+        
+      - name: FLAGGED_CARD
+        source: FraudAlert
+        target: CreditCard
+        
+      - name: HAS_ALERT
+        source: Customer
+        target: FraudAlert
+
+# =============================================================================
+# DATA STATISTICS
+# =============================================================================
+
+data:
+  totalRecords: 407
+  
+  lakehouse:
+    tables:
+      - name: DimCustomer
+        file: data/DimCustomer.csv
+        rows: 25
+        type: dimension
+        
+      - name: DimCreditCard
+        file: data/DimCreditCard.csv
+        rows: 35
+        type: dimension
+        
+      - name: DimMerchant
+        file: data/DimMerchant.csv
+        rows: 20
+        type: dimension
+        
+      - name: DimDevice
+        file: data/DimDevice.csv
+        rows: 30
+        type: dimension
+        
+      - name: DimGeoLocation
+        file: data/DimGeoLocation.csv
+        rows: 15
+        type: dimension
+        
+      - name: FactTransaction
+        file: data/FactTransaction.csv
+        rows: 80
+        type: fact
+        
+      - name: FactFraudAlert
+        file: data/FactFraudAlert.csv
+        rows: 25
+        type: fact
+        
+      - name: FactCustomerDevice
+        file: data/FactCustomerDevice.csv
+        rows: 43
+        type: edge
+
+  eventhouse:
+    database: CreditFraudDB
+    tables:
+      - name: CardTelemetry
+        file: data/CardTelemetry.csv
+        rows: 70
+        keyColumn: CardId
+        timestampColumn: Timestamp
+        
+      - name: DeviceTelemetry
+        file: data/DeviceTelemetry.csv
+        rows: 64
+        keyColumn: DeviceId
+        timestampColumn: Timestamp
+
+# =============================================================================
+# DEMO CONTENT
+# =============================================================================
+
+demo:
+  questions:
+    file: demo-questions.md
+    count: 5
+    themes:
+      - Fraud Ring Detection
+      - Device Compromise Impact
+      - Operational Correlation
+      - Regulatory Compliance
+      - End-to-End Genealogy
+    maxHops: 5
+    
+  scenarios:
+    - name: Executive Briefing
+      duration: 10
+      audience: C-suite
+      
+    - name: Technical Deep-Dive
+      duration: 20
+      audience: Engineers
+      
+    - name: Compliance Demo
+      duration: 15
+      audience: Risk Officers
+
+# =============================================================================
+# DOCUMENTATION
+# =============================================================================
+
+documentation:
+  readme: README.md
+  ontologyStructure: ontology-structure.md
+  presentationSlide: ontology-diagram-slide.html
+  lakehouseBinding: lakehouse-binding.md
+  eventhouseBinding: eventhouse-binding.md
+  bindings: bindings.yaml
+  demoQuestions: demo-questions.md
+
+# =============================================================================
+# COMPATIBILITY
+# =============================================================================
+
+compatibility:
+  fabricVersion: "2024.01+"
+  ontologyVersion: "1.0"
+  requiresEventhouse: true
+  requiresLakehouse: true
+  onelakeSecuritySupported: false
+
+# =============================================================================
+# VALIDATION CHECKLIST
+# =============================================================================
+
+validation:
+  checklist:
+    - item: All entity keys are string or int type
+      status: pass
+      
+    - item: Property names unique across all entities
+      status: pass
+      
+    - item: Property names ≤26 characters
+      status: pass
+      
+    - item: No reserved GQL words in property names
+      status: pass
+      
+    - item: Relationships have distinct source and target
+      status: pass
+      
+    - item: No xsd:decimal types used
+      status: pass
+      
+    - item: All CSV files have headers
+      status: pass
+      
+    - item: No NULL values in key columns
+      status: pass
+      
+    - item: Foreign keys reference valid parent records
+      status: pass
+      
+    - item: Timestamps in ISO 8601 format
+      status: pass

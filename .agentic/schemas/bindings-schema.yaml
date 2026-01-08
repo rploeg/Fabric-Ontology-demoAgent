@@ -1,0 +1,315 @@
+# Bindings YAML Schema
+# Version: 1.1
+# Purpose: Machine-readable binding configuration for fabric-demo automation tool
+# Updated: January 2026
+
+$schema: "http://json-schema.org/draft-07/schema#"
+title: Fabric Ontology Demo Bindings
+description: |
+  Structured binding configuration for automation tools.
+  This file is the SOURCE OF TRUTH for the fabric-demo CLI tool.
+  
+  The schema supports the nested lakehouse/eventhouse structure used by
+  the demo generator. Properties use consistent naming:
+  - entity: Entity type name
+  - sourceTable: Table name in data source  
+  - keyColumn: Primary key column
+  - properties[]: Property-to-column mappings with "property" and "column" fields
+
+type: object
+required:
+  - _schema_version
+  - lakehouse
+
+properties:
+  _schema_version:
+    type: string
+    enum: ["1.0", "1.1"]
+    description: Schema version for compatibility checking
+
+  metadata:
+    type: object
+    description: Optional demo metadata
+    properties:
+      name:
+        type: string
+      version:
+        type: string
+      description:
+        type: string
+      company:
+        type: string
+      domain:
+        type: string
+      created:
+        type: string
+
+  lakehouse:
+    type: object
+    description: Lakehouse configuration with entities and relationships
+    required:
+      - entities
+    properties:
+      name:
+        type: string
+        description: Lakehouse name
+      workspace:
+        type: string
+        description: Workspace ID (to be configured by user)
+      entities:
+        type: array
+        description: Entity bindings - one entry per entity type
+        items:
+          $ref: "#/definitions/lakehouseEntityBinding"
+      relationships:
+        type: array
+        description: Relationship bindings - one entry per relationship type
+        items:
+          $ref: "#/definitions/relationshipBinding"
+
+  eventhouse:
+    type: object
+    description: Eventhouse/KQL configuration for timeseries data
+    properties:
+      name:
+        type: string
+        description: Eventhouse name
+      database:
+        type: string
+        description: KQL database name
+      workspace:
+        type: string
+        description: Workspace ID (to be configured by user)
+      entities:
+        type: array
+        description: Timeseries entity bindings
+        items:
+          $ref: "#/definitions/eventhouseEntityBinding"
+
+definitions:
+  lakehouseEntityBinding:
+    type: object
+    required:
+      - entity
+      - sourceTable
+      - keyColumn
+      - properties
+    properties:
+      entity:
+        type: string
+        description: Entity type name (must match ontology)
+      sourceTable:
+        type: string
+        description: Source table name (e.g., DimCustomer, FactTransaction)
+      keyColumn:
+        type: string
+        description: Column that uniquely identifies entity instances
+      file:
+        type: string
+        description: Path to CSV file relative to demo folder (e.g., Data/Lakehouse/DimCustomer.csv)
+      properties:
+        type: array
+        description: Property-to-column mappings
+        items:
+          $ref: "#/definitions/propertyMapping"
+
+  eventhouseEntityBinding:
+    type: object
+    required:
+      - entity
+      - sourceTable
+      - keyColumn
+      - timestampColumn
+      - properties
+    properties:
+      entity:
+        type: string
+        description: Entity type name (must match ontology)
+      sourceTable:
+        type: string
+        description: KQL table name (e.g., CardTelemetry)
+      keyColumn:
+        type: string
+        description: Column matching entity key for contextualization
+      timestampColumn:
+        type: string
+        description: Column containing timestamp values
+        default: Timestamp
+      file:
+        type: string
+        description: Path to CSV file relative to demo folder (e.g., Data/Eventhouse/CardTelemetry.csv)
+      rowCount:
+        type: integer
+        description: Expected number of rows (for validation)
+      properties:
+        type: array
+        description: Timeseries property mappings
+        items:
+          $ref: "#/definitions/propertyMapping"
+
+  propertyMapping:
+    type: object
+    required:
+      - property
+      - column
+      - type
+    properties:
+      property:
+        type: string
+        description: Ontology property name
+      column:
+        type: string
+        description: Source column name
+      type:
+        type: string
+        enum: [string, int, double, boolean, datetime]
+        description: Data type
+      is_key:
+        type: boolean
+        default: false
+        description: Whether this is the entity key
+
+  relationshipBinding:
+    type: object
+    required:
+      - relationship
+      - sourceEntity
+      - targetEntity
+      - sourceTable
+      - sourceKeyColumn
+      - targetKeyColumn
+    properties:
+      relationship:
+        type: string
+        description: Relationship type name (must match ontology)
+      sourceEntity:
+        type: string
+        description: Source entity type name
+      targetEntity:
+        type: string
+        description: Target entity type name
+      sourceTable:
+        type: string
+        description: Table containing the relationship data (fact/bridge table)
+      sourceKeyColumn:
+        type: string
+        description: |
+          ⚠️ CRITICAL: Column that identifies the SOURCE entity.
+          This is the foreign key in the source table that links TO the source entity.
+          Must match a value that exists in the source entity's key column.
+          
+          Example for "Customer OWNS CreditCard":
+            - sourceTable: DimCreditCard
+            - sourceKeyColumn: CustomerId (FK to Customer)
+            - targetKeyColumn: CardId (CreditCard's own key)
+      targetKeyColumn:
+        type: string
+        description: |
+          Column that identifies the TARGET entity.
+          This is typically the target entity's own key column or a foreign key to it.
+
+# =============================================================================
+# EXAMPLE - Credit Fraud Demo
+# =============================================================================
+example:
+  _schema_version: "1.0"
+  
+  metadata:
+    name: CreditFraud
+    version: "1.0"
+    description: Credit card fraud detection ontology
+    
+  lakehouse:
+    name: CreditFraudLakehouse
+    entities:
+      - entity: Customer
+        sourceTable: DimCustomer
+        keyColumn: CustomerId
+        file: Data/Lakehouse/DimCustomer.csv
+        properties:
+          - property: CustomerId
+            column: CustomerId
+            type: string
+            is_key: true
+          - property: FullName
+            column: FullName
+            type: string
+          - property: RiskScore
+            column: RiskScore
+            type: double
+            
+      - entity: CreditCard
+        sourceTable: DimCreditCard
+        keyColumn: CardId
+        file: Data/Lakehouse/DimCreditCard.csv
+        properties:
+          - property: CardId
+            column: CardId
+            type: string
+            is_key: true
+          - property: CreditLimit
+            column: CreditLimit
+            type: double
+          - property: IsActive
+            column: IsActive
+            type: boolean
+    
+    relationships:
+      # ⚠️ CORRECT: Customer OWNS CreditCard
+      # The DimCreditCard table has CustomerId (FK) and CardId columns
+      # sourceKeyColumn is the FK that identifies the source entity (Customer)
+      # targetKeyColumn is the key that identifies the target entity (CreditCard)
+      - relationship: OWNS
+        sourceEntity: Customer
+        targetEntity: CreditCard
+        sourceTable: DimCreditCard
+        sourceKeyColumn: CustomerId    # FK to Customer
+        targetKeyColumn: CardId        # CreditCard's own key
+        
+      # ⚠️ CORRECT: CreditCard HAS_TRANSACTION Transaction
+      # The FactTransaction table has CardId (FK) and TransactionId columns
+      - relationship: HAS_TRANSACTION
+        sourceEntity: CreditCard
+        targetEntity: Transaction
+        sourceTable: FactTransaction
+        sourceKeyColumn: CardId          # FK to CreditCard  
+        targetKeyColumn: TransactionId   # Transaction's own key
+  
+  eventhouse:
+    name: CreditFraudEventhouse
+    database: CreditFraudDB
+    entities:
+      - entity: CreditCard
+        sourceTable: CardTelemetry
+        keyColumn: CardId
+        timestampColumn: Timestamp
+        file: Data/Eventhouse/CardTelemetry.csv
+        rowCount: 70
+        properties:
+          - property: TxnVelocity
+            column: TxnVelocity
+            type: double
+          - property: DailySpend
+            column: DailySpend
+            type: double
+
+# =============================================================================
+# VALIDATION NOTES
+# =============================================================================
+# 
+# Relationship Binding Rules (from Microsoft Fabric Ontology Tutorial):
+# 
+# 1. The relationship source table must contain columns that link BOTH entities
+# 2. sourceKeyColumn = Column that matches SOURCE entity's key
+# 3. targetKeyColumn = Column that matches TARGET entity's key
+# 
+# Common pattern for 1:N relationships:
+#   - Relationship: Parent → Child
+#   - Source table: Child dimension/fact table
+#   - sourceKeyColumn: ParentId (FK in child table)
+#   - targetKeyColumn: ChildId (PK in child table)
+#
+# Example: Customer OWNS CreditCard
+#   - DimCreditCard table has: CardId (PK), CustomerId (FK)
+#   - sourceKeyColumn: CustomerId (identifies which Customer)
+#   - targetKeyColumn: CardId (identifies which CreditCard)

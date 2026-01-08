@@ -1,0 +1,368 @@
+# =============================================================================
+# Credit Fraud Detection - Ontology Bindings Configuration
+# =============================================================================
+# This file is the SOURCE OF TRUTH for automation tools.
+# Schema: See schemas/bindings-schema.yaml
+# Version: 1.0
+# Created: January 2026
+# =============================================================================
+
+_schema_version: "1.0"
+
+metadata:
+  name: CreditFraud
+  version: "1.0"
+  description: Credit card fraud detection ontology for FinanceGuard Bank
+  company: FinanceGuard Bank
+  domain: Financial Services - Fraud Detection
+  created: "2026-01-06"
+
+# =============================================================================
+# LAKEHOUSE CONFIGURATION
+# =============================================================================
+
+lakehouse:
+  name: CreditFraudLakehouse
+  workspace: # To be configured by user
+  
+  # Entity bindings for automation parsing
+  entities:
+    - entity: Customer
+      sourceTable: DimCustomer
+      keyColumn: CustomerId
+      file: Data/Lakehouse/DimCustomer.csv
+      properties:
+        - property: CustomerId
+          column: CustomerId
+          type: string
+          is_key: true
+        - property: FullName
+          column: FullName
+          type: string
+        - property: Email
+          column: Email
+          type: string
+        - property: PhoneNumber
+          column: PhoneNumber
+          type: string
+        - property: RiskScore
+          column: RiskScore
+          type: double
+        - property: AccountStatus
+          column: AccountStatus
+          type: string
+        - property: CreatedDate
+          column: CreatedDate
+          type: datetime
+
+    - entity: CreditCard
+      sourceTable: DimCreditCard
+      keyColumn: CardId
+      file: Data/Lakehouse/DimCreditCard.csv
+      properties:
+        - property: CardId
+          column: CardId
+          type: string
+          is_key: true
+        - property: CardNumber
+          column: CardNumber
+          type: string
+        - property: CardType
+          column: CardType
+          type: string
+        - property: CreditLimit
+          column: CreditLimit
+          type: double
+        - property: IssuedDate
+          column: IssuedDate
+          type: datetime
+        - property: ExpiryDate
+          column: ExpiryDate
+          type: datetime
+        - property: IsActive
+          column: IsActive
+          type: boolean
+
+    - entity: Transaction
+      sourceTable: FactTransaction
+      keyColumn: TransactionId
+      file: Data/Lakehouse/FactTransaction.csv
+      properties:
+        - property: TransactionId
+          column: TransactionId
+          type: string
+          is_key: true
+        - property: Amount
+          column: Amount
+          type: double
+        - property: TransactionType
+          column: TransactionType
+          type: string
+        - property: TransactionDate
+          column: TransactionDate
+          type: datetime
+        - property: IsOnline
+          column: IsOnline
+          type: boolean
+        - property: RiskFlag
+          column: RiskFlag
+          type: string
+
+    - entity: Merchant
+      sourceTable: DimMerchant
+      keyColumn: MerchantId
+      file: Data/Lakehouse/DimMerchant.csv
+      properties:
+        - property: MerchantId
+          column: MerchantId
+          type: string
+          is_key: true
+        - property: MerchantName
+          column: MerchantName
+          type: string
+        - property: MerchantCategory
+          column: MerchantCategory
+          type: string
+        - property: RiskTier
+          column: RiskTier
+          type: string
+        - property: RegistrationDate
+          column: RegistrationDate
+          type: datetime
+
+    - entity: FraudAlert
+      sourceTable: FactFraudAlert
+      keyColumn: AlertId
+      file: Data/Lakehouse/FactFraudAlert.csv
+      properties:
+        - property: AlertId
+          column: AlertId
+          type: string
+          is_key: true
+        - property: AlertType
+          column: AlertType
+          type: string
+        - property: Severity
+          column: Severity
+          type: string
+        - property: AlertDate
+          column: AlertDate
+          type: datetime
+        - property: Resolution
+          column: Resolution
+          type: string
+        - property: InvestigatorNotes
+          column: InvestigatorNotes
+          type: string
+
+    - entity: Device
+      sourceTable: DimDevice
+      keyColumn: DeviceId
+      file: Data/Lakehouse/DimDevice.csv
+      properties:
+        - property: DeviceId
+          column: DeviceId
+          type: string
+          is_key: true
+        - property: DeviceType
+          column: DeviceType
+          type: string
+        - property: DeviceOS
+          column: DeviceOS
+          type: string
+        - property: FirstSeen
+          column: FirstSeen
+          type: datetime
+        - property: LastSeen
+          column: LastSeen
+          type: datetime
+        - property: IsTrusted
+          column: IsTrusted
+          type: boolean
+
+    - entity: GeoLocation
+      sourceTable: DimGeoLocation
+      keyColumn: LocationId
+      file: Data/Lakehouse/DimGeoLocation.csv
+      properties:
+        - property: LocationId
+          column: LocationId
+          type: string
+          is_key: true
+        - property: City
+          column: City
+          type: string
+        - property: Country
+          column: Country
+          type: string
+        - property: Region
+          column: Region
+          type: string
+        - property: Latitude
+          column: Latitude
+          type: double
+        - property: Longitude
+          column: Longitude
+          type: double
+        - property: RiskZone
+          column: RiskZone
+          type: string
+
+  # Relationship bindings
+  # ⚠️ CRITICAL: sourceKeyColumn = SOURCE entity's own primary key
+  #              targetKeyColumn = Foreign key column in the table that points to TARGET entity
+  relationships:
+    # ---------------------------------------------------------------------------
+    # Customer Relationships
+    # ---------------------------------------------------------------------------
+    # OWNS: Customer → CreditCard
+    # Source table: DimCreditCard contains CustomerId (FK to Customer) and CardId (CreditCard's key)
+    # Direction: Customer OWNS CreditCard
+    # sourceKeyColumn: CustomerId - the column that identifies which Customer
+    # targetKeyColumn: CardId - the column that identifies which CreditCard
+    - relationship: OWNS
+      sourceEntity: Customer
+      targetEntity: CreditCard
+      sourceTable: DimCreditCard
+      sourceKeyColumn: CustomerId
+      targetKeyColumn: CardId
+
+    # REGISTERED_DEVICE: Customer → Device (Many-to-Many via FactCustomerDevice)
+    # Source table: FactCustomerDevice contains CustomerId and DeviceId
+    - relationship: REGISTERED_DEVICE
+      sourceEntity: Customer
+      targetEntity: Device
+      sourceTable: FactCustomerDevice
+      sourceKeyColumn: CustomerId
+      targetKeyColumn: DeviceId
+
+    # HAS_ALERT: Customer → FraudAlert
+    # Source table: FactFraudAlert contains CustomerId (FK to Customer) and AlertId
+    - relationship: HAS_ALERT
+      sourceEntity: Customer
+      targetEntity: FraudAlert
+      sourceTable: FactFraudAlert
+      sourceKeyColumn: CustomerId
+      targetKeyColumn: AlertId
+
+    # ---------------------------------------------------------------------------
+    # CreditCard Relationships
+    # ---------------------------------------------------------------------------
+    # HAS_TRANSACTION: CreditCard → Transaction
+    # Source table: FactTransaction contains CardId (FK to CreditCard) and TransactionId
+    - relationship: HAS_TRANSACTION
+      sourceEntity: CreditCard
+      targetEntity: Transaction
+      sourceTable: FactTransaction
+      sourceKeyColumn: CardId
+      targetKeyColumn: TransactionId
+
+    # ---------------------------------------------------------------------------
+    # Transaction Relationships
+    # ---------------------------------------------------------------------------
+    # OCCURRED_AT: Transaction → Merchant
+    # Source table: FactTransaction contains TransactionId and MerchantId (FK to Merchant)
+    - relationship: OCCURRED_AT
+      sourceEntity: Transaction
+      targetEntity: Merchant
+      sourceTable: FactTransaction
+      sourceKeyColumn: TransactionId
+      targetKeyColumn: MerchantId
+
+    # TRIGGERED: Transaction → FraudAlert
+    # Source table: FactFraudAlert contains TransactionId (FK) and AlertId
+    - relationship: TRIGGERED
+      sourceEntity: Transaction
+      targetEntity: FraudAlert
+      sourceTable: FactFraudAlert
+      sourceKeyColumn: TransactionId
+      targetKeyColumn: AlertId
+
+    # USED_DEVICE: Transaction → Device
+    # Source table: FactTransaction contains TransactionId and DeviceId (FK to Device)
+    - relationship: USED_DEVICE
+      sourceEntity: Transaction
+      targetEntity: Device
+      sourceTable: FactTransaction
+      sourceKeyColumn: TransactionId
+      targetKeyColumn: DeviceId
+
+    # LOCATED_IN_TXN: Transaction → GeoLocation
+    # Source table: FactTransaction contains TransactionId and LocationId (FK to GeoLocation)
+    - relationship: LOCATED_IN_TXN
+      sourceEntity: Transaction
+      targetEntity: GeoLocation
+      sourceTable: FactTransaction
+      sourceKeyColumn: TransactionId
+      targetKeyColumn: LocationId
+
+    # ---------------------------------------------------------------------------
+    # Merchant Relationships
+    # ---------------------------------------------------------------------------
+    # LOCATED_IN_MERCHANT: Merchant → GeoLocation
+    # Source table: DimMerchant contains MerchantId and LocationId (FK to GeoLocation)
+    - relationship: LOCATED_IN_MERCHANT
+      sourceEntity: Merchant
+      targetEntity: GeoLocation
+      sourceTable: DimMerchant
+      sourceKeyColumn: MerchantId
+      targetKeyColumn: LocationId
+
+    # ---------------------------------------------------------------------------
+    # FraudAlert Relationships
+    # ---------------------------------------------------------------------------
+    # FLAGGED_CARD: FraudAlert → CreditCard
+    # Source table: FactFraudAlert contains AlertId and CardId (FK to CreditCard)
+    - relationship: FLAGGED_CARD
+      sourceEntity: FraudAlert
+      targetEntity: CreditCard
+      sourceTable: FactFraudAlert
+      sourceKeyColumn: AlertId
+      targetKeyColumn: CardId
+
+# =============================================================================
+# EVENTHOUSE CONFIGURATION
+# =============================================================================
+
+eventhouse:
+  name: CreditFraudEventhouse
+  database: CreditFraudDB
+  workspace: # To be configured by user
+  
+  # Timeseries entity bindings
+  entities:
+    # CreditCard Timeseries: TxnVelocity, DailySpend, DeclineRate
+    - entity: CreditCard
+      sourceTable: CardTelemetry
+      keyColumn: CardId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/CardTelemetry.csv
+      rowCount: 70
+      properties:
+        - property: TxnVelocity
+          column: TxnVelocity
+          type: double
+        - property: DailySpend
+          column: DailySpend
+          type: double
+        - property: DeclineRate
+          column: DeclineRate
+          type: double
+
+    # Device Timeseries: LoginAttempts, FailedLogins, SessionDuration
+    - entity: Device
+      sourceTable: DeviceTelemetry
+      keyColumn: DeviceId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/DeviceTelemetry.csv
+      rowCount: 64
+      properties:
+        - property: LoginAttempts
+          column: LoginAttempts
+          type: int
+        - property: FailedLogins
+          column: FailedLogins
+          type: int
+        - property: SessionDuration
+          column: SessionDuration
+          type: double

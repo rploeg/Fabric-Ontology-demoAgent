@@ -1,0 +1,109 @@
+# Entity Definition Template
+# Use this template when defining new entity types
+
+# Entity type definition
+entity:
+  name: "{EntityName}"
+  description: "{Brief description of what this entity represents}"
+  
+  # Key definition - MUST be string or int
+  key:
+    name: "{KeyPropertyName}"
+    type: string  # or: int
+    description: "Unique identifier for {EntityName}"
+  
+  # Static properties (stored in Lakehouse)
+  static_properties:
+    - name: "{PropertyName}"
+      type: string  # Allowed: string, int, double, boolean, datetime
+      description: "{What this property represents}"
+      required: true
+      
+    - name: "{PropertyName2}"
+      type: datetime
+      description: "{Description}"
+      required: false
+  
+  # Timeseries properties (optional - stored in Eventhouse)
+  timeseries_properties:
+    - name: "{MetricName}"
+      type: double  # Usually double or int for metrics
+      unit: "{unit of measure}"
+      description: "{What this metric measures}"
+      
+    - name: "{MetricName2}"
+      type: double
+      unit: "{unit}"
+      description: "{Description}"
+
+  # Data binding configuration
+  bindings:
+    static:
+      source: lakehouse
+      table: "{DimTableName or FactTableName}"
+      key_column: "{KeyColumnInTable}"
+      
+    timeseries:  # Only if timeseries_properties exist
+      source: eventhouse
+      table: "{TimeseriesTableName}"
+      timestamp_column: Timestamp
+      key_column: "{KeyColumnInTable}"
+
+# =============================================================================
+# Property Naming Rules
+# =============================================================================
+# 1. Max length: 26 characters
+# 2. Pattern: ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$
+# 3. Must be unique across ALL entity types in the ontology
+# 4. Avoid GQL reserved words
+# 5. Recommendation: Use entity prefix (e.g., Product_Name, Batch_Status)
+
+# =============================================================================
+# Type Constraints
+# =============================================================================
+# Key types:     string, int ONLY (never datetime, boolean, double)
+# Property types: string, int, double, boolean, datetime
+# 
+# ⚠️ NEVER use 'decimal' - it returns NULL in Graph queries
+
+# =============================================================================
+# Example: Product Entity
+# =============================================================================
+example:
+  entity:
+    name: Product
+    description: "Manufactured product in the catalog"
+    
+    key:
+      name: ProductId
+      type: string
+      description: "Unique product identifier (e.g., PRD-001)"
+    
+    static_properties:
+      - name: Product_Name
+        type: string
+        description: "Display name of the product"
+        required: true
+        
+      - name: Product_Category
+        type: string
+        description: "Product classification category"
+        required: true
+        
+      - name: Product_Status
+        type: string
+        description: "Current status (Active, Discontinued, Pending)"
+        required: true
+        
+      - name: Product_LaunchDate
+        type: datetime
+        description: "Date product was launched to market"
+        required: false
+    
+    timeseries_properties: []  # Product has no timeseries data
+    
+    bindings:
+      static:
+        source: lakehouse
+        table: DimProduct
+        key_column: ProductId

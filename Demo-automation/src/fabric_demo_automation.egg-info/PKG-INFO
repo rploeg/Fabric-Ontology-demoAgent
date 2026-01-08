@@ -1,0 +1,267 @@
+Metadata-Version: 2.4
+Name: fabric-demo-automation
+Version: 0.1.0
+Summary: Automated Fabric Ontology Demo Setup Tool
+Author: Azure Ontology Team
+License: MIT
+Project-URL: Homepage, https://github.com/falloutxAY/rdf-dtdl-fabric-ontology-converter
+Project-URL: Bug Tracker, https://github.com/falloutxAY/rdf-dtdl-fabric-ontology-converter/issues
+Keywords: fabric,ontology,demo,automation,microsoft
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: azure-identity>=1.15.0
+Requires-Dist: azure-storage-file-datalake>=12.14.0
+Requires-Dist: requests>=2.31.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: tqdm>=4.66.0
+Requires-Dist: tenacity>=8.2.0
+Requires-Dist: python-dotenv>=1.0.0
+Requires-Dist: rich>=13.7.0
+Requires-Dist: rdflib>=7.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: black>=23.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+Requires-Dist: mypy>=1.7.0; extra == "dev"
+
+# Fabric Demo Automation
+
+Automated setup tool for Microsoft Fabric Ontology demos. This CLI tool orchestrates the complete demo setup process with **9 sequential steps**, each independently executable with built-in resume capability.
+
+## Setup Workflow
+
+The tool executes the following steps in order:
+
+| Step | Description | Validation |
+|------|-------------|------------|
+| 1. **Validate** | Verify demo folder structure matches `fabric-ontology-demo-v2.yaml` spec | ✓ Structure & files |
+| 2. **Create Lakehouse** | Create Lakehouse in Fabric workspace | ✓ Resource exists |
+| 3. **Upload Files** | Upload `data/lakehouse/*.csv` files to Lakehouse | ✓ Files uploaded |
+| 4. **Load Tables** | Convert CSV files to managed Delta tables | ✓ Tables created |
+| 5. **Create Eventhouse** | Create Eventhouse with KQL Database | ✓ Resource exists |
+| 6. **Ingest Data** | Upload `data/eventhouse/*.csv` and ingest to KQL tables | ✓ Tables have data |
+| 7. **Create Ontology** | Create ontology from TTL file with entities, properties, keys | ✓ Definition uploaded |
+| 8. **Configure Bindings** | Bind static (lakehouse), timeseries (eventhouse), and relationships | ✓ All bindings configured |
+| 9. **Verify Setup** | Comprehensive verification of all resources and bindings | ✓ All checks passed |
+
+## Features
+
+- **Auto-discovery**: Reads demo structure from folder conventions
+- **Structured bindings**: Parses `bindings.yaml` (v3.2+) for machine-readable configuration
+- **Validation**: Ensures demo packages match generator constraints and limitations
+- **Hybrid configuration**: YAML config with environment variable support
+- **Resume capability**: State persistence via `.setup-state.yaml` for failure recovery
+- **Smart skipping**: Automatically skips resources/tables that already exist
+- **Progress reporting**: Real-time progress with rich terminal output
+- **Constraint adherence**: Respects all Fabric Graph/Ontology limitations
+
+## Installation
+
+```bash
+# Navigate to the Demo-automation folder first
+cd Demo-automation
+
+# Install in development mode (creates 'fabric-demo' command)
+pip install -e .
+
+# Install with dev dependencies
+pip install -e ".[dev]"
+
+# Verify installation
+fabric-demo --help
+```
+
+> **Note**: After installation, the `fabric-demo` command will be available globally. If you get "command not recognized", ensure:
+> 1. You ran `pip install -e .` from the `Demo-automation` directory
+> 2. Your Python Scripts folder is in your PATH
+> 3. You're in the correct virtual environment (if using one)
+
+### Alternative: Run as Python Module
+
+If `fabric-demo` isn't recognized, you can run the CLI as a Python module:
+
+```bash
+# From the Demo-automation folder
+python -m demo_automation.cli --help
+python -m demo_automation.cli validate ./MedicalManufacturing
+python -m demo_automation.cli setup ./MedicalManufacturing --workspace-id <id>
+```
+
+## Quick Start
+
+```bash
+# Initialize a demo configuration
+fabric-demo init ./MedicalManufacturing
+
+# Validate demo package
+fabric-demo validate ./MedicalManufacturing
+
+# Run full setup
+fabric-demo setup ./MedicalManufacturing --workspace-id <your-workspace-id>
+
+# Run with dry-run to preview actions
+fabric-demo setup ./MedicalManufacturing --dry-run
+
+# Resume from a failed step
+fabric-demo setup ./MedicalManufacturing --resume
+
+# Clear state and start fresh
+fabric-demo setup ./MedicalManufacturing --clear-state
+
+# Check status
+fabric-demo status ./MedicalManufacturing
+
+# Cleanup resources
+fabric-demo cleanup ./MedicalManufacturing --confirm
+```
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# Required
+FABRIC_WORKSPACE_ID=<your-workspace-guid>
+
+# Optional
+AZURE_TENANT_ID=<your-tenant-id>
+```
+
+### Demo Configuration (demo.yaml)
+
+```yaml
+demo:
+  name: MedicalManufacturing
+  description: "Medical manufacturing ontology demonstration"
+
+fabric:
+  workspace_id: ${FABRIC_WORKSPACE_ID}
+
+options:
+  skip_existing: true
+  dry_run: false
+```
+
+## Demo Package Structure
+
+```
+DemoName/
+├── demo.yaml                    # Configuration (optional - auto-generated)
+├── .demo-metadata.yaml          # Version info (auto-generated)
+├── .setup-state.yaml            # Resume state (auto-generated, gitignored)
+├── ontology/
+│   ├── *.ttl                    # Ontology definition (RDF/Turtle)
+│   └── ontology-structure.md    # Human-readable structure docs
+├── data/
+│   ├── lakehouse/*.csv          # Static data → Delta tables
+│   └── eventhouse/*.csv         # Timeseries data → KQL tables
+├── bindings/
+│   ├── bindings.yaml            # Machine-readable bindings (v3.2+, preferred)
+│   ├── lakehouse-binding.md     # Human-readable static binding instructions
+│   └── eventhouse-binding.md    # Human-readable timeseries instructions
+├── queries/
+│   └── demo-questions.md        # Demo GQL queries
+└── README.md
+```
+
+## Bindings Configuration (v3.2+)
+
+The `bindings/bindings.yaml` file is the **source of truth** for automation:
+
+```yaml
+version: "1.0"
+generatedBy: "fabric-ontology-demo-v3.2"
+
+lakehouse:
+  entities:
+    - entity: Product
+      sourceTable: DimProduct
+      keyColumn: ProductId
+      properties:
+        - property: ProductId
+          column: ProductId
+          type: string
+        - property: Product_Name
+          column: Product_Name
+          type: string
+
+  relationships:
+    - relationship: produces
+      sourceEntity: Facility
+      targetEntity: ProductionBatch
+      sourceTable: DimProductionBatch
+      sourceKeyColumn: FacilityId
+      targetKeyColumn: BatchId
+
+eventhouse:
+  entities:
+    - entity: ProductionBatch
+      sourceTable: BatchTelemetry
+      keyColumn: BatchId
+      timestampColumn: Timestamp
+      properties:
+        - property: Batch_Temperature
+          column: Temperature
+          type: double
+```
+
+## Constraints Enforced
+
+Based on `fabric-ontology-demo-v2.yaml` and known Fabric limitations:
+
+| Constraint | Enforcement |
+|------------|-------------|
+| Property types | `string`, `int`, `double`, `boolean`, `datetime` only |
+| Entity key types | `string` or `int` only (no datetime/boolean) |
+| Property name length | Max 26 characters |
+| Static before timeseries | Lakehouse bindings created before Eventhouse |
+| OneLake only for static | Uses `LakehouseTable` source type |
+| Managed tables only | No shortcuts, views, or external tables |
+
+## Resume & Error Handling
+
+- **On success**: Each step marks completion in `.setup-state.yaml`
+- **On failure**: Stops immediately and outputs error; state preserved for resume
+- **Resume**: Use `--resume` flag to continue from last successful step
+- **Fresh start**: Use `--clear-state` to remove state and start over
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Demo Automation Orchestrator                  │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
+│  │ StateManager │  │  Validator   │  │   BindingsParser       │ │
+│  │ (.yaml)      │  │ (structure)  │  │ (YAML + MD fallback)   │ │
+│  └──────────────┘  └──────────────┘  └────────────────────────┘ │
+├─────────────────────────────────────────────────────────────────┤
+│                        Step Executors                            │
+│  ┌─────────────────┐  ┌──────────────────┐  ┌────────────────┐ │
+│  │ LakehouseClient │  │ EventhouseClient │  │ FabricClient   │ │
+│  │   - Create      │  │   - Create       │  │   - Ontology   │ │
+│  │   - Upload CSV  │  │   - KQL Tables   │  │   - Bindings   │ │
+│  │   - Load Tables │  │   - Ingest Data  │  │   - Definition │ │
+│  └─────────────────┘  └──────────────────┘  └────────────────┘ │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │              OntologyBindingBuilder                       │  │
+│  │   - Lakehouse (Static) bindings                          │  │
+│  │   - Eventhouse (TimeSeries) bindings                     │  │
+│  │   - Relationship contextualizations                       │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## License
+
+MIT License

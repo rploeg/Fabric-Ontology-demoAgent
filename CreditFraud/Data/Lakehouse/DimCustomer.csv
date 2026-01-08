@@ -1,0 +1,26 @@
+CustomerId,FullName,Email,PhoneNumber,RiskScore,AccountStatus,CreatedDate
+CUST001,Sarah Mitchell,sarah.mitchell@email.com,+1-555-0101,12.5,Active,2021-03-15T09:30:00
+CUST002,James Rodriguez,james.rodriguez@email.com,+1-555-0102,8.2,Active,2020-07-22T14:15:00
+CUST003,Emily Chen,emily.chen@email.com,+1-555-0103,45.8,Under Review,2019-11-08T11:00:00
+CUST004,Michael Thompson,michael.thompson@email.com,+1-555-0104,5.1,Active,2022-01-30T16:45:00
+CUST005,Jessica Williams,jessica.williams@email.com,+1-555-0105,78.3,Suspended,2018-05-12T08:20:00
+CUST006,David Kim,david.kim@email.com,+1-555-0106,15.7,Active,2021-09-18T13:00:00
+CUST007,Amanda Foster,amanda.foster@email.com,+1-555-0107,22.4,Active,2020-12-05T10:30:00
+CUST008,Robert Garcia,robert.garcia@email.com,+1-555-0108,65.2,Under Review,2019-08-25T15:45:00
+CUST009,Michelle Lee,michelle.lee@email.com,+1-555-0109,9.8,Active,2022-04-10T09:00:00
+CUST010,Christopher Davis,christopher.davis@email.com,+1-555-0110,31.5,Active,2020-02-28T12:15:00
+CUST011,Jennifer Martinez,jennifer.martinez@email.com,+1-555-0111,18.9,Active,2021-06-14T14:30:00
+CUST012,Daniel Wilson,daniel.wilson@email.com,+1-555-0112,55.6,Under Review,2019-04-03T11:45:00
+CUST013,Lisa Anderson,lisa.anderson@email.com,+1-555-0113,7.3,Active,2022-08-20T16:00:00
+CUST014,Kevin Brown,kevin.brown@email.com,+1-555-0114,42.1,Active,2020-10-11T08:45:00
+CUST015,Rachel Taylor,rachel.taylor@email.com,+1-555-0115,88.9,Suspended,2018-12-30T13:30:00
+CUST016,Brian Jackson,brian.jackson@email.com,+1-555-0116,11.2,Active,2021-11-22T10:00:00
+CUST017,Stephanie White,stephanie.white@email.com,+1-555-0117,26.8,Active,2020-05-07T15:15:00
+CUST018,Andrew Harris,andrew.harris@email.com,+1-555-0118,38.4,Active,2019-09-14T09:45:00
+CUST019,Nicole Moore,nicole.moore@email.com,+1-555-0119,6.5,Active,2022-02-18T12:00:00
+CUST020,Timothy Clark,timothy.clark@email.com,+1-555-0120,71.3,Under Review,2018-07-26T14:45:00
+CUST021,Samantha Lewis,samantha.lewis@email.com,+1-555-0121,14.6,Active,2021-04-09T11:30:00
+CUST022,Patrick Robinson,patrick.robinson@email.com,+1-555-0122,33.7,Active,2020-08-15T16:15:00
+CUST023,Megan Walker,megan.walker@email.com,+1-555-0123,19.4,Active,2022-06-02T08:00:00
+CUST024,Joshua Hall,joshua.hall@email.com,+1-555-0124,52.8,Under Review,2019-01-19T13:45:00
+CUST025,Ashley Young,ashley.young@email.com,+1-555-0125,4.2,Active,2022-10-28T10:30:00

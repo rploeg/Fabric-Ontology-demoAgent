@@ -1,0 +1,174 @@
+# Demo Metadata Schema
+# Version: 1.0
+# Purpose: Generation metadata for automation tool version compatibility
+
+$schema: "http://json-schema.org/draft-07/schema#"
+title: Fabric Ontology Demo Metadata
+description: |
+  Auto-generated metadata file for fabric-demo automation tool.
+  DO NOT EDIT manually - used for validation and resource discovery.
+
+type: object
+required:
+  - _generator
+  - demo
+  - files
+  - constraints_applied
+
+properties:
+  _generator:
+    type: object
+    description: Generation context
+    required:
+      - spec_name
+      - spec_version
+      - generated_at
+      - generator_phase
+    properties:
+      spec_name:
+        type: string
+        const: fabric-ontology-demo-v2
+        description: Name of the specification used
+        
+      spec_version:
+        type: string
+        pattern: "^\\d+\\.\\d+(\\.\\d+)?$"
+        description: Version of the specification
+        
+      generated_at:
+        type: string
+        format: date-time
+        description: ISO 8601 timestamp of generation
+        
+      generator_phase:
+        type: string
+        enum:
+          - discovery
+          - design
+          - ontology
+          - data
+          - bindings
+          - queries
+          - readme
+          - complete
+        description: Last completed generation phase
+
+  demo:
+    type: object
+    description: Demo characteristics
+    required:
+      - name
+      - domain
+      - entity_count
+      - relationship_count
+      - has_timeseries
+    properties:
+      name:
+        type: string
+        description: Demo name (folder name)
+        
+      domain:
+        type: string
+        description: Industry/domain focus
+        
+      entity_count:
+        type: integer
+        minimum: 4
+        maximum: 12
+        description: Number of entity types
+        
+      relationship_count:
+        type: integer
+        minimum: 3
+        description: Number of relationship types
+        
+      has_timeseries:
+        type: boolean
+        description: Whether demo includes timeseries data
+
+  files:
+    type: object
+    description: Generated file inventory
+    required:
+      - ontology_ttl
+      - lakehouse_tables
+    properties:
+      ontology_ttl:
+        type: string
+        description: Path to ontology TTL file
+        
+      lakehouse_tables:
+        type: array
+        items:
+          type: string
+        description: List of lakehouse table names (Dim*, Fact*)
+        
+      eventhouse_tables:
+        type: array
+        items:
+          type: string
+        description: List of timeseries table names
+
+  constraints_applied:
+    type: object
+    description: Constraints validated during generation
+    required:
+      - property_types
+      - key_types
+      - property_name_max_length
+    properties:
+      property_types:
+        type: array
+        items:
+          type: string
+          enum: [string, int, double, boolean, datetime]
+        description: Property types used (must be from allowed list)
+        
+      key_types:
+        type: array
+        items:
+          type: string
+          enum: [string, int]
+        description: Key types used (must be string or int only)
+        
+      property_name_max_length:
+        type: integer
+        const: 26
+        description: Maximum property name length enforced
+
+# Example .demo-metadata.yaml
+example:
+  _generator:
+    spec_name: fabric-ontology-demo-v2
+    spec_version: "3.3"
+    generated_at: "2026-01-06T14:30:00Z"
+    generator_phase: complete
+    
+  demo:
+    name: MedicalManufacturing
+    domain: Pharmaceutical Manufacturing
+    entity_count: 8
+    relationship_count: 10
+    has_timeseries: true
+    
+  files:
+    ontology_ttl: "ontology/bd-medical-manufacturing.ttl"
+    lakehouse_tables:
+      - DimProduct
+      - DimFacility
+      - DimSupplier
+      - DimComponent
+      - DimProductionBatch
+      - DimRegulatorySubmission
+      - FactBatchComponent
+      - FactQualityEvent
+      - FactCustomerComplaint
+      - FactFacilitySupplier
+    eventhouse_tables:
+      - BatchTelemetry
+      - FacilityTelemetry
+      
+  constraints_applied:
+    property_types: [string, int, double, boolean, datetime]
+    key_types: [string, int]
+    property_name_max_length: 26

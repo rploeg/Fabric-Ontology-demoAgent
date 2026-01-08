@@ -1,0 +1,2 @@
+[console_scripts]
+fabric-demo = demo_automation.cli:main
