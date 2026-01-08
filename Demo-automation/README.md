@@ -263,6 +263,34 @@ Based on `fabric-ontology-demo-v2.yaml` and known Fabric limitations:
 - **Resume**: Use `--resume` flag to continue from last successful step
 - **Fresh start**: Use `--clear-state` to remove state and start over
 
+## Cleanup Command
+
+The `cleanup` command safely removes only the resources that were created by the setup process:
+
+```bash
+# Preview what will be deleted (dry run)
+fabric-demo cleanup ./MedicalManufacturing
+
+# Actually delete resources
+fabric-demo cleanup ./MedicalManufacturing --confirm
+```
+
+**Safety features:**
+- **State-based deletion**: Only deletes resources tracked in `.setup-state.yaml` by their IDs
+- **No accidental deletion**: Pre-existing resources with matching names are NOT deleted
+- **Audit trail**: After cleanup, the state file is preserved with status `cleaned_up`
+- **Idempotent**: Running cleanup again shows "No resources recorded" since IDs are cleared
+
+**What gets deleted:**
+1. Ontology (deleted first, as it depends on data sources)
+2. Eventhouse (includes KQL database)
+3. Lakehouse
+
+**What is NOT deleted:**
+- The demo folder and its files
+- Resources not created by this tool
+- The `.setup-state.yaml` file (updated to `cleaned_up` status)
+
 ### Troubleshooting: "An error occurred while loading the columns"
 
 If you see this error when viewing relationship bindings in the Fabric UI:

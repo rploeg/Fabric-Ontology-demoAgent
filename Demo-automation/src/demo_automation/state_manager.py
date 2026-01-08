@@ -39,6 +39,7 @@ class SetupStatus(Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    CLEANED_UP = "cleaned_up"
 
 
 @dataclass
@@ -301,6 +302,24 @@ class SetupStateManager:
             self.state_file.unlink()
             logger.info(f"Cleared state file: {self.state_file}")
         self._state = None
+
+    def mark_cleaned_up(self) -> None:
+        """Mark state as cleaned up, clearing resource IDs but preserving audit trail."""
+        self.state.status = SetupStatus.CLEANED_UP
+        self.state.completed_at = datetime.now(timezone.utc).isoformat()
+        
+        # Clear resource IDs (they no longer exist)
+        self.state.lakehouse_id = None
+        self.state.lakehouse_name = None
+        self.state.eventhouse_id = None
+        self.state.eventhouse_name = None
+        self.state.kql_database_id = None
+        self.state.kql_database_name = None
+        self.state.ontology_id = None
+        self.state.ontology_name = None
+        
+        self.save_state()
+        logger.info("Marked state as cleaned up")
 
     def start_setup(self) -> None:
         """Mark setup as started."""

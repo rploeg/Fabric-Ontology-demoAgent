@@ -872,17 +872,26 @@ def run_status(args: argparse.Namespace) -> int:
 
 
 def run_cleanup(args: argparse.Namespace) -> int:
-    """Remove demo resources."""
+    """Remove demo resources that were created by setup.
+    
+    Uses the state file to identify exactly which resources were created,
+    preventing accidental deletion of pre-existing resources.
+    """
     demo_path = Path(args.demo_path).resolve()
 
     if not demo_path.is_dir():
         console.print(f"[red]Error:[/red] Directory not found: {demo_path}")
         return 1
 
-    if not args.confirm:
-        console.print("[yellow]Warning:[/yellow] This will delete all demo resources.")
-        console.print("Use --confirm to proceed.")
-        return 1
+    # Check for state file first - this tells us what was actually created
+    from .state_manager import SetupStateManager, STATE_FILE_NAME
+    
+    state_file = demo_path / STATE_FILE_NAME
+    if not state_file.exists():
+        console.print(f"[yellow]Warning:[/yellow] No state file found at {state_file}")
+        console.print("This means no resources were created by setup, or state was already cleared.")
+        console.print("Nothing to clean up.")
+        return 0
 
     try:
         config = DemoConfiguration.from_demo_folder(
@@ -895,36 +904,89 @@ def run_cleanup(args: argparse.Namespace) -> int:
             console.print(f"[red]Configuration error:[/red] {errors[0]}")
             return 1
 
+        # Load the state to get resource IDs that were actually created
+        state_manager = SetupStateManager(demo_path, config.fabric.workspace_id, config.name)
+        state = state_manager.load_state()
+        
+        if state is None:
+            console.print("[yellow]Warning:[/yellow] Could not load state file.")
+            console.print("Nothing to clean up.")
+            return 0
+
+        # Check if there are any resources to delete
+        has_resources = any([
+            state.ontology_id,
+            state.eventhouse_id,
+            state.lakehouse_id,
+        ])
+        
+        if not has_resources:
+            console.print("[yellow]Warning:[/yellow] No resources recorded in state file.")
+            console.print("Nothing to clean up.")
+            # Still remove the state file
+            state_manager.clear_state()
+            return 0
+
+        # Show what will be deleted
+        console.print(Panel(f"Resources to clean up for demo: [bold red]{config.name}[/bold red]"))
+        if state.ontology_id:
+            console.print(f"  • Ontology: {state.ontology_name} ({state.ontology_id})")
+        if state.eventhouse_id:
+            console.print(f"  • Eventhouse: {state.eventhouse_name} ({state.eventhouse_id})")
+        if state.lakehouse_id:
+            console.print(f"  • Lakehouse: {state.lakehouse_name} ({state.lakehouse_id})")
+        console.print("")
+
+        if not args.confirm:
+            console.print("[yellow]Warning:[/yellow] This will delete the resources listed above.")
+            console.print("Use --confirm to proceed.")
+            return 1
+
         from .platform import FabricClient
 
         with FabricClient(
             workspace_id=config.fabric.workspace_id,
             tenant_id=config.fabric.tenant_id,
         ) as client:
-            console.print(Panel(f"Cleaning up demo: [bold red]{config.name}[/bold red]"))
-
             # Delete Ontology first (depends on data sources)
-            ont = client.find_ontology_by_name(config.resources.ontology.name)
-            if ont:
-                console.print(f"Deleting Ontology: {config.resources.ontology.name}")
-                client.delete_ontology(ont["id"])
-                console.print("[green]  ✓ Deleted[/green]")
+            if state.ontology_id:
+                console.print(f"Deleting Ontology: {state.ontology_name} ({state.ontology_id})")
+                try:
+                    client.delete_ontology(state.ontology_id)
+                    console.print("[green]  ✓ Deleted[/green]")
+                except Exception as e:
+                    if "not found" in str(e).lower() or "404" in str(e):
+                        console.print("[yellow]  ⚠ Already deleted or not found[/yellow]")
+                    else:
+                        raise
 
-            # Delete Eventhouse
-            eh = client.find_eventhouse_by_name(config.resources.eventhouse.name)
-            if eh:
-                console.print(f"Deleting Eventhouse: {config.resources.eventhouse.name}")
-                client.delete_eventhouse(eh["id"])
-                console.print("[green]  ✓ Deleted[/green]")
+            # Delete Eventhouse (includes KQL database)
+            if state.eventhouse_id:
+                console.print(f"Deleting Eventhouse: {state.eventhouse_name} ({state.eventhouse_id})")
+                try:
+                    client.delete_eventhouse(state.eventhouse_id)
+                    console.print("[green]  ✓ Deleted[/green]")
+                except Exception as e:
+                    if "not found" in str(e).lower() or "404" in str(e):
+                        console.print("[yellow]  ⚠ Already deleted or not found[/yellow]")
+                    else:
+                        raise
 
             # Delete Lakehouse
-            lh = client.find_lakehouse_by_name(config.resources.lakehouse.name)
-            if lh:
-                console.print(f"Deleting Lakehouse: {config.resources.lakehouse.name}")
-                client.delete_lakehouse(lh["id"])
-                console.print("[green]  ✓ Deleted[/green]")
+            if state.lakehouse_id:
+                console.print(f"Deleting Lakehouse: {state.lakehouse_name} ({state.lakehouse_id})")
+                try:
+                    client.delete_lakehouse(state.lakehouse_id)
+                    console.print("[green]  ✓ Deleted[/green]")
+                except Exception as e:
+                    if "not found" in str(e).lower() or "404" in str(e):
+                        console.print("[yellow]  ⚠ Already deleted or not found[/yellow]")
+                    else:
+                        raise
 
-        console.print("\n[green]✓[/green] Cleanup completed")
+        # Mark state as cleaned up (preserves audit trail)
+        state_manager.mark_cleaned_up()
+        console.print("\n[green]✓[/green] Cleanup completed - state file updated")
         return 0
 
     except Exception as e:
