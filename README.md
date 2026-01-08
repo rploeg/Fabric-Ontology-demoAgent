@@ -2,6 +2,18 @@
 
 An expert agent configuration for creating Microsoft Fabric Ontology demo scenarios with realistic sample data, bindings, and guidance. The core configuration lives in [.agentic](.agentic), describing entities, relationships, bindings, validation checks, and deliverables.
 
+## 📖 Documentation
+
+**[📚 Read the Full Documentation →](docs/index.md)**
+
+| Guide | Description |
+|-------|-------------|
+| [Quick Start](docs/index.md) | Get a demo running in 5 minutes |
+| [CLI Reference](docs/cli-reference.md) | All commands explained |
+| [Configuration](docs/configuration.md) | Setup options |
+| [Troubleshooting](docs/troubleshooting.md) | Common issues |
+| [Agent Workflow](docs/agent-workflow.md) | Generate new demos with AI |
+
 ## What's inside
 - **[.agentic](.agentic)** — Agent specifications, schemas, and templates for generating ontology demos
   - Agent instructions and constraints
@@ -13,8 +25,8 @@ An expert agent configuration for creating Microsoft Fabric Ontology demo scenar
   - State-based resume capability
   - Safe cleanup with audit trail
   - See [Demo-automation/README.md](Demo-automation/README.md) for details
-- **Docs** — project guidelines for contribution, conduct, and security reporting
-- **demo-*** — generated demo folders (e.g., `demo-water_treatment_plant/`, `demo-potash_mining/`, `MedicalManufacturing/`)
+- **[docs](docs)** — Consolidated documentation
+- **demo-*** — generated demo folders (e.g., `demo-water_treatment_plant/`, `MedicalManufacturing/`)
 
 ## Output folder structure
 Each generated demo follows a consistent structure:

@@ -1,0 +1,319 @@
+# Configuration Guide
+
+Complete guide to configuring the `fabric-demo` CLI tool.
+
+---
+
+## Configuration Precedence
+
+The tool uses multiple configuration sources in this order (highest priority first):
+
+1. **CLI arguments**: `--workspace-id abc123`
+2. **Environment variables**: `FABRIC_WORKSPACE_ID`
+3. **Global config file**: `~/.fabric-demo/config.yaml`
+4. **Demo-specific config**: `demo.yaml` in demo folder
+5. **Built-in defaults**
+
+---
+
+## Global Configuration File
+
+Location:
+- **Windows**: `%USERPROFILE%\.fabric-demo\config.yaml`
+- **macOS/Linux**: `~/.fabric-demo/config.yaml`
+
+### Creating the Config File
+
+```bash
+# Interactive wizard (recommended)
+fabric-demo config init
+
+# Or create manually
+mkdir -p ~/.fabric-demo
+touch ~/.fabric-demo/config.yaml
+```
+
+### Full Configuration Template
+
+```yaml
+# Fabric Demo Automation - Global Configuration
+# =============================================
+
+defaults:
+  # Your default Fabric workspace ID (GUID)
+  workspace_id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  
+  # Azure AD tenant ID (optional, for multi-tenant scenarios)
+  tenant_id: 
+  
+  # Authentication method: interactive, service_principal, or default
+  # - interactive: Opens browser for login (recommended for demos)
+  # - service_principal: Uses AZURE_CLIENT_ID and AZURE_CLIENT_SECRET env vars
+  # - default: Uses DefaultAzureCredential chain
+  auth_method: interactive
+
+options:
+  # Skip creation if resources already exist (default: true)
+  skip_existing: true
+  
+  # Preview mode - don't make changes (default: false)
+  dry_run: false
+  
+  # Show verbose output (default: false)
+  verbose: false
+  
+  # Require --confirm or interactive confirmation for cleanup (default: true)
+  confirm_cleanup: true
+
+# API rate limiting settings
+# Adjust these if you have higher Fabric SKU quotas or experience throttling
+rate_limiting:
+  # Enable/disable rate limiting (default: true)
+  enabled: true
+  
+  # Maximum requests per minute (default: 30)
+  # Fabric API typically allows 30-60 requests/minute depending on SKU
+  requests_per_minute: 30
+  
+  # Burst allowance for short request spikes (default: 10)
+  burst: 10
+```
+
+### View Current Configuration
+
+```bash
+fabric-demo config show
+```
+
+Output:
+
+```
+┏━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
+┃ Setting         ┃ Value                                ┃ Source  ┃
+┡━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━┩
+│ Workspace ID    │ bf5fab96-5f75-44a9-a8e2-850ad6ea59ce │ env     │
+│ Tenant ID       │ not set                              │ not set │
+│ Auth Method     │ interactive                          │ config  │
+│ Skip Existing   │ True                                 │ config  │
+│ Confirm Cleanup │ True                                 │ config  │
+├─────────────────┼──────────────────────────────────────┼─────────┤
+│ Rate Limiting   │                                      │         │
+│   Enabled       │ True                                 │ config  │
+│   Requests/min  │ 30                                   │ config  │
+│   Burst         │ 10                                   │ config  │
+└─────────────────┴──────────────────────────────────────┴─────────┘
+```
+
+---
+
+## Environment Variables
+
+Set these in your shell or a `.env` file:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `FABRIC_WORKSPACE_ID` | Fabric workspace GUID | `bf5fab96-5f75-...` |
+| `AZURE_TENANT_ID` | Azure AD tenant ID | `72f988bf-86f1-...` |
+| `AZURE_CLIENT_ID` | Service principal app ID | (for automation) |
+| `AZURE_CLIENT_SECRET` | Service principal secret | (for automation) |
+
+### Using a .env File
+
+Create a `.env` file in your project root:
+
+```bash
+# .env
+FABRIC_WORKSPACE_ID=bf5fab96-5f75-44a9-a8e2-850ad6ea59ce
+AZURE_TENANT_ID=72f988bf-86f1-41af-91ab-2d7cd011db47
+```
+
+The tool automatically loads `.env` files from the current directory.
+
+> ⚠️ **Security**: Never commit `.env` files with real credentials. Use `.env.example` as a template.
+
+---
+
+## Demo-Specific Configuration
+
+Each demo folder can have a `demo.yaml` file:
+
+```yaml
+# demo.yaml
+demo:
+  name: MedicalManufacturing
+  description: "Medical device manufacturing ontology demo"
+
+fabric:
+  # Override workspace for this specific demo
+  workspace_id: ${FABRIC_WORKSPACE_ID}
+
+options:
+  skip_existing: true
+  dry_run: false
+```
+
+### Variable Substitution
+
+Use `${VAR_NAME}` to reference environment variables:
+
+```yaml
+fabric:
+  workspace_id: ${FABRIC_WORKSPACE_ID}
+  tenant_id: ${AZURE_TENANT_ID}
+```
+
+---
+
+## Authentication Methods
+
+### Interactive Browser (Default)
+
+Best for demos and development. Opens a browser window for Azure AD login.
+
+```yaml
+defaults:
+  auth_method: interactive
+```
+
+### Service Principal
+
+Best for CI/CD automation. Requires environment variables.
+
+```yaml
+defaults:
+  auth_method: service_principal
+```
+
+Required environment variables:
+```bash
+AZURE_TENANT_ID=your-tenant-id
+AZURE_CLIENT_ID=your-app-id
+AZURE_CLIENT_SECRET=your-secret
+```
+
+### Default Azure Credential Chain
+
+Uses Azure SDK's DefaultAzureCredential, which tries multiple methods:
+1. Environment variables
+2. Managed Identity
+3. Visual Studio Code credentials
+4. Azure CLI credentials
+5. Interactive browser (fallback)
+
+```yaml
+defaults:
+  auth_method: default
+```
+
+---
+
+## Rate Limiting
+
+The Fabric API has rate limits. The tool includes a token bucket rate limiter.
+
+### Default Settings
+
+- **30 requests/minute** - Conservative for all Fabric SKUs
+- **Burst of 10** - Allows short spikes
+
+### Adjusting for Higher SKUs
+
+If you have a Fabric F64 or higher SKU, you may have higher quotas:
+
+```yaml
+rate_limiting:
+  enabled: true
+  requests_per_minute: 60
+  burst: 20
+```
+
+### Disabling Rate Limiting
+
+Not recommended, but possible:
+
+```yaml
+rate_limiting:
+  enabled: false
+```
+
+---
+
+## Common Configuration Scenarios
+
+### Personal Demo Machine
+
+```yaml
+defaults:
+  workspace_id: your-personal-workspace-id
+  auth_method: interactive
+
+options:
+  skip_existing: true
+  confirm_cleanup: true
+
+rate_limiting:
+  requests_per_minute: 30
+```
+
+### CI/CD Pipeline
+
+```yaml
+defaults:
+  auth_method: service_principal
+
+options:
+  skip_existing: false
+  confirm_cleanup: false
+
+rate_limiting:
+  requests_per_minute: 60
+```
+
+### Shared Demo Environment
+
+```yaml
+defaults:
+  workspace_id: shared-team-workspace-id
+  auth_method: interactive
+
+options:
+  skip_existing: true
+  confirm_cleanup: true  # Always confirm to avoid accidents
+```
+
+---
+
+## Troubleshooting Configuration
+
+### "Workspace ID not configured"
+
+Run `fabric-demo config init` or set the environment variable:
+
+```bash
+export FABRIC_WORKSPACE_ID=your-workspace-id
+```
+
+### "Auth method not recognized"
+
+Valid values are: `interactive`, `service_principal`, `default`
+
+### Config File Not Loading
+
+Check the file location:
+
+```bash
+fabric-demo config path
+```
+
+Verify YAML syntax with:
+
+```bash
+python -c "import yaml; yaml.safe_load(open('~/.fabric-demo/config.yaml'))"
+```
+
+---
+
+## See Also
+
+- [CLI Reference](cli-reference.md) - All commands
+- [Troubleshooting](troubleshooting.md) - Common issues

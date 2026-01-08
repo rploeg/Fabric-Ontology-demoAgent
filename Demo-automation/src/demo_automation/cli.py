@@ -325,6 +325,13 @@ If the state file is missing, use --force-by-name to delete resources by name.
         help="Filter resources by name pattern",
     )
 
+    # docs command
+    subparsers.add_parser(
+        "docs",
+        help="Open documentation in browser",
+        description="Open the fabric-demo documentation in your default browser.",
+    )
+
     return parser
 
 
@@ -448,6 +455,37 @@ def _config_path() -> int:
     else:
         console.print("[yellow]File does not exist[/yellow]")
         console.print("Run 'fabric-demo config init' to create it.")
+    return 0
+
+
+def run_docs(args: argparse.Namespace) -> int:
+    """Open documentation in browser."""
+    import webbrowser
+    from pathlib import Path
+    
+    # Try to find the docs folder relative to this file
+    # The structure is: Demo-automation/src/demo_automation/cli.py
+    # Docs are at: docs/index.md (relative to repo root)
+    
+    # First, check for GitHub docs URL (preferred for users)
+    github_docs_url = "https://github.com/falloutxAY/Fabric-Ontology-demoAgent/blob/main/docs/index.md"
+    
+    # Try to find local docs
+    cli_path = Path(__file__).resolve()
+    repo_root = cli_path.parent.parent.parent.parent.parent  # Go up from cli.py
+    local_docs = repo_root / "docs" / "index.md"
+    
+    if local_docs.exists():
+        # Open local docs if available
+        local_url = local_docs.as_uri()
+        console.print(f"Opening local documentation: {local_docs}")
+        webbrowser.open(local_url)
+    else:
+        # Fall back to GitHub
+        console.print(f"Opening documentation on GitHub...")
+        webbrowser.open(github_docs_url)
+    
+    console.print("[green]✓[/green] Documentation opened in browser")
     return 0
 
 
@@ -1321,6 +1359,7 @@ def main() -> int:
         "status": run_status,
         "list": run_list,
         "cleanup": run_cleanup,
+        "docs": run_docs,
     }
 
     handler = commands.get(args.command)
