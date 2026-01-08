@@ -2,13 +2,62 @@
 
 Automated setup tool for Microsoft Fabric Ontology demos. This CLI tool orchestrates the complete demo setup process with **11 sequential steps**, each independently executable with built-in resume capability.
 
+## Quick Start
+
+```bash
+# 1. Install the tool
+cd Demo-automation
+pip install -e .
+
+# 2. Configure your workspace (one-time setup)
+fabric-demo config init
+
+# 3. Validate and setup a demo
+fabric-demo validate ../CreditFraud
+fabric-demo setup ../CreditFraud
+
+# 4. When done, cleanup
+fabric-demo cleanup ../CreditFraud
+```
+
+## Configuration
+
+The tool supports multiple configuration sources (in order of precedence):
+
+1. **CLI arguments**: `--workspace-id abc123`
+2. **Environment variables**: `FABRIC_WORKSPACE_ID`
+3. **Global config file**: `~/.fabric-demo/config.yaml`
+4. **Demo-specific config**: `demo.yaml` in demo folder
+
+### First-Time Setup
+
+```bash
+# Interactive configuration wizard
+fabric-demo config init
+
+# View current configuration
+fabric-demo config show
+
+# Show config file location
+fabric-demo config path
+```
+
+### Environment Variables
+
+Create a `.env` file (see `.env.example`):
+
+```bash
+FABRIC_WORKSPACE_ID=your-workspace-id-guid
+AZURE_TENANT_ID=your-tenant-id        # Optional
+```
+
 ## Setup Workflow
 
 The tool executes the following steps in order:
 
 | Step | Description | Validation |
 |------|-------------|------------|
-| 1. **Validate** | Verify demo folder structure matches `fabric-ontology-demo-v2.yaml` spec | ✓ Structure & files |
+| 1. **Validate** | Verify demo folder structure matches spec | ✓ Structure & files |
 | 2. **Create Lakehouse** | Create Lakehouse in Fabric workspace | ✓ Resource exists |
 | 3. **Upload Files** | Upload `data/lakehouse/*.csv` files to Lakehouse | ✓ Files uploaded |
 | 4. **Load Tables** | Convert CSV files to managed Delta tables | ✓ Tables created |
@@ -22,15 +71,15 @@ The tool executes the following steps in order:
 
 ## Features
 
+- **Global configuration**: One-time setup via `fabric-demo config init`
 - **Auto-discovery**: Reads demo structure from folder conventions
 - **Structured bindings**: Parses `bindings.yaml` (v3.2+) for machine-readable configuration
 - **Validation**: Ensures demo packages match generator constraints and limitations
-- **Hybrid configuration**: YAML config with environment variable support
 - **Resume capability**: State persistence via `.setup-state.yaml` for failure recovery
 - **Individual step execution**: Run any step independently via `run-step` command
 - **Smart skipping**: Automatically skips resources/tables that already exist
+- **Safe cleanup**: Only deletes resources tracked in state file; `--force-by-name` for fallback
 - **Progress reporting**: Real-time progress with rich terminal output
-- **Constraint adherence**: Respects all Fabric Graph/Ontology limitations
 
 ## Installation
 
@@ -82,40 +131,27 @@ python -m demo_automation.cli validate ../MedicalManufacturing
 python -m demo_automation.cli setup ../PillManufacturing --workspace-id <id>
 ```
 
-**Option 4: Use pip-installed location**
+## Commands Reference
 
 ```bash
-# Check where pip installs scripts
-python -m site --user-base
-# Append /Scripts (Windows) or /bin (Linux/Mac) to that path
-```
+# Configuration
+fabric-demo config init          # Interactive setup wizard
+fabric-demo config show          # Show current configuration
+fabric-demo config path          # Show config file location
 
-## Quick Start
+# Demo Operations
+fabric-demo init ./Demo          # Create demo.yaml template
+fabric-demo validate ./Demo      # Validate demo package
+fabric-demo setup ./Demo         # Run full setup
+fabric-demo status ./Demo        # Check setup progress
+fabric-demo list                 # List resources in workspace
+fabric-demo cleanup ./Demo       # Remove demo resources
 
-```bash
-# Initialize a demo configuration
-fabric-demo init ./MedicalManufacturing
-
-# Validate demo package
-fabric-demo validate ./MedicalManufacturing
-
-# Run full setup
-fabric-demo setup ./MedicalManufacturing --workspace-id <your-workspace-id>
-
-# Run with dry-run to preview actions
-fabric-demo setup ./MedicalManufacturing --dry-run
-
-# Resume from a failed step
-fabric-demo setup ./MedicalManufacturing --resume
-
-# Clear state and start fresh
-fabric-demo setup ./MedicalManufacturing --clear-state
-
-# Check status (shows 11-step progress)
-fabric-demo status ./MedicalManufacturing
-
-# Cleanup resources
-fabric-demo cleanup ./MedicalManufacturing --confirm
+# Advanced
+fabric-demo setup ./Demo --dry-run           # Preview without changes
+fabric-demo setup ./Demo --resume            # Resume from failure
+fabric-demo run-step ./Demo --step 8         # Run single step
+fabric-demo cleanup ./Demo --force-by-name   # Cleanup without state file
 ```
 
 ## Running Individual Steps

@@ -2,10 +2,12 @@
 Command-line interface for Fabric Demo Automation.
 
 Provides commands for:
+- config: Manage global configuration
 - init: Create demo.yaml template
 - validate: Validate demo package structure
 - setup: Run complete demo setup
 - status: Check demo resource status
+- list: List demos in workspace
 - cleanup: Remove demo resources
 """
 
@@ -19,8 +21,10 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.logging import RichHandler
+from rich.prompt import Prompt, Confirm
 
 from .core.config import DemoConfiguration, generate_demo_yaml_template
+from .core.global_config import GlobalConfig, get_config_file_path, config_file_exists, generate_config_template
 from .core.errors import DemoAutomationError, ConfigurationError
 from .orchestrator import DemoOrchestrator, print_setup_results
 
@@ -53,14 +57,20 @@ def create_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  fabric-demo init ./MedicalManufacturing
+  # First-time setup
+  fabric-demo config init                     # Configure workspace ID
+  
+  # Working with demos
   fabric-demo validate ./MedicalManufacturing
-  fabric-demo setup ./MedicalManufacturing --workspace-id abc123
-  fabric-demo setup ./MedicalManufacturing --dry-run
-  fabric-demo run-step ./MedicalManufacturing --step create_lakehouse
-  fabric-demo run-step ./MedicalManufacturing --step 2
+  fabric-demo setup ./MedicalManufacturing
   fabric-demo status ./MedicalManufacturing
-  fabric-demo cleanup ./MedicalManufacturing --confirm
+  fabric-demo list                            # List demos in workspace
+  fabric-demo cleanup ./MedicalManufacturing
+  
+  # Advanced usage
+  fabric-demo setup ./Demo --workspace-id abc  # Override workspace
+  fabric-demo run-step ./Demo --step 8         # Run single step
+  fabric-demo cleanup ./Demo --force-by-name   # Cleanup without state file
         """,
     )
 
@@ -70,8 +80,44 @@ Examples:
         action="store_true",
         help="Enable verbose output",
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug output with full stack traces",
+    )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # config command
+    config_parser = subparsers.add_parser(
+        "config",
+        help="Manage global configuration",
+        description="View or modify global fabric-demo settings.",
+    )
+    config_subparsers = config_parser.add_subparsers(dest="config_action", help="Config actions")
+    
+    # config init
+    config_init_parser = config_subparsers.add_parser(
+        "init",
+        help="Initialize global configuration interactively",
+    )
+    config_init_parser.add_argument(
+        "--force", "-f",
+        action="store_true",
+        help="Overwrite existing configuration",
+    )
+    
+    # config show
+    config_subparsers.add_parser(
+        "show",
+        help="Show current configuration",
+    )
+    
+    # config path
+    config_subparsers.add_parser(
+        "path",
+        help="Show configuration file path",
+    )
 
     # init command
     init_parser = subparsers.add_parser(
@@ -232,6 +278,14 @@ Available steps:
     cleanup_parser = subparsers.add_parser(
         "cleanup",
         help="Remove demo resources",
+        description="""
+Remove demo resources from your Fabric workspace.
+
+By default, cleanup uses the state file (.setup-state.yaml) to identify exactly
+which resources were created, preventing accidental deletion.
+
+If the state file is missing, use --force-by-name to delete resources by name.
+        """,
     )
     cleanup_parser.add_argument(
         "demo_path",
@@ -244,12 +298,226 @@ Available steps:
         help="Fabric workspace ID",
     )
     cleanup_parser.add_argument(
-        "--confirm",
+        "--confirm", "--yes", "-y",
         action="store_true",
-        help="Confirm deletion (required)",
+        help="Skip confirmation prompt",
+    )
+    cleanup_parser.add_argument(
+        "--force-by-name",
+        action="store_true",
+        help="Delete resources by name even without state file (use with caution)",
+    )
+
+    # list command
+    list_parser = subparsers.add_parser(
+        "list",
+        help="List demo resources in workspace",
+        description="List ontologies, lakehouses, and eventhouses in your Fabric workspace.",
+    )
+    list_parser.add_argument(
+        "--workspace-id", "-w",
+        type=str,
+        help="Fabric workspace ID",
+    )
+    list_parser.add_argument(
+        "--filter", "-f",
+        type=str,
+        help="Filter resources by name pattern",
     )
 
     return parser
+
+
+def run_config(args: argparse.Namespace) -> int:
+    """Manage global configuration."""
+    action = getattr(args, 'config_action', None)
+    
+    if action == "init":
+        return _config_init(args)
+    elif action == "show":
+        return _config_show()
+    elif action == "path":
+        return _config_path()
+    else:
+        # No subcommand - show help
+        console.print("Usage: fabric-demo config <init|show|path>")
+        console.print("\nActions:")
+        console.print("  init   Initialize configuration interactively")
+        console.print("  show   Show current configuration")
+        console.print("  path   Show configuration file path")
+        return 0
+
+
+def _config_init(args: argparse.Namespace) -> int:
+    """Initialize global configuration interactively."""
+    config_path = get_config_file_path()
+    
+    if config_file_exists() and not getattr(args, 'force', False):
+        console.print(f"[yellow]Configuration file already exists:[/yellow] {config_path}")
+        if not Confirm.ask("Overwrite existing configuration?"):
+            return 0
+    
+    console.print(Panel("[bold cyan]Fabric Demo Configuration Setup[/bold cyan]"))
+    console.print("This will create a global configuration file for fabric-demo.\n")
+    
+    # Get workspace ID
+    workspace_id = Prompt.ask(
+        "Enter your Fabric workspace ID (GUID)",
+        default="",
+    )
+    
+    # Get tenant ID (optional)
+    tenant_id = Prompt.ask(
+        "Enter your Azure tenant ID (optional, press Enter to skip)",
+        default="",
+    )
+    
+    # Get auth method
+    console.print("\nAuthentication methods:")
+    console.print("  [cyan]interactive[/cyan] - Opens browser for login (recommended)")
+    console.print("  [cyan]service_principal[/cyan] - Uses environment variables")
+    console.print("  [cyan]default[/cyan] - Azure SDK default chain")
+    auth_method = Prompt.ask(
+        "Authentication method",
+        choices=["interactive", "service_principal", "default"],
+        default="interactive",
+    )
+    
+    # Create and save config
+    config = GlobalConfig(
+        workspace_id=workspace_id if workspace_id else None,
+        tenant_id=tenant_id if tenant_id else None,
+        auth_method=auth_method,
+    )
+    config.save()
+    
+    console.print(f"\n[green]✓[/green] Configuration saved to {config_path}")
+    
+    if not workspace_id:
+        console.print("\n[yellow]Note:[/yellow] No workspace ID configured.")
+        console.print("You can set it later via:")
+        console.print("  • Environment variable: FABRIC_WORKSPACE_ID=<your-id>")
+        console.print("  • CLI argument: --workspace-id <your-id>")
+        console.print("  • Edit config file directly")
+    
+    return 0
+
+
+def _config_show() -> int:
+    """Show current configuration."""
+    config = GlobalConfig.load()
+    
+    table = Table(title="Fabric Demo Configuration")
+    table.add_column("Setting", style="cyan")
+    table.add_column("Value")
+    table.add_column("Source", style="dim")
+    
+    # Determine source for each value
+    import os
+    ws_source = "env" if os.environ.get('FABRIC_WORKSPACE_ID') else ("config" if config.workspace_id else "not set")
+    tenant_source = "env" if os.environ.get('AZURE_TENANT_ID') else ("config" if config.tenant_id else "not set")
+    
+    table.add_row("Workspace ID", config.workspace_id or "[dim]not set[/dim]", ws_source)
+    table.add_row("Tenant ID", config.tenant_id or "[dim]not set[/dim]", tenant_source)
+    table.add_row("Auth Method", config.auth_method, "config")
+    table.add_row("Skip Existing", str(config.skip_existing), "config")
+    table.add_row("Confirm Cleanup", str(config.confirm_cleanup), "config")
+    
+    console.print(table)
+    
+    config_path = get_config_file_path()
+    if config_file_exists():
+        console.print(f"\n[dim]Config file: {config_path}[/dim]")
+    else:
+        console.print(f"\n[dim]No config file. Run 'fabric-demo config init' to create one.[/dim]")
+    
+    return 0
+
+
+def _config_path() -> int:
+    """Show configuration file path."""
+    config_path = get_config_file_path()
+    console.print(f"Config file: {config_path}")
+    if config_file_exists():
+        console.print("[green]✓[/green] File exists")
+    else:
+        console.print("[yellow]File does not exist[/yellow]")
+        console.print("Run 'fabric-demo config init' to create it.")
+    return 0
+
+
+def run_list(args: argparse.Namespace) -> int:
+    """List demo resources in workspace."""
+    from .platform import FabricClient
+    
+    # Load global config
+    global_config = GlobalConfig.load()
+    workspace_id = global_config.get_workspace_id(getattr(args, 'workspace_id', None))
+    
+    if not workspace_id:
+        console.print("[red]Error:[/red] No workspace ID configured.")
+        console.print("\nSet workspace ID via one of:")
+        console.print("  • fabric-demo config init")
+        console.print("  • Environment variable: FABRIC_WORKSPACE_ID")
+        console.print("  • CLI argument: --workspace-id")
+        return 1
+    
+    filter_pattern = getattr(args, 'filter', None)
+    
+    try:
+        with FabricClient(
+            workspace_id=workspace_id,
+            tenant_id=global_config.tenant_id,
+        ) as client:
+            console.print(f"Listing resources in workspace: [cyan]{workspace_id}[/cyan]\n")
+            
+            # List Ontologies
+            ontologies = client.list_ontologies()
+            if filter_pattern:
+                ontologies = [o for o in ontologies if filter_pattern.lower() in o.get('displayName', '').lower()]
+            
+            console.print("[bold]Ontologies[/bold]")
+            if ontologies:
+                for ont in ontologies:
+                    name = ont.get('displayName', 'Unknown')
+                    ont_id = ont.get('id', '')
+                    console.print(f"  • {name} [dim]({ont_id})[/dim]")
+            else:
+                console.print("  [dim]No ontologies found[/dim]")
+            
+            # List Lakehouses
+            console.print("\n[bold]Lakehouses[/bold]")
+            lakehouses = client.list_lakehouses()
+            if filter_pattern:
+                lakehouses = [l for l in lakehouses if filter_pattern.lower() in l.get('displayName', '').lower()]
+            
+            if lakehouses:
+                for lh in lakehouses:
+                    name = lh.get('displayName', 'Unknown')
+                    lh_id = lh.get('id', '')
+                    console.print(f"  • {name} [dim]({lh_id})[/dim]")
+            else:
+                console.print("  [dim]No lakehouses found[/dim]")
+            
+            # List Eventhouses
+            console.print("\n[bold]Eventhouses[/bold]")
+            eventhouses = client.list_eventhouses()
+            if filter_pattern:
+                eventhouses = [e for e in eventhouses if filter_pattern.lower() in e.get('displayName', '').lower()]
+            
+            if eventhouses:
+                for eh in eventhouses:
+                    name = eh.get('displayName', 'Unknown')
+                    eh_id = eh.get('id', '')
+                    console.print(f"  • {name} [dim]({eh_id})[/dim]")
+            else:
+                console.print("  [dim]No eventhouses found[/dim]")
+        
+        return 0
+    
+    except Exception as e:
+        console.print(f"[red]Error:[/red] {e}")
+        return 1
 
 
 def run_init(args: argparse.Namespace) -> int:
@@ -876,6 +1144,8 @@ def run_cleanup(args: argparse.Namespace) -> int:
     
     Uses the state file to identify exactly which resources were created,
     preventing accidental deletion of pre-existing resources.
+    
+    If --force-by-name is used, deletes by resource name (when state file missing).
     """
     demo_path = Path(args.demo_path).resolve()
 
@@ -883,20 +1153,29 @@ def run_cleanup(args: argparse.Namespace) -> int:
         console.print(f"[red]Error:[/red] Directory not found: {demo_path}")
         return 1
 
-    # Check for state file first - this tells us what was actually created
+    # Load global config for defaults
+    global_config = GlobalConfig.load()
+    
+    # Check for state file first
     from .state_manager import SetupStateManager, STATE_FILE_NAME
     
     state_file = demo_path / STATE_FILE_NAME
-    if not state_file.exists():
+    force_by_name = getattr(args, 'force_by_name', False)
+    
+    if not state_file.exists() and not force_by_name:
         console.print(f"[yellow]Warning:[/yellow] No state file found at {state_file}")
         console.print("This means no resources were created by setup, or state was already cleared.")
-        console.print("Nothing to clean up.")
+        console.print("\n[dim]If you want to delete resources by name anyway, use:[/dim]")
+        console.print(f"  fabric-demo cleanup {args.demo_path} --force-by-name")
         return 0
 
     try:
+        # Resolve workspace ID
+        workspace_id = global_config.get_workspace_id(getattr(args, 'workspace_id', None))
+        
         config = DemoConfiguration.from_demo_folder(
             demo_path,
-            workspace_id=args.workspace_id,
+            workspace_id=workspace_id,
         )
 
         errors = config.validate()
@@ -904,55 +1183,93 @@ def run_cleanup(args: argparse.Namespace) -> int:
             console.print(f"[red]Configuration error:[/red] {errors[0]}")
             return 1
 
-        # Load the state to get resource IDs that were actually created
-        state_manager = SetupStateManager(demo_path, config.fabric.workspace_id, config.name)
-        state = state_manager.load_state()
-        
-        if state is None:
-            console.print("[yellow]Warning:[/yellow] Could not load state file.")
-            console.print("Nothing to clean up.")
-            return 0
+        from .platform import FabricClient
 
-        # Check if there are any resources to delete
-        has_resources = any([
-            state.ontology_id,
-            state.eventhouse_id,
-            state.lakehouse_id,
-        ])
+        # Determine what to delete
+        resources_to_delete = []
+        state_manager = None
+        state = None
         
-        if not has_resources:
-            console.print("[yellow]Warning:[/yellow] No resources recorded in state file.")
-            console.print("Nothing to clean up.")
-            # Still remove the state file
-            state_manager.clear_state()
+        if force_by_name or not state_file.exists():
+            # Force-by-name mode: look up resources by name
+            console.print("[yellow]Force-by-name mode:[/yellow] Looking up resources by name...")
+            
+            with FabricClient(
+                workspace_id=config.fabric.workspace_id,
+                tenant_id=config.fabric.tenant_id,
+            ) as client:
+                # Find resources by name
+                ont = client.find_ontology_by_name(config.resources.ontology.name)
+                if ont:
+                    ont_name = ont.get('displayName') or config.resources.ontology.name
+                    resources_to_delete.append(('Ontology', ont_name, ont['id']))
+                
+                eh = client.find_eventhouse_by_name(config.resources.eventhouse.name)
+                if eh:
+                    eh_name = eh.get('displayName') or config.resources.eventhouse.name
+                    resources_to_delete.append(('Eventhouse', eh_name, eh['id']))
+                
+                lh = client.find_lakehouse_by_name(config.resources.lakehouse.name)
+                if lh:
+                    lh_name = lh.get('displayName') or config.resources.lakehouse.name
+                    resources_to_delete.append(('Lakehouse', lh_name, lh['id']))
+        else:
+            # Normal mode: use state file
+            state_manager = SetupStateManager(demo_path, config.fabric.workspace_id, config.name)
+            state = state_manager.load_state()
+            
+            if state is None:
+                console.print("[yellow]Warning:[/yellow] Could not load state file.")
+                console.print("Nothing to clean up.")
+                return 0
+            
+            if state.ontology_id:
+                resources_to_delete.append(('Ontology', state.ontology_name, state.ontology_id))
+            if state.eventhouse_id:
+                resources_to_delete.append(('Eventhouse', state.eventhouse_name, state.eventhouse_id))
+            if state.lakehouse_id:
+                resources_to_delete.append(('Lakehouse', state.lakehouse_name, state.lakehouse_id))
+
+        if not resources_to_delete:
+            console.print("[yellow]Warning:[/yellow] No resources found to delete.")
+            if state_manager:
+                state_manager.clear_state()
             return 0
 
         # Show what will be deleted
         console.print(Panel(f"Resources to clean up for demo: [bold red]{config.name}[/bold red]"))
-        if state.ontology_id:
-            console.print(f"  • Ontology: {state.ontology_name} ({state.ontology_id})")
-        if state.eventhouse_id:
-            console.print(f"  • Eventhouse: {state.eventhouse_name} ({state.eventhouse_id})")
-        if state.lakehouse_id:
-            console.print(f"  • Lakehouse: {state.lakehouse_name} ({state.lakehouse_id})")
+        for resource_type, name, resource_id in resources_to_delete:
+            console.print(f"  • {resource_type}: {name} ({resource_id})")
         console.print("")
 
-        if not args.confirm:
-            console.print("[yellow]Warning:[/yellow] This will delete the resources listed above.")
-            console.print("Use --confirm to proceed.")
-            return 1
+        # Handle confirmation
+        confirmed = getattr(args, 'confirm', False)
+        if not confirmed:
+            if global_config.confirm_cleanup:
+                console.print("[yellow]This will permanently delete the resources listed above.[/yellow]")
+                confirmed = Confirm.ask("Proceed with deletion?", default=False)
+                if not confirmed:
+                    console.print("[dim]Cancelled[/dim]")
+                    return 0
+            else:
+                console.print("[yellow]Warning:[/yellow] This will delete the resources listed above.")
+                console.print("Use --confirm or -y to proceed.")
+                return 1
 
-        from .platform import FabricClient
-
+        # Perform deletion
         with FabricClient(
             workspace_id=config.fabric.workspace_id,
             tenant_id=config.fabric.tenant_id,
         ) as client:
-            # Delete Ontology first (depends on data sources)
-            if state.ontology_id:
-                console.print(f"Deleting Ontology: {state.ontology_name} ({state.ontology_id})")
+            for resource_type, name, resource_id in resources_to_delete:
+                console.print(f"Deleting {resource_type}: {name} ({resource_id})")
                 try:
-                    client.delete_ontology(state.ontology_id)
+                    if resource_type == 'Ontology':
+                        client.delete_ontology(resource_id)
+                    elif resource_type == 'Eventhouse':
+                        client.delete_eventhouse(resource_id)
+                    elif resource_type == 'Lakehouse':
+                        client.delete_lakehouse(resource_id)
                     console.print("[green]  ✓ Deleted[/green]")
                 except Exception as e:
                     if "not found" in str(e).lower() or "404" in str(e):
@@ -960,37 +1277,20 @@ def run_cleanup(args: argparse.Namespace) -> int:
                     else:
                         raise
 
-            # Delete Eventhouse (includes KQL database)
-            if state.eventhouse_id:
-                console.print(f"Deleting Eventhouse: {state.eventhouse_name} ({state.eventhouse_id})")
-                try:
-                    client.delete_eventhouse(state.eventhouse_id)
-                    console.print("[green]  ✓ Deleted[/green]")
-                except Exception as e:
-                    if "not found" in str(e).lower() or "404" in str(e):
-                        console.print("[yellow]  ⚠ Already deleted or not found[/yellow]")
-                    else:
-                        raise
-
-            # Delete Lakehouse
-            if state.lakehouse_id:
-                console.print(f"Deleting Lakehouse: {state.lakehouse_name} ({state.lakehouse_id})")
-                try:
-                    client.delete_lakehouse(state.lakehouse_id)
-                    console.print("[green]  ✓ Deleted[/green]")
-                except Exception as e:
-                    if "not found" in str(e).lower() or "404" in str(e):
-                        console.print("[yellow]  ⚠ Already deleted or not found[/yellow]")
-                    else:
-                        raise
-
-        # Mark state as cleaned up (preserves audit trail)
-        state_manager.mark_cleaned_up()
-        console.print("\n[green]✓[/green] Cleanup completed - state file updated")
+        # Mark state as cleaned up (if using state file)
+        if state_manager:
+            state_manager.mark_cleaned_up()
+            console.print("\n[green]✓[/green] Cleanup completed - state file updated")
+        else:
+            console.print("\n[green]✓[/green] Cleanup completed")
+        
         return 0
 
     except Exception as e:
         console.print(f"\n[red]Error:[/red] {e}")
+        if getattr(args, 'debug', False) or logging.getLogger().level == logging.DEBUG:
+            import traceback
+            console.print(traceback.format_exc())
         return 1
 
 
@@ -1003,20 +1303,31 @@ def main() -> int:
         parser.print_help()
         return 0
 
-    setup_logging(args.verbose)
+    # Handle debug mode
+    debug = getattr(args, 'debug', False)
+    setup_logging(args.verbose or debug)
 
     commands = {
+        "config": run_config,
         "init": run_init,
         "validate": run_validate,
         "setup": run_setup,
         "run-step": run_step,
         "status": run_status,
+        "list": run_list,
         "cleanup": run_cleanup,
     }
 
     handler = commands.get(args.command)
     if handler:
-        return handler(args)
+        try:
+            return handler(args)
+        except Exception as e:
+            console.print(f"\n[red]Error:[/red] {e}")
+            if debug:
+                import traceback
+                console.print(traceback.format_exc())
+            return 1
     else:
         parser.print_help()
         return 1
