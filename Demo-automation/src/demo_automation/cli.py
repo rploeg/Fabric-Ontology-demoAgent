@@ -422,6 +422,11 @@ def _config_show() -> int:
     table.add_row("Auth Method", config.auth_method, "config")
     table.add_row("Skip Existing", str(config.skip_existing), "config")
     table.add_row("Confirm Cleanup", str(config.confirm_cleanup), "config")
+    table.add_section()
+    table.add_row("[bold]Rate Limiting[/bold]", "", "")
+    table.add_row("  Enabled", str(config.rate_limit_enabled), "config")
+    table.add_row("  Requests/min", str(config.rate_limit_requests_per_minute), "config")
+    table.add_row("  Burst", str(config.rate_limit_burst), "config")
     
     console.print(table)
     

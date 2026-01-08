@@ -25,7 +25,9 @@ from .core.errors import (
     ResourceExistsError,
     CancellationRequestedError,
 )
+from .core.global_config import GlobalConfig
 from .platform import FabricClient, OneLakeDataClient, LakehouseClient, EventhouseClient
+from .platform.fabric_client import RateLimitConfig
 from .binding import (
     OntologyBindingBuilder,
     BindingType,
@@ -207,10 +209,18 @@ class DemoOrchestrator:
     def fabric_client(self) -> FabricClient:
         """Get or create FabricClient."""
         if self._fabric_client is None:
+            # Load global config for rate limiting settings
+            global_config = GlobalConfig.load()
+            rate_limit_config = RateLimitConfig(
+                enabled=global_config.rate_limit_enabled,
+                requests_per_minute=global_config.rate_limit_requests_per_minute,
+                burst=global_config.rate_limit_burst,
+            )
             self._fabric_client = FabricClient(
                 workspace_id=self.config.fabric.workspace_id,
                 tenant_id=self.config.fabric.tenant_id,
                 use_interactive_auth=self.config.fabric.use_interactive_auth,
+                rate_limit_config=rate_limit_config,
             )
         return self._fabric_client
 

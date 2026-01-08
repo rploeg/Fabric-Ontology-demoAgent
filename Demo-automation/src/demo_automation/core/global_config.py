@@ -49,6 +49,11 @@ class GlobalConfig:
     # UI settings
     confirm_cleanup: bool = True  # Require confirmation for cleanup by default
     
+    # Rate limiting (Fabric API throttling)
+    rate_limit_enabled: bool = True
+    rate_limit_requests_per_minute: int = 30  # Fabric API default
+    rate_limit_burst: int = 10
+    
     @classmethod
     def load(cls) -> "GlobalConfig":
         """Load global configuration from file and environment."""
@@ -74,6 +79,7 @@ class GlobalConfig:
         """Create config from dictionary."""
         defaults = data.get('defaults', {})
         options = data.get('options', {})
+        rate_limiting = data.get('rate_limiting', {})
         
         return cls(
             workspace_id=defaults.get('workspace_id'),
@@ -83,6 +89,9 @@ class GlobalConfig:
             dry_run=options.get('dry_run', False),
             verbose=options.get('verbose', False),
             confirm_cleanup=options.get('confirm_cleanup', True),
+            rate_limit_enabled=rate_limiting.get('enabled', True),
+            rate_limit_requests_per_minute=rate_limiting.get('requests_per_minute', 30),
+            rate_limit_burst=rate_limiting.get('burst', 10),
         )
     
     def _apply_env_overrides(self) -> None:
@@ -105,6 +114,11 @@ class GlobalConfig:
                 'dry_run': self.dry_run,
                 'verbose': self.verbose,
                 'confirm_cleanup': self.confirm_cleanup,
+            },
+            'rate_limiting': {
+                'enabled': self.rate_limit_enabled,
+                'requests_per_minute': self.rate_limit_requests_per_minute,
+                'burst': self.rate_limit_burst,
             },
         }
     
@@ -180,4 +194,17 @@ options:
   
   # Require --confirm or interactive confirmation for cleanup (default: true)
   confirm_cleanup: true
+
+# API rate limiting settings
+# Adjust these if you have higher Fabric SKU quotas or experience throttling
+rate_limiting:
+  # Enable/disable rate limiting (default: true)
+  enabled: true
+  
+  # Maximum requests per minute (default: 30)
+  # Fabric API typically allows 30-60 requests/minute depending on SKU
+  requests_per_minute: 30
+  
+  # Burst allowance for short request spikes (default: 10)
+  burst: 10
 """
