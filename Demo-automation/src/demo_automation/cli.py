@@ -179,6 +179,7 @@ Available steps:
   9. bind_timeseries   - Bind eventhouse properties (timeseries data)
   10. bind_relationships - Bind relationship contextualizations
   11. verify           - Verify all bindings and resources in Fabric
+  12. refresh_graph    - Refresh the ontology graph to sync bound data
         """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -504,6 +505,7 @@ STEP_MAPPING = {
     "9": "bind_timeseries",
     "10": "bind_relationships",
     "11": "verify",
+    "12": "refresh_graph",
     # Also allow step names directly
     "validate": "validate",
     "create_lakehouse": "create_lakehouse",
@@ -516,6 +518,7 @@ STEP_MAPPING = {
     "bind_timeseries": "bind_timeseries",
     "bind_relationships": "bind_relationships",
     "verify": "verify",
+    "refresh_graph": "refresh_graph",
     # Legacy mapping for configure_bindings (runs all binding steps)
     "configure_bindings": "configure_bindings",
 }
@@ -546,6 +549,7 @@ def run_step(args: argparse.Namespace) -> int:
         console.print("  9. bind_timeseries   - Bind eventhouse properties (timeseries)")
         console.print("  10. bind_relationships - Bind relationship contextualizations")
         console.print("  11. verify           - Verify all resources and bindings")
+        console.print("  12. refresh_graph    - Refresh ontology graph to sync data")
         return 1
 
     console.print(Panel(f"Running step: [bold cyan]{step_name}[/bold cyan]"))
@@ -613,8 +617,9 @@ def run_status(args: argparse.Namespace) -> int:
         console.print(f"[red]Error:[/red] Directory not found: {demo_path}")
         return 1
 
-    # Define the 11 steps from ResearchFixes.md (aligned with task requirements)
+    # Define the 12 steps from ResearchFixes.md (aligned with task requirements)
     # Steps 8-10 are separate binding steps for static, timeseries, and relationships
+    # Step 12 is the graph refresh step added after verification
     SETUP_STEPS = [
         ("validate", "1. Validate", "Validate demo folder structure"),
         ("create_lakehouse", "2. Lakehouse", "Create Lakehouse resource"),
@@ -627,6 +632,7 @@ def run_status(args: argparse.Namespace) -> int:
         ("bind_timeseries", "9. Timeseries", "Bind eventhouse properties"),
         ("bind_relationships", "10. Relations", "Bind relationship contextualizations"),
         ("verify", "11. Verify", "Validate all bindings in Fabric"),
+        ("refresh_graph", "12. Refresh", "Refresh ontology graph to sync data"),
     ]
     
     # Also check for legacy configure_bindings step (maps to bind_static+bind_timeseries+bind_relationships)

@@ -253,6 +253,8 @@ Based on `fabric-ontology-demo-v2.yaml` and known Fabric limitations:
 | Static before timeseries | Lakehouse bindings created before Eventhouse |
 | OneLake only for static | Uses `LakehouseTable` source type |
 | Managed tables only | No shortcuts, views, or external tables |
+| **Lakehouse schemas disabled** | Lakehouses must NOT have "Lakehouse schemas (Public Preview)" enabled |
+| **sourceSchema: null** | Relationship contextualizations use `null` for lakehouses without schemas |
 
 ## Resume & Error Handling
 
@@ -260,6 +262,14 @@ Based on `fabric-ontology-demo-v2.yaml` and known Fabric limitations:
 - **On failure**: Stops immediately and outputs error; state preserved for resume
 - **Resume**: Use `--resume` flag to continue from last successful step
 - **Fresh start**: Use `--clear-state` to remove state and start over
+
+### Troubleshooting: "An error occurred while loading the columns"
+
+If you see this error when viewing relationship bindings in the Fabric UI:
+
+1. **Check Lakehouse schemas**: Ensure the Lakehouse was created WITHOUT "Lakehouse schemas (Public Preview)" enabled
+2. **Re-run bindings**: Use `fabric-demo run-step --step bind_relationships --force <demo-path>`
+3. **Verify OneLake security**: Ensure OneLake folder-level security is disabled
 
 ## Architecture
 

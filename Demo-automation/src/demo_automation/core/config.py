@@ -110,19 +110,22 @@ class ResourcesConfig:
         eventhouse_data = data.get("eventhouse", {})
         ontology_data = data.get("ontology", {})
 
+        # Fabric doesn't allow hyphens in resource names - use underscores
+        safe_name = demo_name.replace("-", "_")
+
         return cls(
             lakehouse=ResourceConfig(
-                name=lakehouse_data.get("name", f"{demo_name}-Lakehouse"),
+                name=lakehouse_data.get("name", f"{safe_name}_Lakehouse"),
                 description=lakehouse_data.get("description", ""),
                 enabled=lakehouse_data.get("enabled", True),
             ),
             eventhouse=ResourceConfig(
-                name=eventhouse_data.get("name", f"{demo_name}-Telemetry"),
+                name=eventhouse_data.get("name", f"{safe_name}_Telemetry"),
                 description=eventhouse_data.get("description", ""),
                 enabled=eventhouse_data.get("enabled", True),
             ),
             ontology=ResourceConfig(
-                name=ontology_data.get("name", f"{demo_name}-Ontology"),
+                name=ontology_data.get("name", f"{safe_name}_Ontology"),
                 description=ontology_data.get("description", ""),
                 enabled=ontology_data.get("enabled", True),
             ),

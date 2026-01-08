@@ -24,3 +24,39 @@
 - Ensure code adheres to all limitations of fabric graph, FAbric ontology
 
 - Resume should resume from the last known successful step
+
+---
+
+## Known Issues & Fixes
+
+### Issue: "An error occurred while loading the columns" in relationship binding UI
+**Date Fixed**: January 2026
+
+**Root Cause**: Relationship contextualizations were using `"sourceSchema": "dbo"` but the Lakehouse was created without schemas enabled. The mismatch caused the Fabric UI to fail when loading columns.
+
+**Fix Applied**:
+1. Changed default `source_schema` from `"dbo"` to `None` in `binding_builder.py`
+2. Updated `RelationshipContextualization` dataclass default
+3. Updated `add_relationship_contextualization()` method signature
+4. Updated `add_eventhouse_relationship_contextualization()` method signature
+
+**Files Modified**:
+- `Demo-automation/src/demo_automation/binding/binding_builder.py`
+- `Demo-automation/tests/test_relationship_bindings.py`
+
+**Important**: Lakehouses used for ontology bindings must NOT have "Lakehouse schemas (Public Preview)" enabled. The `create_lakehouse` method intentionally does not set `enableSchemas` flag.
+
+### Issue: Entities with both Lakehouse and Eventhouse bindings lose static binding
+**Date Fixed**: January 2026
+
+**Root Cause**: The `_bindings` dictionary used `entity_id` as key, causing Eventhouse binding to overwrite Lakehouse binding for entities like CreditCard that have both static and timeseries properties.
+
+**Fix Applied**:
+1. Changed `_bindings` from `Dict[str, DataBinding]` to `Dict[str, List[DataBinding]]`
+2. Updated `add_lakehouse_binding()` and `add_eventhouse_binding()` to append to list
+3. Updated `build_definition_parts()` to iterate over list of bindings per entity
+4. Modified orchestrator to generate new binding IDs for TimeSeries when entity already has NonTimeSeries binding
+
+**Files Modified**:
+- `Demo-automation/src/demo_automation/binding/binding_builder.py`
+- `Demo-automation/src/demo_automation/orchestrator.py`

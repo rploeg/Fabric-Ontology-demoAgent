@@ -19,6 +19,15 @@ Before binding, you **MUST** disable OneLake folder-level security:
 
 > **Why?** Graph queries cannot access data with folder-level security enabled.
 
+### ⚠️ CRITICAL: Lakehouse Schemas Must Be Disabled
+
+When creating the Lakehouse, ensure **"Lakehouse schemas (Public Preview)"** is **NOT** enabled:
+
+1. When creating a new Lakehouse, do NOT check the "Lakehouse schemas" option
+2. For existing Lakehouses, verify schemas are disabled in settings
+
+> **Why?** Ontology bindings use `sourceSchema: null` which is incompatible with schema-enabled Lakehouses. Enabling schemas causes "An error occurred while loading the columns" when configuring relationship bindings.
+
 ### Required Resources
 
 - [ ] Fabric Workspace with Lakehouse capacity

@@ -136,7 +136,7 @@ class RelationshipContextualization:
     item_id: str  # Lakehouse or Eventhouse ID
     source_type: SourceType
     table_name: str
-    source_schema: str = "dbo"
+    source_schema: Optional[str] = None  # None for lakehouses without schemas enabled
     source_key_column: str = ""  # Column linking to source entity
     source_key_property_id: str = ""  # Property ID of source entity key
     target_key_column: str = ""  # Column linking to target entity
@@ -159,7 +159,7 @@ class RelationshipContextualization:
                 "workspaceId": "guid",
                 "itemId": "guid",
                 "sourceTableName": "TableName",
-                "sourceSchema": "dbo",
+                "sourceSchema": null,  // null for lakehouses without schemas
                 "sourceType": "LakehouseTable"
             },
             "sourceKeyRefBindings": [
@@ -176,7 +176,7 @@ class RelationshipContextualization:
                 "workspaceId": self.workspace_id,
                 "itemId": self.item_id,
                 "sourceTableName": self.table_name,
-                "sourceSchema": self.source_schema,
+                "sourceSchema": self.source_schema,  # None for lakehouses without schemas
                 "sourceType": self.source_type.value,
             },
             "sourceKeyRefBindings": [
@@ -251,7 +251,9 @@ class OntologyBindingBuilder:
         """
         self.workspace_id = workspace_id
         self.ontology_id = ontology_id
-        self._bindings: Dict[str, DataBinding] = {}  # entity_id -> binding
+        # Support multiple bindings per entity: entity_id -> list of bindings
+        # An entity can have ONE static binding + MULTIPLE time series bindings
+        self._bindings: Dict[str, List[DataBinding]] = {}  # entity_id -> [bindings]
         self._contextualizations: Dict[str, RelationshipContextualization] = {}  # relationship_id -> contextualization
         self._entity_definitions: Dict[str, Dict[str, Any]] = {}
         self._entity_key_properties: Dict[str, str] = {}  # entity_name -> key_property_id
@@ -294,7 +296,10 @@ class OntologyBindingBuilder:
             ],
         )
 
-        self._bindings[entity_type_id] = binding
+        # Add to list of bindings for this entity (supports multiple bindings)
+        if entity_type_id not in self._bindings:
+            self._bindings[entity_type_id] = []
+        self._bindings[entity_type_id].append(binding)
         logger.debug(f"Added Lakehouse binding for entity {entity_type_id}: {table_name}")
         return self
 
@@ -342,7 +347,10 @@ class OntologyBindingBuilder:
             ],
         )
 
-        self._bindings[entity_type_id] = binding
+        # Add to list of bindings for this entity (supports multiple bindings)
+        if entity_type_id not in self._bindings:
+            self._bindings[entity_type_id] = []
+        self._bindings[entity_type_id].append(binding)
         logger.debug(f"Added Eventhouse binding for entity {entity_type_id}: {table_name}")
         return self
 
@@ -376,7 +384,7 @@ class OntologyBindingBuilder:
         source_key_property_id: str,
         target_key_column: str,
         target_key_property_id: str,
-        source_schema: str = "dbo",
+        source_schema: Optional[str] = None,
         contextualization_id: Optional[str] = None,
     ) -> "OntologyBindingBuilder":
         """
@@ -393,7 +401,7 @@ class OntologyBindingBuilder:
             source_key_property_id: Property ID of the source entity's key
             target_key_column: Column name that links to target entity
             target_key_property_id: Property ID of the target entity's key
-            source_schema: Database schema (default: "dbo")
+            source_schema: Database schema (default: None for lakehouses without schemas)
             contextualization_id: Optional specific contextualization ID
             
         Returns:
@@ -440,7 +448,7 @@ class OntologyBindingBuilder:
         source_key_property_id: str,
         target_key_column: str,
         target_key_property_id: str,
-        source_schema: str = "dbo",
+        source_schema: Optional[str] = None,
         contextualization_id: Optional[str] = None,
     ) -> "OntologyBindingBuilder":
         """
@@ -457,7 +465,7 @@ class OntologyBindingBuilder:
             source_key_property_id: Property ID of the source entity's key
             target_key_column: Column name that links to target entity
             target_key_property_id: Property ID of the target entity's key
-            source_schema: Database schema (default: "dbo")
+            source_schema: Database schema (default: None)
             contextualization_id: Optional specific contextualization ID
             
         Returns:
@@ -580,14 +588,19 @@ class OntologyBindingBuilder:
         filtered_out_contextualizations = 0
         
         # Build mapping of entity_id -> key_property_id from bindings
+        # Use the first static (NonTimeSeries) binding's key column
         entity_key_property_ids = {}
-        for entity_id, binding in self._bindings.items():
-            # Find the property ID that matches the key_column
-            for prop_binding in binding.property_bindings:
-                if prop_binding.source_column == binding.key_column:
-                    entity_key_property_ids[entity_id] = prop_binding.target_property_id
-                    logger.debug(f"Entity {entity_id} key property: {binding.key_column} -> {prop_binding.target_property_id}")
-                    break
+        for entity_id, bindings_list in self._bindings.items():
+            # Find the first NonTimeSeries binding (static) which has the key
+            for binding in bindings_list:
+                if binding.binding_type == BindingType.NON_TIME_SERIES:
+                    # Find the property ID that matches the key_column
+                    for prop_binding in binding.property_bindings:
+                        if prop_binding.source_column == binding.key_column:
+                            entity_key_property_ids[entity_id] = prop_binding.target_property_id
+                            logger.debug(f"Entity {entity_id} key property: {binding.key_column} -> {prop_binding.target_property_id}")
+                            break
+                    break  # Only need first static binding for key
 
         # Start with existing parts (if any)
         if existing_definition:
@@ -668,16 +681,18 @@ class OntologyBindingBuilder:
                 "payloadType": "InlineBase64",
             })
 
-        # Add binding parts for each entity
-        for entity_id, binding in self._bindings.items():
-            binding_part = {
-                "path": f"EntityTypes/{entity_id}/DataBindings/{binding.binding_id}.json",
-                "payload": base64.b64encode(
-                    json.dumps(binding.to_dict()).encode("utf-8")
-                ).decode("utf-8"),
-                "payloadType": "InlineBase64",
-            }
-            parts.append(binding_part)
+        # Add binding parts for each entity (now supports multiple bindings per entity)
+        for entity_id, bindings_list in self._bindings.items():
+            for binding in bindings_list:
+                binding_part = {
+                    "path": f"EntityTypes/{entity_id}/DataBindings/{binding.binding_id}.json",
+                    "payload": base64.b64encode(
+                        json.dumps(binding.to_dict()).encode("utf-8")
+                    ).decode("utf-8"),
+                    "payloadType": "InlineBase64",
+                }
+                parts.append(binding_part)
+                logger.debug(f"Added binding part for entity {entity_id}: {binding.binding_id} ({binding.binding_type.value})")
 
         # Add contextualization parts for each relationship
         for rel_id, contextualization in self._contextualizations.items():
@@ -718,8 +733,8 @@ class OntologyBindingBuilder:
         # Use timestamp-based ID generation
         return str(int(time.time() * 1000000))
 
-    def get_bindings(self) -> Dict[str, DataBinding]:
-        """Get all configured bindings."""
+    def get_bindings(self) -> Dict[str, List[DataBinding]]:
+        """Get all configured bindings (list per entity for multi-binding support)."""
         return self._bindings.copy()
 
     def get_contextualizations(self) -> Dict[str, RelationshipContextualization]:

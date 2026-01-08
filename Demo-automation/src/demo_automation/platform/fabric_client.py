@@ -536,7 +536,15 @@ class FabricClient:
         description: str = "",
         progress_callback: Optional[Callable[[str, float], None]] = None,
     ) -> Dict[str, Any]:
-        """Create a new lakehouse."""
+        """
+        Create a new lakehouse.
+        
+        Note: This creates a lakehouse WITHOUT schemas enabled (Public Preview).
+        Per Microsoft documentation for Ontology tutorials, the "Lakehouse schemas"
+        checkbox should NOT be enabled. By not passing creationPayload with
+        enableSchemas=true, we ensure the lakehouse is created without schema support.
+        See: https://learn.microsoft.com/en-us/fabric/iq/ontology/tutorial-0-introduction
+        """
         logger.info(f"Creating lakehouse: {display_name}")
         return self.create_item(
             "lakehouses",
@@ -702,6 +710,118 @@ class FabricClient:
                     progress_callback=progress_callback,
                 )
 
+        return self._handle_response(response)
+
+    # --- Graph Operations ---
+
+    def list_graphs(self) -> List[Dict[str, Any]]:
+        """
+        List all graph items in the workspace.
+        
+        Note: This searches for GraphQL API items. The Graph in Microsoft Fabric
+        item type (used by ontology) may have a different endpoint or may not
+        be accessible via public API yet.
+        """
+        return self.list_items("graphqlApis")
+
+    def find_graph_by_name(self, name: str) -> Optional[Dict[str, Any]]:
+        """Find graph item by display name."""
+        return self.find_item_by_name("graphqlApis", name)
+
+    def find_ontology_graph(
+        self,
+        ontology_name: str,
+        ontology_id: str,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Find the graph item associated with an ontology.
+        
+        The graph item is typically named: {OntologyName}_graph_{ontologyIdWithoutDashes}
+        
+        Note: The Graph in Microsoft Fabric item type (associated with ontology)
+        may not be accessible via the public REST API. The graph is managed by
+        Fabric internally and can be refreshed via the Fabric portal.
+        
+        Args:
+            ontology_name: Name of the ontology
+            ontology_id: ID of the ontology (GUID)
+            
+        Returns:
+            Graph item if found, None otherwise
+        """
+        # Graph name format: {OntologyName}_graph_{ontologyIdWithoutDashes}
+        ontology_id_clean = ontology_id.replace("-", "")
+        expected_graph_name = f"{ontology_name}_graph_{ontology_id_clean}"
+        
+        logger.debug(f"Looking for graph item: {expected_graph_name}")
+        
+        # Try exact match first with GraphQL APIs
+        graph = self.find_graph_by_name(expected_graph_name)
+        if graph:
+            return graph
+        
+        # Try partial match if exact match fails
+        graphs = self.list_graphs()
+        for g in graphs:
+            display_name = g.get("displayName", "")
+            # Check if it matches the ontology pattern
+            if display_name.startswith(f"{ontology_name}_graph_"):
+                logger.debug(f"Found graph by partial match: {display_name}")
+                return g
+        
+        # Note: The Graph in Microsoft Fabric item type might not be accessible
+        # via REST API. The graph for an ontology is managed internally by Fabric
+        # and can be refreshed manually from the Fabric portal.
+        logger.info(
+            f"Graph item '{expected_graph_name}' not found via API. "
+            f"The graph may need to be refreshed manually from the Fabric portal."
+        )
+        
+        return None
+
+    def refresh_graph(
+        self,
+        graph_id: str,
+        timeout_seconds: int = 600,
+        progress_callback: Optional[Callable[[str, float], None]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Trigger an on-demand refresh job for a graph item.
+        
+        This uses the Fabric Job Scheduler API to run a refresh job.
+        
+        Args:
+            graph_id: Graph item ID (GUID)
+            timeout_seconds: Timeout for the refresh job
+            progress_callback: Optional progress callback
+            
+        Returns:
+            Job result or status
+        """
+        logger.info(f"Triggering refresh for graph: {graph_id}")
+        
+        # Use the job scheduler API to run on-demand refresh
+        # POST /workspaces/{workspaceId}/items/{itemId}/jobs/{jobType}/instances
+        url = self._build_url(f"items/{graph_id}/jobs/DefaultJob/instances")
+        
+        response = self._make_request("POST", url)
+        
+        if response.status_code == 202:
+            # Job accepted, get the location header for status tracking
+            operation_url = response.headers.get("Location")
+            retry_after = int(response.headers.get("Retry-After", 60))
+            
+            if operation_url:
+                logger.info(f"Graph refresh job started, tracking at: {operation_url}")
+                return self._wait_for_lro(
+                    operation_url,
+                    timeout_seconds=timeout_seconds,
+                    progress_callback=progress_callback,
+                    poll_interval=retry_after,
+                )
+            else:
+                return {"status": "accepted", "message": "Refresh job started"}
+        
         return self._handle_response(response)
 
     def close(self) -> None:

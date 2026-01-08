@@ -28,6 +28,7 @@ from .core.errors import (
 from .platform import FabricClient, OneLakeDataClient, LakehouseClient, EventhouseClient
 from .binding import (
     OntologyBindingBuilder,
+    BindingType,
     parse_demo_bindings,
     get_eventhouse_table_configs,
     parse_bindings_yaml,
@@ -93,6 +94,7 @@ class DemoOrchestrator:
     7. Create Ontology (if enabled)
     8. Configure data bindings
     9. Comprehensive verification
+    10. Refresh graph (manual step to sync data)
     """
 
     def __init__(
@@ -337,6 +339,12 @@ class DemoOrchestrator:
             # Step 9: Verify setup
             results["verify"] = self._run_step_with_state("verify", self._step_verify_setup)
 
+            # Step 10: Refresh graph (if ontology was created and bindings configured)
+            if self.state.ontology_id and self.state.bindings_configured:
+                results["refresh_graph"] = self._run_step_with_state(
+                    "refresh_graph", self._step_refresh_graph
+                )
+
             # Mark setup as completed
             self._state_manager.complete_setup(success=True)
 
@@ -388,6 +396,7 @@ class DemoOrchestrator:
             "bind_timeseries": self._step_bind_timeseries,
             "bind_relationships": self._step_bind_relationships,
             "verify": self._step_verify_setup,
+            "refresh_graph": self._step_refresh_graph,
         }
         
         if step_name not in step_methods:
@@ -879,8 +888,9 @@ class DemoOrchestrator:
                     duration_seconds=time.time() - start,
                 )
 
-        # Check which tables already exist and have data
-        existing_tables = self._get_existing_eventhouse_tables()
+        # Check which tables already exist (existence = ingestion was at least attempted)
+        # KQL async ingestion means tables may have 0 rows while still processing
+        existing_tables = set(self._get_existing_eventhouse_tables())
         tables_with_data = {}
         for table_name in existing_tables:
             try:
@@ -889,22 +899,25 @@ class DemoOrchestrator:
                     database_name=self.state.kql_database_name,
                     table_name=table_name,
                 )
-                if count > 0:
-                    tables_with_data[table_name] = count
+                tables_with_data[table_name] = count
             except Exception:
-                pass
+                tables_with_data[table_name] = 0  # Table exists but couldn't get count
 
         expected_tables = {tc.table_name for tc in table_configs}
         
-        # If all expected tables have data, skip entirely
-        if expected_tables.issubset(set(tables_with_data.keys())):
-            logger.info(f"All {len(expected_tables)} eventhouse tables already have data, skipping ingestion")
-            self.state.ingested_tables.extend(list(expected_tables))
+        # Tables to skip: those that already exist (ingestion was initiated, possibly still async)
+        # Table existence is the key check - if table exists, .create table and .ingest were called
+        tables_to_skip = existing_tables & expected_tables
+        
+        # If all expected tables already exist, skip entirely (async ingestion may still be processing)
+        if expected_tables.issubset(tables_to_skip):
+            tables_info = {t: tables_with_data.get(t, 0) for t in expected_tables}
+            logger.info(f"All {len(expected_tables)} eventhouse tables already exist, skipping ingestion (async may still be processing)")
             return StepResult(
                 status=StepStatus.SKIPPED,
-                message=f"All {len(expected_tables)} eventhouse tables already have data",
+                message=f"All {len(expected_tables)} eventhouse tables already exist (async ingestion may still be processing)",
                 duration_seconds=time.time() - start,
-                details={"existing_tables": tables_with_data},
+                details={"existing_tables": tables_info},
             )
 
         total_tables = len(table_configs)
@@ -920,11 +933,12 @@ class DemoOrchestrator:
             table_name = table_config.table_name
             logger.info(f"Processing table: {table_name}")
 
-            # Check if table already has data
-            if table_name in tables_with_data:
-                logger.info(f"Table {table_name} already has {tables_with_data[table_name]} rows, skipping")
+            # Check if table already exists (ingestion was initiated - async may still be processing)
+            if table_name in existing_tables:
+                row_count = tables_with_data.get(table_name, 0)
+                status_msg = f"has {row_count} rows" if row_count > 0 else "exists (async ingestion may still be processing)"
+                logger.info(f"Table {table_name} {status_msg}, skipping")
                 skipped_tables.append(table_name)
-                self.state.ingested_tables.append(table_name)
                 continue
 
             # Find matching CSV file
@@ -962,11 +976,12 @@ class DemoOrchestrator:
 
                     # Step 3: Ingest from OneLake
                     # OneLake path format: https://onelake.dfs.fabric.microsoft.com/{workspace_id}/{item_id}/Files/eventhouse/{file}.csv
+                    # The ;impersonate suffix tells KQL to use the caller's identity to access OneLake
                     onelake_path = (
                         f"https://onelake.dfs.fabric.microsoft.com/"
                         f"{self.config.fabric.workspace_id}/"
                         f"{self.state.lakehouse_id}/"
-                        f"Files/{eventhouse_folder}/{csv_file.name}"
+                        f"Files/{eventhouse_folder}/{csv_file.name};impersonate"
                     )
 
                     logger.info(f"Ingesting data into {table_name} from OneLake")
@@ -980,10 +995,12 @@ class DemoOrchestrator:
                     )
 
                     # Wait for async ingestion to complete (KQL ingestion is async)
-                    # Poll for row count with retries
+                    # Use exponential backoff: 2s, 4s, 8s, 16s, 32s = ~62s total
                     row_count = 0
-                    for attempt in range(5):  # Max 5 attempts
-                        time.sleep(3)  # Wait 3 seconds between checks
+                    wait_time = 2
+                    max_attempts = 6
+                    for attempt in range(max_attempts):
+                        time.sleep(wait_time)
                         row_count = self.eventhouse_client.get_table_count(
                             eventhouse_id=self.state.eventhouse_id,
                             database_name=self.state.kql_database_name,
@@ -991,11 +1008,15 @@ class DemoOrchestrator:
                         )
                         if row_count > 0:
                             break
-                        logger.debug(f"Waiting for {table_name} ingestion (attempt {attempt + 1}/5)")
-                    logger.info(f"Table {table_name} now has {row_count} rows")
+                        logger.debug(f"Waiting for {table_name} ingestion (attempt {attempt + 1}/{max_attempts}, next wait: {wait_time * 2}s)")
+                        wait_time = min(wait_time * 2, 30)  # Cap at 30s
+                    
+                    if row_count > 0:
+                        logger.info(f"Table {table_name} now has {row_count} rows")
+                    else:
+                        logger.warning(f"Table {table_name} still shows 0 rows (async ingestion may still be processing)")
 
                 ingested_tables.append(table_name)
-                self.state.ingested_tables.append(table_name)
 
             except Exception as e:
                 logger.error(f"Failed to ingest table {table_name}: {e}")
@@ -1466,6 +1487,14 @@ class DemoOrchestrator:
                     else:
                         skipped_props.append(target_prop_name)
                 
+                # Fabric API requires key property to be mapped in propertyBindings
+                # even for TimeSeries bindings - add it if not already present
+                key_col = entity_binding.key_column
+                key_prop_id = entity_props.get(key_col)
+                if key_prop_id and key_col not in property_mappings:
+                    property_mappings[key_col] = key_prop_id
+                    logger.debug(f"Added key property mapping: {key_col} -> {key_prop_id}")
+                
                 if skipped_props:
                     logger.warning(f"Skipped {len(skipped_props)} properties for '{entity_name}' (not in ontology): {skipped_props[:3]}...")
                 
@@ -1480,8 +1509,24 @@ class DemoOrchestrator:
                         timestamp_col = table_config.timestamp_column
                         break
                 
-                # Reuse existing binding ID if available (prevents duplicate bindings)
-                existing_binding_id = existing_entity_binding_ids.get(entity_id)
+                # For TimeSeries bindings, we should NOT reuse the existing binding ID
+                # if that ID belongs to a NonTimeSeries binding. Each binding type needs
+                # its own unique ID. Check if we've already added a Lakehouse binding.
+                eventhouse_binding_id = None  # Will generate a new ID
+                
+                # Check if entity already has a Lakehouse binding in this session
+                existing_bindings = builder.get_bindings().get(entity_id, [])
+                has_lakehouse_binding = any(
+                    b.binding_type.value == "NonTimeSeries" for b in existing_bindings
+                )
+                
+                if not has_lakehouse_binding and existing_entity_binding_ids.get(entity_id):
+                    # Entity has no Lakehouse binding in this session but has existing binding
+                    # This means it's an eventhouse-only entity, can reuse existing ID
+                    eventhouse_binding_id = existing_entity_binding_ids.get(entity_id)
+                    logger.info(f"Reusing existing binding ID for eventhouse-only entity {entity_name}: {eventhouse_binding_id}")
+                else:
+                    logger.debug(f"Generating new binding ID for {entity_name} TimeSeries binding (entity has Lakehouse binding)")
                 
                 builder.add_eventhouse_binding(
                     entity_type_id=entity_id,
@@ -1491,7 +1536,7 @@ class DemoOrchestrator:
                     key_column=entity_binding.key_column,
                     timestamp_column=timestamp_col,
                     property_mappings=property_mappings,
-                    binding_id=existing_binding_id,  # Reuse existing ID
+                    binding_id=eventhouse_binding_id,  # New ID for entities with both binding types
                 )
                 eventhouse_binding_count += 1
                 logger.info(f"Added eventhouse binding: {entity_name} -> {entity_binding.table_name}")
@@ -2371,6 +2416,119 @@ class DemoOrchestrator:
             details=all_details,
         )
 
+    def _step_refresh_graph(self) -> StepResult:
+        """
+        Refresh the graph item associated with the ontology.
+        
+        This step triggers an on-demand refresh job for the graph item
+        to ensure all bound data is synced after bindings are configured.
+        
+        The graph item is automatically created by Fabric when an ontology
+        has data bindings configured, and is named:
+        {OntologyName}_graph_{ontologyIdWithoutDashes}
+        """
+        start = time.time()
+        self._report_progress("refresh_graph", "in_progress", 0)
+        
+        if not self.state.ontology_id:
+            return StepResult(
+                status=StepStatus.SKIPPED,
+                message="No ontology ID available - skipping graph refresh",
+                duration_seconds=time.time() - start,
+            )
+        
+        if not self.state.ontology_name:
+            return StepResult(
+                status=StepStatus.SKIPPED,
+                message="No ontology name available - skipping graph refresh",
+                duration_seconds=time.time() - start,
+            )
+        
+        try:
+            self._report_progress("refresh_graph", "in_progress", 10)
+            
+            # Find the graph item associated with the ontology
+            graph_item = self.fabric_client.find_ontology_graph(
+                ontology_name=self.state.ontology_name,
+                ontology_id=self.state.ontology_id,
+            )
+            
+            if not graph_item:
+                # Graph might not be accessible via REST API yet or hasn't been created
+                # The Graph in Microsoft Fabric item type is managed internally by Fabric
+                ontology_id_clean = self.state.ontology_id.replace("-", "")
+                expected_graph_name = f"{self.state.ontology_name}_graph_{ontology_id_clean}"
+                
+                return StepResult(
+                    status=StepStatus.COMPLETED,
+                    message=f"Graph refresh requires manual action. Please refresh the graph "
+                            f"'{expected_graph_name}' from the Fabric portal: "
+                            f"Workspace → Graph item → Schedule → Refresh now",
+                    duration_seconds=time.time() - start,
+                    details={
+                        "ontology_id": self.state.ontology_id,
+                        "ontology_name": self.state.ontology_name,
+                        "expected_graph_name": expected_graph_name,
+                        "action": "manual_refresh_required",
+                        "instructions": [
+                            "1. Open the Fabric workspace in your browser",
+                            f"2. Locate the graph item: '{expected_graph_name}'",
+                            "3. Click '...' to expand the options menu",
+                            "4. Select 'Schedule'",
+                            "5. Click 'Refresh now' to sync the data",
+                        ],
+                    },
+                )
+            
+            graph_id = graph_item.get("id")
+            graph_name = graph_item.get("displayName")
+            logger.info(f"Found graph item: {graph_name} ({graph_id})")
+            
+            self._report_progress("refresh_graph", "in_progress", 30)
+            
+            # Trigger refresh job
+            logger.info(f"Triggering refresh for graph: {graph_name}")
+            
+            def progress_callback(status: str, percent: float):
+                self._report_progress("refresh_graph", "in_progress", 30 + (percent * 0.6))
+            
+            result = self.fabric_client.refresh_graph(
+                graph_id=graph_id,
+                timeout_seconds=600,
+                progress_callback=progress_callback,
+            )
+            
+            self._report_progress("refresh_graph", "completed", 100)
+            
+            return StepResult(
+                status=StepStatus.COMPLETED,
+                message=f"Graph '{graph_name}' refresh completed successfully",
+                artifact_id=graph_id,
+                artifact_name=graph_name,
+                duration_seconds=time.time() - start,
+                details={
+                    "graph_id": graph_id,
+                    "graph_name": graph_name,
+                    "refresh_result": result,
+                },
+            )
+            
+        except Exception as e:
+            logger.warning(f"Graph refresh failed (non-critical): {e}")
+            # Graph refresh is not critical - the graph can be refreshed manually
+            return StepResult(
+                status=StepStatus.COMPLETED,
+                message=f"Graph refresh skipped: {str(e)}. You can manually refresh the graph "
+                        f"'{self.state.ontology_name}_graph_*' from the Fabric portal.",
+                duration_seconds=time.time() - start,
+                details={
+                    "error": str(e),
+                    "ontology_id": self.state.ontology_id,
+                    "ontology_name": self.state.ontology_name,
+                    "action": "manual_refresh_recommended",
+                },
+            )
+
     def _dry_run_summary(self) -> Dict[str, StepResult]:
         """Generate summary for dry run mode."""
         results = {}
@@ -2400,6 +2558,11 @@ class DemoOrchestrator:
             results["create_ontology"] = StepResult(
                 status=StepStatus.PENDING,
                 message=f"Would create Ontology: {self.config.resources.ontology.name}",
+            )
+
+            results["refresh_graph"] = StepResult(
+                status=StepStatus.PENDING,
+                message=f"Would refresh graph for Ontology: {self.config.resources.ontology.name}",
             )
 
         return results

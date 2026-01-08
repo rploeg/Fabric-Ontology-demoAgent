@@ -297,6 +297,15 @@ example:
 # VALIDATION NOTES
 # =============================================================================
 # 
+# ⚠️ CRITICAL: Lakehouse Schema Requirement
+# 
+# Lakehouses used for ontology bindings must NOT have "Lakehouse schemas (Public Preview)"
+# enabled. The automation tool sets sourceSchema to null in all contextualizations,
+# which is incompatible with schema-enabled Lakehouses.
+#
+# If schemas are enabled, you will see "An error occurred while loading the columns"
+# when configuring relationship bindings in the Fabric UI.
+#
 # Relationship Binding Rules (from Microsoft Fabric Ontology Tutorial):
 # 
 # 1. The relationship source table must contain columns that link BOTH entities

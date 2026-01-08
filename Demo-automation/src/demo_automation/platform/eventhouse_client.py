@@ -301,6 +301,30 @@ class EventhouseClient:
 
         return response.json()
 
+    def drop_table(
+        self,
+        eventhouse_id: str,
+        database_name: str,
+        table_name: str,
+    ) -> Dict[str, Any]:
+        """
+        Drop a table from the KQL database.
+
+        Args:
+            eventhouse_id: Eventhouse ID
+            database_name: Database name
+            table_name: Table name to drop
+
+        Returns:
+            Command result
+        """
+        command = f".drop table {table_name} ifexists"
+        return self.execute_kql_management(
+            eventhouse_id=eventhouse_id,
+            database_name=database_name,
+            command=command,
+        )
+
     def create_table(
         self,
         eventhouse_id: str,
@@ -457,13 +481,22 @@ class EventhouseClient:
             query=query,
         )
 
-        # Parse result
+        # Parse result - KQL returns a list of frames, find the PrimaryResult
         try:
-            tables = result.get("Tables", [])
-            if tables:
-                rows = tables[0].get("Rows", [])
-                if rows:
-                    return rows[0][0]
+            # Result is a list of frames (v2 format)
+            if isinstance(result, list):
+                for frame in result:
+                    if frame.get("TableKind") == "PrimaryResult":
+                        rows = frame.get("Rows", [])
+                        if rows and len(rows) > 0:
+                            return rows[0][0]
+            # Fallback for v1 format (dict with Tables key)
+            elif isinstance(result, dict):
+                tables = result.get("Tables", [])
+                if tables:
+                    rows = tables[0].get("Rows", [])
+                    if rows:
+                        return rows[0][0]
         except Exception:
             pass
 

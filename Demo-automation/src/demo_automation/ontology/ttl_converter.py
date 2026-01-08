@@ -268,7 +268,6 @@ class TTLToFabricConverter:
             # Extract key property name from comment like "Key: ProductId (string)"
             key_property_name = None
             if description:
-                import re
                 key_match = re.search(r'Key:\s*(\w+)', description, re.IGNORECASE)
                 if key_match:
                     key_property_name = key_match.group(1)

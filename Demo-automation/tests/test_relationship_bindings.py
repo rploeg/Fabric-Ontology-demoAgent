@@ -32,7 +32,7 @@ class TestRelationshipContextualization:
             item_id="lakehouse-456",
             source_type=SourceType.LAKEHOUSE_TABLE,
             table_name="DimProductionBatch",
-            source_schema="dbo",
+            source_schema=None,  # None for lakehouses without schemas
             source_key_column="FacilityId",
             source_key_property_id="facility-prop-id",
             target_key_column="BatchId",
@@ -45,7 +45,7 @@ class TestRelationshipContextualization:
         assert result["dataBindingTable"]["workspaceId"] == "workspace-123"
         assert result["dataBindingTable"]["itemId"] == "lakehouse-456"
         assert result["dataBindingTable"]["sourceTableName"] == "DimProductionBatch"
-        assert result["dataBindingTable"]["sourceSchema"] == "dbo"
+        assert result["dataBindingTable"]["sourceSchema"] is None  # None for lakehouses without schemas
         assert result["dataBindingTable"]["sourceType"] == "LakehouseTable"
         assert len(result["sourceKeyRefBindings"]) == 1
         assert result["sourceKeyRefBindings"][0]["sourceColumnName"] == "FacilityId"
@@ -63,7 +63,7 @@ class TestRelationshipContextualization:
             item_id="eventhouse-789",
             source_type=SourceType.KUSTO_TABLE,
             table_name="BatchEvents",
-            source_schema="dbo",
+            source_schema=None,  # Kusto tables also use None
             source_key_column="BatchId",
             source_key_property_id="batch-prop-id",
             target_key_column="EventId",
