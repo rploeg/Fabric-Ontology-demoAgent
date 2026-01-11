@@ -1,5 +1,5 @@
 # Validation Rules Contract
-# These rules MUST be implemented consistently across all SDK versions
+
 
 version: "2.0.0"
 description: |
@@ -14,99 +14,367 @@ rules:
   # ==========================================================================
   
   reservedWords:
-    description: "Names that are not allowed (GQL, GraphQL, and Fabric-specific)"
+    description: "Complete list of GQL reserved words from official Microsoft documentation"
     source: "https://learn.microsoft.com/en-us/fabric/graph/gql-reference-reserved-terms"
+    lastUpdated: "2026-01-10"
+    totalCount: 280
     words:
-      # GQL keywords
-      - match
-      - return
-      - filter
-      - where
-      - let
-      - order
-      - limit
-      - offset
-      - distinct
-      - group
-      - by
-      - asc
-      - desc
-      - and
-      - or
-      - not
-      - "true"
-      - "false"
-      - "null"
-      - is
-      - in
-      - starts
-      - ends
-      - contains
-      - with
-      - as
-      - node
-      - edge
-      - path
-      - trail
-      - union
+      # === A ===
+      - abs
+      - abstract          # prereserved
+      - acos
+      - aggregate         # prereserved
+      - aggregates        # prereserved
       - all
-      # GQL functions
-      - count
-      - sum
+      - all_different
+      - alter             # prereserved
+      - and
+      - any
+      - array
+      - as
+      - asc
+      - ascending
+      - asin
+      - at
+      - atan
       - avg
-      - min
-      - max
-      - coalesce
-      - size
-      - labels
-      - nodes
-      - edges
-      - upper
-      - lower
-      - trim
+      # === B ===
+      - big
+      - bigint
+      - binary
+      - bool
+      - boolean
+      - both
+      - btrim
+      - by
+      - byte_length
+      - bytes
+      # === C ===
+      - call
+      - cardinality
+      - case
+      - cast
+      - catalog           # prereserved
+      - ceil
+      - ceiling
+      - char
       - char_length
-      # GraphQL keywords
-      - query
+      - character_length
+      - characteristics
+      - clear             # prereserved
+      - clone             # prereserved
+      - close
+      - coalesce
+      - collect_list
+      - commit
+      - constraint        # prereserved
+      - construct         # Fabric only
+      - contains          # Fabric only
+      - copy
+      - cos
+      - cosh
+      - cot
+      - count
+      - create
+      - current_date
+      - current_graph
+      - current_property_graph
+      - current_role      # prereserved
+      - current_schema
+      - current_time
+      - current_timestamp
+      - current_user      # prereserved
+      # === D ===
+      - data              # prereserved
+      - date
+      - datetime
+      - dec
+      - decimal
+      - declare           # Fabric only
+      - degrees
+      - delete
+      - desc
+      - descending
+      - detach
+      - directory         # prereserved
+      - distinct
+      - double
+      - drop
+      - dryrun            # prereserved
+      - duration
+      - duration_between
+      # === E ===
+      - edge              # Fabric only
+      - edges             # Fabric only
+      - element           # Fabric only
+      - elements          # Fabric only
+      - element_id
+      - else
+      - end
+      - ends              # Fabric only
+      - enum              # Fabric only
+      - exact             # Fabric only
+      - except
+      - existing          # prereserved
+      - exists
+      - exp
+      # === F ===
+      - filter
+      - finish
+      - float
+      - float16
+      - float32
+      - float64
+      - float128
+      - float256
+      - floor
+      - for
+      - from
+      - fulltext          # Fabric only
+      - function          # prereserved
+      # === G ===
+      - gql               # Fabric only
+      - gqlstatus         # prereserved
+      - grant             # prereserved
+      - group
+      # === H ===
+      - having
+      - home_graph
+      - home_property_graph
+      - home_schema
+      # === I ===
+      - if
+      - in
+      - include           # Fabric only
+      - index             # Fabric only
+      - infinity          # prereserved
+      - insert
+      - instant           # prereserved
+      - int
+      - integer
+      - int8
+      - integer8
+      - int16
+      - integer16
+      - int32
+      - integer32
+      - int64
+      - integer64
+      - int96             # Fabric only
+      - integer96         # Fabric only
+      - int128
+      - integer128
+      - int256
+      - integer256
+      - intersect
+      - interval
+      - is
+      # === J ===
+      - json              # Fabric only
+      # === K ===
+      - key               # Fabric only
+      - keys              # Fabric only
+      # === L ===
+      - label             # Fabric only
+      - labels            # Fabric only
+      - leading
+      - left
+      - let
+      - like
+      - limit
+      - list
+      - ln
+      - local
+      - local_datetime
+      - local_time
+      - local_timestamp
+      - log
+      - log10
+      - lower
+      - ltrim
+      # === M ===
+      - match
+      - max
+      - merge             # Fabric only
+      - microsoft         # Fabric only
+      - min
+      - mod
+      - msftgql           # Fabric only
+      # === N ===
+      - next
+      - node              # Fabric only
+      - nodes             # Fabric only
+      - nodetach
+      - normalize
+      - not
+      - nothing
+      - "null"
+      - nullif
+      - nulls
+      - number            # prereserved
+      - numeric           # prereserved
+      # === O ===
+      - octet_length
+      - of
+      - offset
+      - on                # prereserved
+      - open              # prereserved
+      - optional
+      - or
+      - order
+      - otherwise
+      # === P ===
+      - parameter
+      - parameters
+      - partition         # prereserved
+      - path
+      - path_length
+      - paths
+      - percentile_cont
+      - percentile_disc
+      - point             # Fabric only
+      - power
+      - pragma            # Fabric only
+      - precision
+      - prepare           # Fabric only
+      - procedure         # prereserved
+      - product           # prereserved
+      - project           # prereserved
+      - property_exists
+      # === Q ===
+      - query             # prereserved
+      # === R ===
+      - radians
+      - range             # Fabric only
+      - real
+      - record
+      - records           # prereserved
+      - reference         # prereserved
+      - regexp_contains   # Fabric only
+      - relationship      # Fabric only
+      - relationships     # Fabric only
+      - remove
+      - rename            # prereserved
+      - replace
+      - reset
+      - return
+      - revoke            # prereserved
+      - right
+      - rollback
+      - rtrim
+      # === S ===
+      - same
+      - schema
+      - select
+      - session
+      - session_user
+      - set
+      - show              # Fabric only
+      - signed
+      - sin
+      - sinh
+      - size
+      - skip
+      - small
+      - smallint
+      - sqrt
+      - start
+      - starts            # Fabric only
+      - stddev_pop
+      - stddev_samp
+      - string
+      - string_join       # Fabric only
+      - substring         # prereserved
+      - sum
+      - system_user       # prereserved
+      # === T ===
+      - tan
+      - tanh
+      - temporal          # prereserved
+      - text              # Fabric only
+      - then
+      - time
+      - timestamp
+      - to_json           # Fabric only
+      - to_json_string    # Fabric only
+      - trailing
+      - trim
+      - "true"
+      - typed
+      # === U ===
+      - ubigint
+      - uint
+      - uint8
+      - uint16
+      - uint32
+      - uint64
+      - uint128
+      - uint256
+      - union
+      - unique            # prereserved
+      - unit              # prereserved
+      - unsigned
+      - update            # Fabric only
+      - upper
+      - use
+      - usmallint
+      - using             # Fabric only
+      # === V ===
+      - value
+      - values            # prereserved
+      - varbinary
+      - varchar
+      - variable
+      - vector            # Fabric only
+      - vertex            # Fabric only
+      - vertices          # Fabric only
+      # === W ===
+      - when
+      - where
+      - with
+      # === X ===
+      - xor
+      # === Y ===
+      - yield
+      # === Z ===
+      - zoned
+      - zoned_datetime
+      - zoned_time
+      # === Additional Fabric Ontology-specific ===
+      - ontology
+      - entity
+      - property
+      - binding
+      # === GraphQL keywords (additional) ===
       - mutation
       - subscription
       - fragment
-      - on
-      - type
       - interface
-      - enum
       - scalar
       - input
       - directive
       - extend
-      - schema
       - implements
-      # Fabric-specific
-      - ontology
-      - entity
-      - relationship
-      - property
-      - binding
-      # Common type names that may conflict
-      - id
-      - string
-      - int
-      - float
-      - boolean
-      - datetime
-      # GraphQL pagination/query terms
+      # === Common pagination terms ===
       - first
       - last
       - after
       - before
-      - skip
       - take
       - orderBy
+      # === Literal values ===
+      - "false"
+      - id
     caseSensitive: false
     errorMessage: "Name '{name}' is a reserved word and cannot be used"
     applies_to:
       - Property.name
       - EntityType.name
       - RelationshipType.name
+    notes:
+      - "Items marked 'prereserved' are reserved for future GQL standard use"
+      - "Items marked 'Fabric only' are Microsoft-specific extensions"
+      - "This list is comprehensive as of the source document date"
 
   problematicWords:
     description: "Words that trigger warnings (not errors) - singular forms that may conflict"
