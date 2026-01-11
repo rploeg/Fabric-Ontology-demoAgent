@@ -2,7 +2,7 @@
 
 System design documentation for contributors and maintainers.
 
-> **Version**: 0.2.0+ uses the [Fabric Ontology SDK](https://github.com/falloutxAY/Fabric-Ontology-SDK) for ontology operations.
+> **Version**: 0.2.0+ uses the [Unofficial Fabric Ontology SDK](https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK) for ontology operations.
 
 ---
 
@@ -272,13 +272,16 @@ def _make_request(self, ...):
 
 ## Authentication
 
-### Supported Methods
+### SDK Factory Methods (v0.3.0+)
 
-| Method | When to Use |
-|--------|-------------|
-| Interactive | Demos, development |
-| Service Principal | CI/CD, automation |
-| Default | Azure-hosted environments |
+The [Unofficial Fabric Ontology SDK](https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK) provides factory methods for authentication:
+
+| Factory Method | Config Value | Use Case |
+|---------------|--------------|----------|
+| `FabricClient.from_interactive()` | `interactive` | Demos, development |
+| `FabricClient.from_service_principal()` | `service_principal` | CI/CD automation |
+| `FabricClient.from_azure_cli()` | `azure_cli` | Local dev with `az login` |
+| `FabricClient.from_device_code()` | `device_code` | Headless environments |
 
 ### Token Management
 

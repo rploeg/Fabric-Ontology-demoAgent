@@ -1,8 +1,24 @@
 # Fabric Ontology Demo Generation - Agent Workflow
 
-> **Spec Version**: 3.3  
+> **Spec Version**: 3.4  
 > **Last Updated**: January 2026  
 > **Purpose**: Phase-by-phase workflow for generating error-free Fabric Ontology demos
+
+---
+
+## Validation Rules Reference
+
+⚠️ **IMPORTANT**: All validation rules are defined in [`schemas/validation-rules.yaml`](schemas/validation-rules.yaml). This file is the **single source of truth** for:
+- Entity/property name patterns and length limits
+- Reserved GQL words (linked to [official Microsoft docs](https://learn.microsoft.com/en-us/fabric/graph/gql-reference-reserved-terms))
+- Data type constraints
+- Binding validation rules
+
+**Official Microsoft Documentation**:
+- [Entity Type Creation](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-entity-types) - naming rules, key constraints
+- [Data Binding](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-bind-data) - property uniqueness, binding order
+- [GQL Reserved Words](https://learn.microsoft.com/en-us/fabric/graph/gql-reference-reserved-terms) - complete reserved words list
+- [Relationship Types](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-relationship-types) - source/target constraints
 
 ---
 
@@ -84,11 +100,13 @@ Generate:
 
 ### Validation Checklist
 
-- [ ] All entity keys are string or int type
-- [ ] Property names are unique across ALL entities
-- [ ] Property names ≤26 characters, alphanumeric with hyphens/underscores
-- [ ] No reserved GQL words in property names
-- [ ] Relationships have distinct source and target entities
+> **See [`schemas/validation-rules.yaml`](schemas/validation-rules.yaml) for complete validation rules**
+
+- [ ] All entity keys are string or int type ([keyDataTypes](https://learn.microsoft.com/en-us/fabric/iq/ontology/resources-glossary))
+- [ ] Property names are unique across ALL entities ([globalPropertyUniqueness](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-bind-data))
+- [ ] Property names ≤26 characters, alphanumeric with hyphens/underscores, start/end alphanumeric
+- [ ] No reserved GQL words in property names ([reservedWords](https://learn.microsoft.com/en-us/fabric/graph/gql-reference-reserved-terms))
+- [ ] Relationships have distinct source and target entities ([sourceTargetDistinct](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-relationship-types))
 
 **Action**: Ask "Design complete. Ready for Phase 3: Ontology TTL?"
 
@@ -140,7 +158,7 @@ The parser uses regex `Key:\s*(\w+)` to extract the key property name.
 
 ## ⚠️ CRITICAL: Property and Entity Naming Constraints
 
-These constraints come directly from Microsoft Fabric Ontology documentation:
+> **Source**: [`schemas/validation-rules.yaml`](schemas/validation-rules.yaml) and [Microsoft Fabric Ontology Documentation](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-entity-types)
 
 ### Entity Type Names
 - **Length**: 1–26 characters
@@ -151,13 +169,15 @@ These constraints come directly from Microsoft Fabric Ontology documentation:
 ### Property Names
 - **Length**: 1–26 characters  
 - **Pattern**: `^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$`
-- **MUST be unique across ALL entity types in the ontology**
+- **MUST be unique across ALL entity types in the ontology** (ERROR, not warning)
 - Must start and end with alphanumeric character
 - Recommendation: Use entity prefix for uniqueness (e.g., `Product_Name`, `Batch_Status`)
 
 ### GQL Reserved Words to AVOID
 
-Never use these as property or entity names (or escape with backticks):
+> **Complete list**: [GQL Reserved Words Reference](https://learn.microsoft.com/en-us/fabric/graph/gql-reference-reserved-terms)
+
+Never use these as property or entity names (excerpt - see link for full list):
 
 ```
 MATCH, RETURN, FILTER, WHERE, LET, ORDER, LIMIT, OFFSET,

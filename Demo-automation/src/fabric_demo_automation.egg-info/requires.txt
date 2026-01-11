@@ -2,11 +2,11 @@ azure-identity>=1.15.0
 azure-storage-file-datalake>=12.14.0
 requests>=2.31.0
 pyyaml>=6.0
-tqdm>=4.66.0
 tenacity>=8.2.0
 python-dotenv>=1.0.0
 rich>=13.7.0
 rdflib>=7.0.0
+fabric-ontology-sdk@ git+https://github.com/falloutxAY/Fabric-Ontology-SDK.git@v0.2.0
 
 [dev]
 pytest>=7.4.0

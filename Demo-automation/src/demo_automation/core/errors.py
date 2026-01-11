@@ -1,5 +1,34 @@
 """
 Custom exception classes for demo automation.
+
+This module provides a hierarchy of exceptions that wrap SDK errors and
+provide consistent error handling throughout the demo automation tool.
+
+Exception Hierarchy:
+    DemoAutomationError (base)
+    ├── ConfigurationError
+    │   └── MissingConfigError
+    ├── ValidationError
+    │   └── SchemaValidationError
+    ├── FabricAPIError
+    │   ├── AuthenticationError
+    │   ├── RateLimitError
+    │   ├── ResourceNotFoundError
+    │   └── ResourceExistsError
+    ├── OneLakeError
+    ├── LROTimeoutError
+    ├── BindingError
+    └── CancellationRequestedError
+
+SDK Exception Mapping (Unofficial Fabric Ontology SDK v0.2.0+):
+    SDK FabricOntologyError  → DemoAutomationError
+    SDK AuthenticationError  → AuthenticationError
+    SDK ValidationError      → ValidationError
+    SDK ApiError            → FabricAPIError
+    SDK ApiError (403)      → AuthenticationError (permission denied)
+    SDK ResourceNotFoundError → ResourceNotFoundError
+    SDK RateLimitError      → RateLimitError
+    SDK ConflictError       → ResourceExistsError
 """
 
 from typing import Optional, Dict, Any
@@ -163,3 +192,103 @@ class CancellationRequestedError(DemoAutomationError):
     """Raised when a cancellation is requested."""
 
     pass
+
+
+# =============================================================================
+# SDK Exception Conversion Utilities
+# =============================================================================
+
+def wrap_sdk_exception(sdk_exception: Exception) -> DemoAutomationError:
+    """
+    Convert an SDK exception to the appropriate DemoAutomationError subclass.
+    
+    This provides consistent error handling when SDK operations fail.
+    
+    Args:
+        sdk_exception: Exception from the Unofficial Fabric Ontology SDK
+        
+    Returns:
+        Appropriate DemoAutomationError subclass
+        
+    Example:
+        >>> from fabric_ontology.exceptions import RateLimitError as SDKRateLimitError
+        >>> try:
+        ...     client.ontologies.create(...)
+        ... except SDKRateLimitError as e:
+        ...     raise wrap_sdk_exception(e)
+    """
+    # Import SDK exceptions here to avoid circular imports
+    try:
+        from fabric_ontology.exceptions import (
+            FabricOntologyError,
+            AuthenticationError as SDKAuthenticationError,
+            ValidationError as SDKValidationError,
+            ApiError,
+            ResourceNotFoundError as SDKResourceNotFoundError,
+            RateLimitError as SDKRateLimitError,
+            ConflictError,
+        )
+    except ImportError:
+        # SDK not installed, return generic error
+        return DemoAutomationError(str(sdk_exception), cause=sdk_exception)
+    
+    # Map SDK exceptions to our hierarchy
+    if isinstance(sdk_exception, SDKAuthenticationError):
+        return AuthenticationError(
+            str(sdk_exception),
+            cause=sdk_exception,
+        )
+    
+    elif isinstance(sdk_exception, SDKValidationError):
+        return ValidationError(
+            str(sdk_exception),
+            cause=sdk_exception,
+        )
+    
+    elif isinstance(sdk_exception, SDKResourceNotFoundError):
+        return ResourceNotFoundError(
+            str(sdk_exception),
+            cause=sdk_exception,
+        )
+    
+    elif isinstance(sdk_exception, SDKRateLimitError):
+        retry_after = getattr(sdk_exception, 'retry_after', None)
+        return RateLimitError(
+            str(sdk_exception),
+            retry_after=retry_after,
+            cause=sdk_exception,
+        )
+    
+    elif isinstance(sdk_exception, ConflictError):
+        return ResourceExistsError(
+            str(sdk_exception),
+            cause=sdk_exception,
+        )
+    
+    elif isinstance(sdk_exception, ApiError):
+        status_code = getattr(sdk_exception, 'status_code', None)
+        error_code = getattr(sdk_exception, 'error_code', None)
+        # Handle 403 Forbidden via ApiError status code
+        if status_code == 403:
+            return AuthenticationError(
+                f"Permission denied: {sdk_exception}",
+                cause=sdk_exception,
+            )
+        return FabricAPIError(
+            str(sdk_exception),
+            status_code=status_code,
+            error_code=error_code,
+            cause=sdk_exception,
+        )
+    
+    elif isinstance(sdk_exception, FabricOntologyError):
+        return DemoAutomationError(
+            str(sdk_exception),
+            cause=sdk_exception,
+        )
+    
+    # Unknown exception type
+    return DemoAutomationError(
+        f"SDK error: {sdk_exception}",
+        cause=sdk_exception,
+    )

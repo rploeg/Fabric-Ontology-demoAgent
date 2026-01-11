@@ -168,35 +168,61 @@ fabric:
 
 ## Authentication Methods
 
-The tool supports three authentication methods. Set via `config init` or in `~/.fabric-demo/config.yaml`:
+The tool supports multiple authentication methods via the [Unofficial Fabric Ontology SDK](https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK). Set via `config init` or in `~/.fabric-demo/config.yaml`:
 
-| Method | Use Case | How It Works |
-|--------|----------|--------------|
-| `interactive` | Demos, development | Opens browser for Azure AD login |
-| `default` | CI/CD, automation | Uses DefaultAzureCredential chain |
-| `service_principal` | CI/CD (explicit) | Uses env vars via DefaultAzureCredential |
+| Method | Use Case | SDK Factory Method |
+|--------|----------|-------------------|
+| `interactive` | Demos, development | `FabricClient.from_interactive()` |
+| `azure_cli` | Local dev with `az login` | `FabricClient.from_azure_cli()` |
+| `service_principal` | CI/CD automation | `FabricClient.from_service_principal()` |
+| `device_code` | Headless environments | `FabricClient.from_device_code()` |
 
 ### Interactive Browser (Default)
+
+Opens browser for Azure AD login. Best for demos and local development.
 
 ```yaml
 defaults:
   auth_method: interactive
 ```
 
-### Default Azure Credential Chain (Recommended for CI/CD)
+### Azure CLI (Recommended for Local Dev)
 
-Automatically tries: Environment variables → Managed Identity → VS Code → Azure CLI → Browser
+Uses credentials from `az login`. Requires Azure CLI to be installed and logged in.
 
 ```yaml
 defaults:
-  auth_method: default
+  auth_method: azure_cli
 ```
 
-For service principal auth, set environment variables:
+```bash
+# Login first
+az login
+```
+
+### Service Principal (Recommended for CI/CD)
+
+Uses service principal credentials from environment variables.
+
+```yaml
+defaults:
+  auth_method: service_principal
+```
+
+Required environment variables:
 ```bash
 export AZURE_TENANT_ID=your-tenant-id
 export AZURE_CLIENT_ID=your-app-id  
 export AZURE_CLIENT_SECRET=your-secret
+```
+
+### Device Code (Headless Environments)
+
+Displays a code to enter at https://microsoft.com/devicelogin. Useful for remote servers without browser access.
+
+```yaml
+defaults:
+  auth_method: device_code
 ```
 
 ---

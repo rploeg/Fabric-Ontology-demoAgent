@@ -1,16 +1,19 @@
 """
 Tests for SDK adapter module.
 
-Verifies the integration between Demo-automation and Fabric Ontology SDK.
+Verifies the integration between Demo-automation and Unofficial Fabric Ontology SDK v0.3.0+.
 """
 
 import pytest
+import os
+from unittest.mock import patch, MagicMock
 from demo_automation.sdk_adapter import (
     map_ttl_type_to_sdk,
     map_ttl_type_to_string,
     TTL_TO_SDK_TYPE_MAP,
     create_ontology_builder,
     create_validator,
+    create_sdk_client,
     validate_entity_name,
     validate_property_name,
     validate_relationship_name,
@@ -242,3 +245,124 @@ class TestEndToEndBuilder:
         assert len(entity_dict["properties"]) == 2  # SensorId, Name
         assert "timeseriesProperties" in entity_dict
         assert len(entity_dict["timeseriesProperties"]) == 2  # Temperature, Humidity
+
+
+class TestSDKClientFactory:
+    """Tests for SDK client factory methods."""
+    
+    @patch('demo_automation.sdk_adapter.FabricClient')
+    def test_create_client_interactive(self, mock_fabric_client):
+        """Test creating client with interactive auth."""
+        mock_client = MagicMock()
+        mock_fabric_client.from_interactive.return_value = mock_client
+        
+        # Create a mock config
+        mock_config = MagicMock()
+        mock_config.fabric.workspace_id = "test-workspace-id"
+        mock_config.fabric.auth_method = "interactive"
+        mock_config.fabric.tenant_id = None
+        
+        client = create_sdk_client(mock_config)
+        
+        mock_fabric_client.from_interactive.assert_called_once()
+        assert client == mock_client
+    
+    @patch('demo_automation.sdk_adapter.FabricClient')
+    def test_create_client_azure_cli(self, mock_fabric_client):
+        """Test creating client with Azure CLI auth."""
+        mock_client = MagicMock()
+        mock_fabric_client.from_azure_cli.return_value = mock_client
+        
+        mock_config = MagicMock()
+        mock_config.fabric.workspace_id = "test-workspace-id"
+        mock_config.fabric.auth_method = "azure_cli"
+        
+        client = create_sdk_client(mock_config)
+        
+        mock_fabric_client.from_azure_cli.assert_called_once()
+        assert client == mock_client
+    
+    @patch('demo_automation.sdk_adapter.FabricClient')
+    def test_create_client_device_code(self, mock_fabric_client):
+        """Test creating client with device code auth."""
+        mock_client = MagicMock()
+        mock_fabric_client.from_device_code.return_value = mock_client
+        
+        mock_config = MagicMock()
+        mock_config.fabric.workspace_id = "test-workspace-id"
+        mock_config.fabric.auth_method = "device_code"
+        
+        client = create_sdk_client(mock_config)
+        
+        mock_fabric_client.from_device_code.assert_called_once()
+        assert client == mock_client
+    
+    @patch.dict(os.environ, {
+        'AZURE_TENANT_ID': 'test-tenant',
+        'AZURE_CLIENT_ID': 'test-client-id',
+        'AZURE_CLIENT_SECRET': 'test-secret',
+    })
+    @patch('demo_automation.sdk_adapter.FabricClient')
+    def test_create_client_service_principal(self, mock_fabric_client):
+        """Test creating client with service principal auth."""
+        mock_client = MagicMock()
+        mock_fabric_client.from_service_principal.return_value = mock_client
+        
+        mock_config = MagicMock()
+        mock_config.fabric.workspace_id = "test-workspace-id"
+        mock_config.fabric.auth_method = "service_principal"
+        mock_config.fabric.tenant_id = None
+        
+        client = create_sdk_client(mock_config)
+        
+        mock_fabric_client.from_service_principal.assert_called_once_with(
+            tenant_id='test-tenant',
+            client_id='test-client-id',
+            client_secret='test-secret',
+        )
+        assert client == mock_client
+    
+    @patch('demo_automation.sdk_adapter.FabricClient')
+    def test_create_client_service_principal_missing_env(self, mock_fabric_client):
+        """Test service principal auth fails without required env vars."""
+        mock_config = MagicMock()
+        mock_config.fabric.workspace_id = "test-workspace-id"
+        mock_config.fabric.auth_method = "service_principal"
+        mock_config.fabric.tenant_id = None
+        
+        # Clear environment variables that might be set
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(ValueError) as exc_info:
+                create_sdk_client(mock_config)
+            
+            assert "AZURE_TENANT_ID" in str(exc_info.value)
+    
+    @patch('demo_automation.sdk_adapter.FabricClient')
+    def test_create_client_auth_method_override(self, mock_fabric_client):
+        """Test auth_method parameter overrides config."""
+        mock_client = MagicMock()
+        mock_fabric_client.from_azure_cli.return_value = mock_client
+        
+        mock_config = MagicMock()
+        mock_config.fabric.workspace_id = "test-workspace-id"
+        mock_config.fabric.auth_method = "interactive"  # Config says interactive
+        
+        # Override with azure_cli
+        client = create_sdk_client(mock_config, auth_method="azure_cli")
+        
+        mock_fabric_client.from_azure_cli.assert_called_once()
+        mock_fabric_client.from_interactive.assert_not_called()
+    
+    @patch('demo_automation.sdk_adapter.FabricClient')
+    def test_create_client_unknown_method_falls_back(self, mock_fabric_client):
+        """Test unknown auth method falls back to interactive."""
+        mock_client = MagicMock()
+        mock_fabric_client.from_interactive.return_value = mock_client
+        
+        mock_config = MagicMock()
+        mock_config.fabric.workspace_id = "test-workspace-id"
+        mock_config.fabric.auth_method = "unknown_method"
+        
+        client = create_sdk_client(mock_config)
+        
+        mock_fabric_client.from_interactive.assert_called_once()

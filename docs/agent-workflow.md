@@ -153,6 +153,7 @@ AI agents are non-deterministic. If you get unexpected results:
 | File | Purpose |
 |------|---------|
 | `.agentic/agent-instructions.md` | Complete 7-phase workflow |
+| `.agentic/schemas/validation-rules.yaml` | Validation rules (single source of truth) |
 | `.agentic/schemas/bindings-schema.yaml` | Bindings file schema |
 | `.agentic/schemas/metadata-schema.yaml` | Metadata file schema |
 | `.agentic/templates/` | Output templates |

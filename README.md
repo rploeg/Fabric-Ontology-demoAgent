@@ -18,7 +18,13 @@ Create and deploy Microsoft Fabric Ontology demos with automated tooling and AI 
 
 ```
 ├── .agentic/              # AI agent specs for generating demos
-├── Demo-automation/       # CLI tool (uses Fabric Ontology SDK v0.2.0)
+│   ├── agent-instructions.md       # 7-phase workflow guide
+│   ├── schemas/
+│   │   ├── validation-rules.yaml   # Validation rules (source of truth)
+│   │   ├── bindings-schema.yaml    # Bindings file schema
+│   │   └── metadata-schema.yaml    # Metadata file schema
+│   └── templates/                  # Output templates
+├── Demo-automation/       # CLI tool (uses Unofficial Fabric Ontology SDK v0.3.0)
 ├── docs/                  # Documentation
 ├── AutoManufacturing-SupplyChain/  # Example demo
 └── FreshMart/             # Example demo

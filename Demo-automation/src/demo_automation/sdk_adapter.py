@@ -1,25 +1,30 @@
 """
 SDK Adapter Module.
 
-Bridges Demo-automation with the Fabric Ontology SDK, providing:
+Bridges Demo-automation with the Unofficial Fabric Ontology SDK (v0.2.0+), providing:
 - SDK client initialization from Demo-automation configuration
 - Type conversion between TTL converter and SDK types
 - Convenience wrappers for common SDK operations
+
+SDK Reference: https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK
 """
 
 import logging
+import os
 from typing import Optional, TYPE_CHECKING
 
-from fabric_ontology import OntologyClient
+from fabric_ontology import FabricClient
 from fabric_ontology.models import PropertyDataType
 from fabric_ontology.builders import OntologyBuilder
 from fabric_ontology.validation import OntologyValidator, validate_name, validate_data_type
-from fabric_ontology.exceptions import ValidationError as SDKValidationError
-from fabric_ontology.auth import (
-    TokenProvider,
-    InteractiveTokenProvider,
-    ServicePrincipalTokenProvider,
-    DeviceCodeTokenProvider,
+from fabric_ontology.exceptions import (
+    ValidationError as SDKValidationError,
+    FabricOntologyError,
+    AuthenticationError as SDKAuthenticationError,
+    ApiError,
+    ResourceNotFoundError as SDKResourceNotFoundError,
+    RateLimitError as SDKRateLimitError,
+    ConflictError,
 )
 
 if TYPE_CHECKING:
@@ -115,55 +120,95 @@ def map_ttl_type_to_string(ttl_type: str) -> str:
 # SDK Client Factory
 # =============================================================================
 
-def create_token_provider(config: "DemoConfiguration") -> TokenProvider:
+def create_sdk_client(
+    config: "DemoConfiguration",
+    auth_method: Optional[str] = None,
+) -> FabricClient:
     """
-    Create an SDK TokenProvider from Demo-automation configuration.
+    Create an SDK FabricClient from Demo-automation configuration.
+    
+    Uses SDK v0.3.0+ factory methods for authentication:
+    - from_interactive(): Interactive browser login (default)
+    - from_service_principal(): Service principal credentials
+    - from_azure_cli(): Azure CLI credentials (requires `az login`)
+    - from_device_code(): Device code flow for headless environments
     
     Args:
         config: Demo configuration containing Fabric connection details
+        auth_method: Override auth method. One of: "interactive", "service_principal", 
+                     "azure_cli", "device_code", "default". If None, uses config value.
         
     Returns:
-        Configured TokenProvider instance (Interactive or ServicePrincipal)
-    """
-    tenant_id = config.fabric.tenant_id or "common"
-    
-    if config.fabric.use_interactive_auth:
-        logger.info("Creating InteractiveTokenProvider for authentication")
-        return InteractiveTokenProvider(tenant_id=tenant_id)
-    else:
-        # For non-interactive, we'd need service principal credentials
-        # which would be added to config if needed
-        logger.info("Creating InteractiveTokenProvider (fallback)")
-        return InteractiveTokenProvider(tenant_id=tenant_id)
-
-
-def create_sdk_client(config: "DemoConfiguration") -> OntologyClient:
-    """
-    Create an SDK OntologyClient from Demo-automation configuration.
-    
-    Args:
-        config: Demo configuration containing Fabric connection details
-        
-    Returns:
-        Configured OntologyClient instance
+        Configured FabricClient instance
         
     Example:
         >>> from demo_automation.core.config import load_config
         >>> config = load_config("path/to/config.yaml")
         >>> client = create_sdk_client(config)
-        >>> ontologies = client.list_ontologies()
+        >>> ontologies = client.ontologies.list(workspace_id)
     """
-    # Create token provider based on config
-    token_provider = create_token_provider(config)
+    # Determine auth method from config or override
+    method = auth_method or getattr(config.fabric, 'auth_method', None) or "interactive"
+    method = method.lower().replace("-", "_")
     
-    # Create and return SDK client
-    client = OntologyClient(
-        workspace_id=config.fabric.workspace_id,
-        token_provider=token_provider,
-    )
+    logger.info(f"Creating FabricClient with auth method: {method}")
     
-    logger.info(f"Created SDK client for workspace: {config.fabric.workspace_id}")
+    if method == "interactive":
+        client = FabricClient.from_interactive()
+        
+    elif method == "service_principal":
+        # Get credentials from environment variables
+        tenant_id = config.fabric.tenant_id or os.environ.get("AZURE_TENANT_ID")
+        client_id = os.environ.get("AZURE_CLIENT_ID")
+        client_secret = os.environ.get("AZURE_CLIENT_SECRET")
+        
+        if not all([tenant_id, client_id, client_secret]):
+            raise ValueError(
+                "Service principal auth requires AZURE_TENANT_ID, AZURE_CLIENT_ID, "
+                "and AZURE_CLIENT_SECRET environment variables"
+            )
+        
+        client = FabricClient.from_service_principal(
+            tenant_id=tenant_id,
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+        
+    elif method == "azure_cli":
+        client = FabricClient.from_azure_cli()
+        
+    elif method == "device_code":
+        client = FabricClient.from_device_code()
+        
+    elif method == "default":
+        # Uses DefaultAzureCredential chain
+        client = FabricClient.from_azure_cli()  # Closest equivalent
+        
+    else:
+        logger.warning(f"Unknown auth method '{method}', falling back to interactive")
+        client = FabricClient.from_interactive()
+    
+    logger.info(f"Created FabricClient for workspace: {config.fabric.workspace_id}")
     return client
+
+
+# Backwards compatibility alias
+def create_token_provider(config: "DemoConfiguration"):
+    """
+    DEPRECATED: Use create_sdk_client() instead.
+    
+    This function is kept for backwards compatibility but will be removed
+    in a future version. The SDK v0.3.0+ uses FabricClient.from_*() factory
+    methods instead of TokenProvider classes.
+    """
+    import warnings
+    warnings.warn(
+        "create_token_provider() is deprecated. Use create_sdk_client() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    # Return the client itself as it handles auth internally
+    return create_sdk_client(config)
 
 
 # =============================================================================
@@ -264,7 +309,7 @@ __all__ = [
     
     # Client/Builder factories
     "create_sdk_client",
-    "create_token_provider",
+    "create_token_provider",  # Deprecated, kept for backwards compatibility
     "create_ontology_builder",
     
     # Validation
@@ -275,12 +320,17 @@ __all__ = [
     "validate_sdk_data_type",
     
     # Re-exports from SDK for convenience
-    "OntologyClient",
+    "FabricClient",
     "OntologyBuilder",
     "OntologyValidator",
     "PropertyDataType",
     "SDKValidationError",
-    "TokenProvider",
-    "InteractiveTokenProvider",
-    "ServicePrincipalTokenProvider",
+    
+    # SDK Exceptions (for error handling)
+    "FabricOntologyError",
+    "SDKAuthenticationError",
+    "ApiError",
+    "SDKResourceNotFoundError",
+    "SDKRateLimitError",
+    "ConflictError",
 ]
