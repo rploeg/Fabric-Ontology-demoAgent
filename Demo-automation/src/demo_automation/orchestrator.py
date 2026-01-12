@@ -1193,8 +1193,12 @@ class DemoOrchestrator:
         try:
             # Convert TTL to SDK builder/definition
             from .ontology.sdk_converter import ttl_to_sdk_builder
-            
-            builder = ttl_to_sdk_builder(str(ttl_path))
+            from .ontology.ttl_converter import TTLToFabricConverter
+
+            converter = TTLToFabricConverter()
+            ttl_content = ttl_path.read_text(encoding="utf-8")
+            conversion_result = converter.parse_ttl(ttl_content)
+            builder = ttl_to_sdk_builder(conversion_result)
             definition = builder.build()
             
             # Use SDK OntologyValidator for comprehensive validation
