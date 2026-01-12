@@ -24,7 +24,7 @@ Create and deploy Microsoft Fabric Ontology demos with automated tooling and AI 
 │   │   ├── bindings-schema.yaml    # Bindings file schema
 │   │   └── metadata-schema.yaml    # Metadata file schema
 │   └── templates/                  # Output templates
-├── Demo-automation/       # CLI tool (uses Unofficial Fabric Ontology SDK v0.3.0)
+├── Demo-automation/       # CLI tool (uses Unofficial Fabric Ontology SDK v0.4.0)
 ├── docs/                  # Documentation
 ├── AutoManufacturing-SupplyChain/  # Example demo
 └── FreshMart/             # Example demo
