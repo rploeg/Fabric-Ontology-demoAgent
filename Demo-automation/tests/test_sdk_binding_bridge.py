@@ -85,7 +85,7 @@ def sample_ttl_entity():
         properties=[
             {"name": "FacilityId", "value_type": "String", "is_key": True},
             {"name": "FacilityName", "value_type": "String"},
-            {"name": "Capacity", "value_type": "Int64"},
+            {"name": "Capacity", "value_type": "BigInt"},
         ],
         key_property_name="FacilityId",
     )
@@ -218,7 +218,7 @@ class TestSDKBindingBridgeAddEntityType:
         # Verify types were mapped correctly
         prop_types = {p.name: p.data_type.value for p in builder._properties}
         assert prop_types["StringProp"] == "String"
-        assert prop_types["IntProp"] == "Int64"
+        assert prop_types["IntProp"] == "BigInt"
         assert prop_types["DoubleProp"] == "Double"
         assert prop_types["BoolProp"] == "Boolean"
         assert prop_types["DateProp"] == "DateTime"

@@ -32,16 +32,16 @@ class TestTypeMapping:
         assert map_ttl_type_to_sdk("string") == PropertyDataType.STRING
     
     def test_integer_type_mapping(self):
-        """Test integer types map to Int64."""
-        assert map_ttl_type_to_sdk("BigInt") == PropertyDataType.INT64
-        assert map_ttl_type_to_sdk("Long") == PropertyDataType.INT64
-        assert map_ttl_type_to_sdk("Int") == PropertyDataType.INT64
-        assert map_ttl_type_to_sdk("Int64") == PropertyDataType.INT64
+        """Test integer types map to BIGINT."""
+        assert map_ttl_type_to_sdk("BigInt") == PropertyDataType.BIGINT
+        assert map_ttl_type_to_sdk("Long") == PropertyDataType.BIGINT
+        assert map_ttl_type_to_sdk("Int") == PropertyDataType.BIGINT
+        assert map_ttl_type_to_sdk("Int64") == PropertyDataType.BIGINT
     
     def test_float_type_mapping(self):
-        """Test float types map to Double."""
+        """Test float types map correctly."""
         assert map_ttl_type_to_sdk("Double") == PropertyDataType.DOUBLE
-        assert map_ttl_type_to_sdk("Float") == PropertyDataType.DOUBLE
+        assert map_ttl_type_to_sdk("Float") == PropertyDataType.FLOAT
     
     def test_decimal_maps_to_double(self):
         """Test Decimal maps to Double (Decimal returns NULL in Graph)."""
@@ -57,7 +57,7 @@ class TestTypeMapping:
         """Test DateTime types map correctly."""
         assert map_ttl_type_to_sdk("DateTime") == PropertyDataType.DATETIME
         assert map_ttl_type_to_sdk("Date") == PropertyDataType.DATETIME
-        assert map_ttl_type_to_sdk("DateTimeOffset") == PropertyDataType.DATETIMEOFFSET
+        assert map_ttl_type_to_sdk("DateTimeOffset") == PropertyDataType.DATETIME  # SDK uses DateTime for all
     
     def test_unknown_type_defaults_to_string(self):
         """Test unknown types default to String."""
@@ -67,7 +67,7 @@ class TestTypeMapping:
     def test_map_to_string_returns_string(self):
         """Test map_ttl_type_to_string returns string value."""
         assert map_ttl_type_to_string("String") == "String"
-        assert map_ttl_type_to_string("BigInt") == "Int64"
+        assert map_ttl_type_to_string("BigInt") == "BigInt"
         assert map_ttl_type_to_string("Double") == "Double"
         assert map_ttl_type_to_string("Boolean") == "Boolean"
 
@@ -163,7 +163,7 @@ class TestValidator:
     def test_validate_valid_data_type(self):
         """Test validation passes for valid data types."""
         validate_sdk_data_type("String")
-        validate_sdk_data_type("Int64")
+        validate_sdk_data_type("BigInt")
         validate_sdk_data_type("Double")
         validate_sdk_data_type("Boolean")
         validate_sdk_data_type("DateTime")
