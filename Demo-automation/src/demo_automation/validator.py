@@ -1193,10 +1193,10 @@ class DemoPackageValidator:
         # Map common aliases to SDK types for validation
         type_mapping = {
             "string": "String", "str": "String",
-            "int": "Int64", "integer": "Int64", "long": "Int64",
-            "double": "Double", "float": "Double",
+            "int": "BigInt", "integer": "BigInt", "long": "BigInt", "int64": "BigInt", "bigint": "BigInt",
+            "double": "Double", "float": "Float",
             "boolean": "Boolean", "bool": "Boolean",
-            "datetime": "DateTime", "datetimeoffset": "DateTimeOffset",
+            "datetime": "DateTime", "datetimeoffset": "DateTime",
             "decimal": "Decimal",  # Will fail SDK validation
         }
         
@@ -1209,7 +1209,7 @@ class DemoPackageValidator:
             self.result.add_error(
                 f"Data type '{data_type}' validation failed: {e.message}",
                 path=context,
-                suggestion=e.details.get("suggestion") if e.details else "Use a valid type: String, Int64, Double, Boolean, DateTime",
+                suggestion=e.details.get("suggestion") if e.details else "Use a valid type: String, BigInt, Double, Boolean, DateTime, Float",
             )
             return
         
