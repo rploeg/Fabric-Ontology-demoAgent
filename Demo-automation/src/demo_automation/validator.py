@@ -24,12 +24,15 @@ from fabric_ontology.validation import (
     validate_name as sdk_validate_name,
     validate_data_type as sdk_validate_data_type,
     GQL_RESERVED_WORDS as SDK_GQL_RESERVED_WORDS,
-    RECOMMENDED_NAME_LENGTH,
+    MAX_NAME_LENGTH as SDK_MAX_NAME_LENGTH,
     OntologyValidator,
 )
 from fabric_ontology.exceptions import ValidationError as SDKValidationError
 
 logger = logging.getLogger(__name__)
+
+# SDK's MAX_NAME_LENGTH is the recommended limit (26 chars)
+RECOMMENDED_NAME_LENGTH = SDK_MAX_NAME_LENGTH
 
 # GQL Reserved words - now uses SDK's comprehensive list with fallback
 # The SDK's GQL_RESERVED_WORDS is more complete and authoritative

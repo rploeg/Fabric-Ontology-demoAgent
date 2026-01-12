@@ -44,19 +44,19 @@ TTL_TO_SDK_TYPE_MAP = {
     "string": PropertyDataType.STRING,
     
     # Integer types (TTL uses various names)
-    "BigInt": PropertyDataType.INT64,
-    "Long": PropertyDataType.INT64,
-    "Int": PropertyDataType.INT64,
-    "Int64": PropertyDataType.INT64,
-    "Integer": PropertyDataType.INT64,
-    "int": PropertyDataType.INT64,
-    "long": PropertyDataType.INT64,
+    "BigInt": PropertyDataType.BIGINT,
+    "Long": PropertyDataType.BIGINT,
+    "Int": PropertyDataType.BIGINT,
+    "Int64": PropertyDataType.BIGINT,
+    "Integer": PropertyDataType.BIGINT,
+    "int": PropertyDataType.BIGINT,
+    "long": PropertyDataType.BIGINT,
     
     # Floating point types
     "Double": PropertyDataType.DOUBLE,
-    "Float": PropertyDataType.DOUBLE,
+    "Float": PropertyDataType.FLOAT,
     "double": PropertyDataType.DOUBLE,
-    "float": PropertyDataType.DOUBLE,
+    "float": PropertyDataType.FLOAT,
     # Note: Decimal maps to Double because SDK rejects Decimal (returns NULL in Graph)
     "Decimal": PropertyDataType.DOUBLE,
     "decimal": PropertyDataType.DOUBLE,
@@ -71,7 +71,7 @@ TTL_TO_SDK_TYPE_MAP = {
     "datetime": PropertyDataType.DATETIME,
     "Date": PropertyDataType.DATETIME,
     "date": PropertyDataType.DATETIME,
-    "DateTimeOffset": PropertyDataType.DATETIMEOFFSET,
+    "DateTimeOffset": PropertyDataType.DATETIME,
 }
 
 
