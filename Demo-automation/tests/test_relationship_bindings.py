@@ -18,6 +18,8 @@ from demo_automation.binding import (
     SourceType,
     parse_demo_bindings,
 )
+# Import the parser's BindingType for use with BindingMarkdownParser
+from demo_automation.binding.binding_parser import BindingType as ParserBindingType
 
 
 class TestRelationshipContextualization:
@@ -191,8 +193,8 @@ class TestOntologyBindingBuilderRelationships:
 
         parts = builder.build_definition_parts()
 
-        # Should have both entity binding and contextualization parts
-        assert len(parts) == 2
+        # Should have definition.json + entity binding + contextualization parts
+        assert len(parts) == 3
 
         paths = [p["path"] for p in parts]
         assert any("EntityTypes/Product/DataBindings" in p for p in paths)
@@ -313,9 +315,9 @@ class TestRelationshipMarkdownParser:
 """
 
         file_path = tmp_path / "test-binding.md"
-        file_path.write_text(content)
+        file_path.write_text(content, encoding='utf-8')
 
-        parser = BindingMarkdownParser(BindingType.STATIC)
+        parser = BindingMarkdownParser(ParserBindingType.STATIC)
         entity_bindings, rel_bindings = parser.parse_file_with_relationships(file_path)
 
         # Note: Entity binding may not parse due to header format

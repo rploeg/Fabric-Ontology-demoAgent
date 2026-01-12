@@ -232,8 +232,8 @@ class TestTtlToSdkBuilder:
         
         # Decimal should be mapped to Double
         assert props_by_name["Price"].data_type.value == "Double"
-        # Float should be mapped to Double
-        assert props_by_name["Weight"].data_type.value == "Double"
+        # Float should stay Float (SDK has separate Float type)
+        assert props_by_name["Weight"].data_type.value == "Float"
     
     def test_marks_key_property(self, sample_entity_type):
         """Test that key property is marked correctly."""
@@ -428,11 +428,11 @@ class TestSdkConverterIntegration:
         props_by_name = {p.name: p for p in definition.entity_types[0].properties}
         
         assert props_by_name["StringProp"].data_type.value == "String"
-        assert props_by_name["BigIntProp"].data_type.value == "Int64"
-        assert props_by_name["LongProp"].data_type.value == "Int64"
-        assert props_by_name["IntProp"].data_type.value == "Int64"
+        assert props_by_name["BigIntProp"].data_type.value == "BigInt"
+        assert props_by_name["LongProp"].data_type.value == "BigInt"
+        assert props_by_name["IntProp"].data_type.value == "BigInt"
         assert props_by_name["DoubleProp"].data_type.value == "Double"
-        assert props_by_name["FloatProp"].data_type.value == "Double"
+        assert props_by_name["FloatProp"].data_type.value == "Float"
         assert props_by_name["DecimalProp"].data_type.value == "Double"
         assert props_by_name["BooleanProp"].data_type.value == "Boolean"
         assert props_by_name["DateTimeProp"].data_type.value == "DateTime"

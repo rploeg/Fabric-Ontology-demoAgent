@@ -91,7 +91,7 @@ class TestDemoConfiguration:
 
         assert config.name == "TestDemo"
         assert config.fabric.workspace_id == "test-workspace"
-        assert config.resources.lakehouse.name == "TestDemo-Lakehouse"
+        assert config.resources.lakehouse.name == "TestDemo_Lakehouse"
 
     def test_workspace_id_override(self, tmp_path):
         """Test workspace_id override."""
@@ -107,8 +107,12 @@ class TestDemoConfiguration:
 
         assert config.fabric.workspace_id == "override-workspace"
 
-    def test_validate_missing_workspace(self, tmp_path):
+    @patch("demo_automation.core.global_config.GlobalConfig")
+    def test_validate_missing_workspace(self, mock_global_config, tmp_path):
         """Test validation fails without workspace_id."""
+        # Mock GlobalConfig to return empty workspace_id
+        mock_global_config.load.return_value.workspace_id = ""
+        
         demo_path = tmp_path / "TestDemo"
         demo_path.mkdir()
         (demo_path / "ontology").mkdir()

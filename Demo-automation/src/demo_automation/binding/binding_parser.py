@@ -407,10 +407,12 @@ class BindingMarkdownParser:
             if i + 1 < len(matches):
                 end = matches[i + 1].start()
             else:
-                # Look for next major section (## header)
-                next_section = re.search(r"^##\s+", content[start + 1:], re.MULTILINE)
+                # This is the last match - look for next major section (## header only)
+                # Search from end of current match (not start+1) to skip past current header
+                search_start = match.end()
+                next_section = re.search(r"^##[^#]", content[search_start:], re.MULTILINE)
                 if next_section:
-                    end = start + 1 + next_section.start()
+                    end = search_start + next_section.start()
                 else:
                     end = len(content)
             
