@@ -2,7 +2,7 @@
 
 System design documentation for contributors and maintainers.
 
-> **Version**: 0.2.0+ uses the [Unofficial Fabric Ontology SDK](https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK) for ontology operations.
+> **Version**: 0.4.0+ uses the [Unofficial Fabric Ontology SDK](https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK) for ontology operations, validation, and resilience patterns.
 
 ---
 
@@ -75,7 +75,8 @@ Demo-automation/
 │   ├── orchestrator.py        # 11-step workflow execution
 │   ├── state_manager.py       # Setup state persistence
 │   ├── validator.py           # Demo package validation
-│   ├── sdk_adapter.py         # SDK client/builder factories (v0.2.0+)
+│   ├── sdk_adapter.py         # SDK client/builder factories (v0.4.0+)
+│   │                          # Exports NAME_PATTERN, PropertyDataType
 │   │
 │   ├── core/
 │   │   ├── config.py          # Demo-specific configuration
@@ -96,7 +97,7 @@ Demo-automation/
 │   │
 │   └── ontology/
 │       ├── ttl_converter.py       # Parse TTL files
-│       └── sdk_converter.py       # TTL to SDK builder conversion (v0.2.0+)
+│       └── sdk_converter.py       # TTL to SDK builder conversion (v0.4.0+)
 │
 ├── tests/
 │   ├── conftest.py            # Pytest fixtures
@@ -177,7 +178,7 @@ RateLimitConfig(
 )
 ```
 
-### SDK Binding Bridge (`binding/sdk_binding_bridge.py`) *(v0.2.0+)*
+### SDK Binding Bridge (`binding/sdk_binding_bridge.py`) *(v0.4.0+)*
 
 Constructs binding payloads using the Fabric Ontology SDK builders.
 
@@ -185,6 +186,12 @@ Constructs binding payloads using the Fabric Ontology SDK builders.
 - Static (Lakehouse tables)
 - Timeseries (Eventhouse tables)
 - Relationship contextualizations
+
+**SDK Integration**:
+- Uses `fabric_ontology.builders` for type-safe ontology construction
+- Uses `fabric_ontology.validation.NAME_PATTERN` for name validation
+- Uses `fabric_ontology.models.PropertyDataType` for data type validation
+- Uses `fabric_ontology.testing` fixtures for unit tests
 
 > **Note**: The legacy `OntologyBindingBuilder` in `binding_builder.py` is deprecated. Use `SDKBindingBridge` for new code.
 
@@ -316,8 +323,9 @@ Uses Azure SDK `DataLakeServiceClient` for file operations:
 
 ### Unit Tests
 - Configuration loading/merging
-- Validation logic
-- Binding payload construction
+- Validation logic (uses SDK NAME_PATTERN)
+- Binding payload construction (uses SDK builders)
+- SDK adapter integration (uses `fabric_ontology.testing` fixtures)
 
 ### Integration Tests (Future)
 - Mock Fabric API responses
@@ -330,6 +338,39 @@ cd Demo-automation
 pip install -e ".[dev]"
 pytest
 ```
+
+---
+
+## SDK Integration (v0.4.0+)
+
+The Demo-Agent uses the [Unofficial Fabric Ontology SDK](https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK) as the single source of truth for:
+
+### Validation Constants
+```python
+from demo_automation.sdk_adapter import NAME_PATTERN, PropertyDataType
+
+# NAME_PATTERN = r"^[a-zA-Z][a-zA-Z0-9_-]{0,25}$"
+# PropertyDataType: BIGINT, STRING, DOUBLE, FLOAT, BOOLEAN, DATETIME, OBJECT
+```
+
+### Ontology Builders
+```python
+from demo_automation.sdk_adapter import (
+    create_ontology_builder,    # Factory for OntologyBuilder
+    create_fabric_client,       # Factory for FabricOntologyClient
+)
+```
+
+### Testing Fixtures
+The SDK provides shared pytest fixtures in `fabric_ontology.testing`:
+- `sample_ontology` - Pre-built ontology with entity/relationship types
+- `mock_fabric_client` - Mock client for unit tests
+- `create_test_entity()` - Helper to create test entities
+
+### Rate Limiting & Resilience
+The SDK provides resilience patterns in `fabric_ontology.resilience`:
+- `RateLimiter` - Token bucket rate limiting
+- `CircuitBreaker` - Prevents cascading failures
 
 ---
 
