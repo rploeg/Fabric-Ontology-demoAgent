@@ -60,30 +60,66 @@ class RateLimitConfig:
     burst: int = 10
 
 
+# Import SDK's RateLimiter for thread-safe rate limiting with Retry-After support
+try:
+    from fabric_ontology.resilience import RateLimiter as SDKRateLimiter
+    _SDK_RATE_LIMITER_AVAILABLE = True
+except ImportError:
+    _SDK_RATE_LIMITER_AVAILABLE = False
+
+
 class TokenBucketRateLimiter:
-    """Simple token bucket rate limiter."""
+    """
+    Token bucket rate limiter.
+    
+    Uses SDK's RateLimiter if available (thread-safe, supports Retry-After),
+    otherwise falls back to simple implementation.
+    """
 
     def __init__(self, rate: float, per: float = 60.0, burst: int = 10):
         self.rate = rate
         self.per = per
         self.burst = burst
-        self.tokens = burst
-        self.last_refill = time.monotonic()
+        
+        if _SDK_RATE_LIMITER_AVAILABLE:
+            # Use SDK's thread-safe rate limiter
+            # SDK uses tokens/second, so convert from rate/per
+            refill_rate = rate / per
+            self._sdk_limiter = SDKRateLimiter(max_tokens=burst, refill_rate=refill_rate)
+            self._use_sdk = True
+        else:
+            # Fallback to simple implementation
+            self.tokens = burst
+            self.last_refill = time.monotonic()
+            self._use_sdk = False
 
     def acquire(self, tokens: int = 1) -> None:
         """Acquire tokens, blocking if necessary."""
-        now = time.monotonic()
-        elapsed = now - self.last_refill
-        self.tokens = min(self.burst, self.tokens + elapsed * (self.rate / self.per))
-        self.last_refill = now
-
-        if self.tokens < tokens:
-            sleep_time = (tokens - self.tokens) * (self.per / self.rate)
-            logger.debug(f"Rate limiting: sleeping {sleep_time:.2f}s")
-            time.sleep(sleep_time)
-            self.tokens = 0
+        if self._use_sdk:
+            self._sdk_limiter.acquire(tokens=tokens)
         else:
-            self.tokens -= tokens
+            # Simple fallback implementation
+            now = time.monotonic()
+            elapsed = now - self.last_refill
+            self.tokens = min(self.burst, self.tokens + elapsed * (self.rate / self.per))
+            self.last_refill = now
+
+            if self.tokens < tokens:
+                sleep_time = (tokens - self.tokens) * (self.per / self.rate)
+                logger.debug(f"Rate limiting: sleeping {sleep_time:.2f}s")
+                time.sleep(sleep_time)
+                self.tokens = 0
+            else:
+                self.tokens -= tokens
+    
+    def handle_retry_after(self, seconds: float) -> None:
+        """Honor a Retry-After header from API response."""
+        if self._use_sdk:
+            self._sdk_limiter.handle_retry_after(seconds)
+        else:
+            # Simple fallback: just sleep
+            logger.info(f"Rate limiter: honoring Retry-After of {seconds:.1f}s")
+            time.sleep(seconds)
 
 
 class FabricClient:

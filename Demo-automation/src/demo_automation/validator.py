@@ -25,6 +25,7 @@ from fabric_ontology.validation import (
     validate_data_type as sdk_validate_data_type,
     GQL_RESERVED_WORDS as SDK_GQL_RESERVED_WORDS,
     MAX_NAME_LENGTH as SDK_MAX_NAME_LENGTH,
+    NAME_PATTERN as SDK_NAME_PATTERN,
     OntologyValidator,
 )
 from fabric_ontology.exceptions import ValidationError as SDKValidationError
@@ -38,9 +39,9 @@ RECOMMENDED_NAME_LENGTH = SDK_MAX_NAME_LENGTH
 # The SDK's GQL_RESERVED_WORDS is more complete and authoritative
 GQL_RESERVED_WORDS = SDK_GQL_RESERVED_WORDS
 
-# Valid property/entity name pattern (1-26 chars, alphanumeric with hyphens/underscores)
-# Note: SDK pattern is more permissive (128 chars), but we keep 26 for demo compatibility
-NAME_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$|^[a-zA-Z0-9]$')
+# Valid property/entity name pattern - now uses SDK's authoritative pattern
+# SDK pattern: ^[a-zA-Z][a-zA-Z0-9_-]{0,25}$ (must start with letter, 1-26 chars)
+NAME_PATTERN = SDK_NAME_PATTERN
 
 # =============================================================================
 # Legacy Validation Constants (kept for backwards compatibility)

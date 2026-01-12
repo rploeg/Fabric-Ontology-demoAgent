@@ -26,6 +26,11 @@ from fabric_ontology.exceptions import (
     RateLimitError as SDKRateLimitError,
     ConflictError,
 )
+from fabric_ontology.resilience import (
+    RateLimiter as SDKRateLimiter,
+    CircuitBreaker as SDKCircuitBreaker,
+    CircuitBreakerOpenError as SDKCircuitBreakerOpenError,
+)
 
 if TYPE_CHECKING:
     from .core.config import DemoConfiguration
@@ -325,6 +330,11 @@ __all__ = [
     "OntologyValidator",
     "PropertyDataType",
     "SDKValidationError",
+    
+    # SDK Resilience (for rate limiting and circuit breaker)
+    "SDKRateLimiter",
+    "SDKCircuitBreaker",
+    "SDKCircuitBreakerOpenError",
     
     # SDK Exceptions (for error handling)
     "FabricOntologyError",
