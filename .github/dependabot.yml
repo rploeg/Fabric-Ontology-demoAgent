@@ -1,0 +1,26 @@
+version: 2
+updates:
+  # Python dependencies in Demo-automation
+  - package-ecosystem: "pip"
+    directory: "/Demo-automation"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"
+      - "python"
+    # Dependabot will detect new tags for git URL dependencies
+    # and create PRs to update to latest versions
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "ci"

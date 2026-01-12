@@ -33,7 +33,8 @@ dependencies = [
     "rich>=13.7.0",
     "rdflib>=7.0.0",
     # Fabric Ontology SDK for ontology operations (pinned to release tag)
-    "fabric-ontology-sdk @ git+https://github.com/falloutxAY/Fabric-Ontology-SDK.git@v0.2.0",
+    # Use SSH for CI/CD: git+ssh://git@github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK.git@v0.4.0
+    "fabric-ontology-sdk @ git+https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK.git@v0.4.0",
 ]
 
 [project.optional-dependencies]
