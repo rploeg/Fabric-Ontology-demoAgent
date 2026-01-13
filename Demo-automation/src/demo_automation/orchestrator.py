@@ -1230,6 +1230,42 @@ class DemoOrchestrator:
             errors.append(f"Pre-flight validation error: {e}")
             return False, errors, warnings
 
+    def _build_eventhouse_property_map(self) -> Dict[str, set]:
+        """
+        Build a mapping of entity_name -> set of property names from eventhouse bindings.
+        
+        This is used to cross-reference timeseries properties when parsing TTL files,
+        ensuring properties bound to eventhouse tables are marked as timeseries.
+        
+        Returns:
+            Dict mapping entity names to sets of property names from eventhouse bindings
+        """
+        result: Dict[str, set] = {}
+        
+        try:
+            bindings_config = parse_bindings_yaml(self.config.demo_path)
+            if not bindings_config:
+                logger.debug("No bindings.yaml found, skipping eventhouse property map")
+                return result
+            
+            for entity_binding in bindings_config.eventhouse_entities:
+                entity_name = entity_binding.entity_name
+                property_names = {
+                    pm.target_property 
+                    for pm in entity_binding.property_mappings
+                    if not pm.is_key  # Key properties are usually static
+                }
+                if property_names:
+                    result[entity_name] = property_names
+                    logger.debug(
+                        f"Eventhouse binding for {entity_name}: "
+                        f"{len(property_names)} timeseries properties"
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to parse bindings for eventhouse property map: {e}")
+        
+        return result
+
     def _step_create_ontology(self) -> StepResult:
         """Create Ontology from TTL file and upload definition."""
         start = time.time()
@@ -1273,10 +1309,18 @@ class DemoOrchestrator:
                     duration_seconds=time.time() - start,
                 )
 
+        # Build eventhouse property map from bindings.yaml for timeseries detection
+        eventhouse_property_map = self._build_eventhouse_property_map()
+        if eventhouse_property_map:
+            logger.info(f"Found eventhouse bindings for {len(eventhouse_property_map)} entities")
+
         # Parse TTL file to get Fabric definition
         self._report_progress("create_ontology", "in_progress", 20)
         try:
-            definition, extracted_name = parse_ttl_file(str(ttl_file))
+            definition, extracted_name = parse_ttl_file(
+                str(ttl_file),
+                eventhouse_property_map=eventhouse_property_map,
+            )
             entity_count = len([p for p in definition.get("parts", []) if "EntityTypes" in p.get("path", "")])
             rel_count = len([p for p in definition.get("parts", []) if "RelationshipTypes" in p.get("path", "")])
             logger.info(f"Parsed TTL: {entity_count} entity types, {rel_count} relationship types")
@@ -1468,9 +1512,15 @@ class DemoOrchestrator:
                 entity_name = payload.get("name", "")
                 if entity_id and entity_name:
                     entity_name_to_id[entity_name] = entity_id
-                    # Also store properties mapping
+                    # Also store properties mapping (include both static and timeseries properties)
                     props = {}
                     for prop in payload.get("properties", []):
+                        prop_name = prop.get("name", "")
+                        prop_id = prop.get("id", "")
+                        if prop_name and prop_id:
+                            props[prop_name] = prop_id
+                    # Also include timeseries properties from timeseriesProperties array
+                    for prop in payload.get("timeseriesProperties", []):
                         prop_name = prop.get("name", "")
                         prop_id = prop.get("id", "")
                         if prop_name and prop_id:

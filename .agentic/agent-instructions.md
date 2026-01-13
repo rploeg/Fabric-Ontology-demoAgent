@@ -281,6 +281,29 @@ The TTL converter parses `rdfs:comment` to extract key property names. Use this 
 
 The parser uses regex `Key:\s*(\w+)` to extract the key property name.
 
+### ⚠️ CRITICAL: Timeseries Property Annotation
+
+For properties bound to **Eventhouse (timeseries data)**, add `(timeseries)` in the `rdfs:comment`. This ensures the property is classified as timeseries in the Fabric API.
+
+```turtle
+# Static property (Lakehouse) - no annotation needed
+:TargetTempC a owl:DatatypeProperty ;
+    rdfs:domain :RefrigerationUnit ;
+    rdfs:range xsd:double ;
+    rdfs:label "TargetTempC" .
+
+# Timeseries property (Eventhouse) - add (timeseries) annotation
+:RefrigTemperatureC a owl:DatatypeProperty ;
+    rdfs:domain :RefrigerationUnit ;
+    rdfs:range xsd:double ;
+    rdfs:label "RefrigTemperatureC" ;
+    rdfs:comment "Current internal temperature (timeseries)" .
+```
+
+The parser uses regex to detect `(timeseries)` (case-insensitive) in `rdfs:comment`.
+
+> ⛔ **CRITICAL**: Without the `(timeseries)` annotation, eventhouse properties will be incorrectly classified as static properties and bound to Lakehouse instead of Eventhouse!
+
 ### Type Mapping
 
 | Ontology Type | XSD Type | Graph Type |
@@ -845,6 +868,7 @@ If validation reports **ERRORS**, you MUST fix them before proceeding:
 | `Property 'X' is not unique - also exists in Entity Y` | Rename with entity prefix (e.g., `Entity_Property`) |
 | `Invalid data type: decimal` | Change to `double` in TTL and data |
 | `Key column has NULL values` | Fix data to ensure all keys have values |
+| `Timeseries properties bound as static` | Add `(timeseries)` annotation in TTL rdfs:comment for eventhouse properties |
 
 #### Property Length Fix Strategy
 
@@ -931,6 +955,7 @@ Before finishing, verify ALL of the following for `fabric-demo setup` to work:
 - [ ] Key property name in comment matches an actual DatatypeProperty
 - [ ] No `xsd:decimal` types (use `xsd:double` instead)
 - [ ] Key properties use `xsd:string` or `xsd:integer` ONLY
+- [ ] ⛔ **Timeseries properties have `(timeseries)` in rdfs:comment** (required for eventhouse binding)
 
 ### Entity & Property Naming
 - [ ] Entity names are 1-26 characters

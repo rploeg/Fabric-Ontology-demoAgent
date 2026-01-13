@@ -1122,9 +1122,76 @@ class DemoPackageValidator:
                             f"Entity '{entity_name}' references key '{key_name}' but no matching DatatypeProperty found",
                             path=str(ttl_path.relative_to(self.demo_path)),
                         )
+            
+            # Check for timeseries annotation on eventhouse properties
+            # Properties bound to Eventhouse should have "(timeseries)" in rdfs:comment
+            self._check_timeseries_annotations(ttl_content, ttl_path)
                     
         except Exception as e:
             logger.warning(f"Failed to validate TTL: {e}")
+
+    def _check_timeseries_annotations(self, ttl_content: str, ttl_path: Path) -> None:
+        """
+        Check that timeseries properties have the (timeseries) annotation in rdfs:comment.
+        
+        Per .agentic/agent-instructions.md Phase 3:
+        Properties bound to Eventhouse must have "(timeseries)" in rdfs:comment to be
+        correctly classified. Without this, eventhouse properties may be incorrectly
+        bound as static properties.
+        """
+        # Check if there's eventhouse data to warrant timeseries properties
+        eventhouse_dir = None
+        for variant in ["eventhouse", "Eventhouse"]:
+            candidate = self.demo_path / "data" / variant
+            if not candidate.is_dir():
+                candidate = self.demo_path / "Data" / variant
+            if candidate.is_dir():
+                eventhouse_dir = candidate
+                break
+        
+        if not eventhouse_dir:
+            return  # No eventhouse data, no timeseries validation needed
+        
+        # Find properties with (timeseries) annotation
+        timeseries_pattern = re.compile(
+            r':(\w+)\s+a\s+owl:DatatypeProperty\s*;[^.]*rdfs:comment\s+"([^"]*\(timeseries\)[^"]*)"',
+            re.MULTILINE | re.DOTALL | re.IGNORECASE
+        )
+        timeseries_props = set()
+        for match in timeseries_pattern.finditer(ttl_content):
+            timeseries_props.add(match.group(1))
+        
+        if timeseries_props:
+            self.result.add_info(
+                f"Found {len(timeseries_props)} timeseries-annotated properties in TTL",
+                path=str(ttl_path.relative_to(self.demo_path)),
+            )
+        else:
+            # Check if there are properties that look like timeseries but lack annotation
+            # Common patterns: Temperature, Level, Pressure, FlowRate, Telemetry, OEE, etc.
+            telemetry_keywords = [
+                'temperature', 'temp', 'level', 'pressure', 'flowrate', 'flow',
+                'oee', 'velocity', 'consumption', 'power', 'cycle', 'speed',
+                'telemetry', 'reading', 'sensor', 'metric'
+            ]
+            
+            # Find all DatatypeProperties
+            prop_pattern = re.compile(r':(\w+)\s+a\s+owl:DatatypeProperty', re.MULTILINE)
+            potential_timeseries = []
+            for match in prop_pattern.finditer(ttl_content):
+                prop_name = match.group(1).lower()
+                for keyword in telemetry_keywords:
+                    if keyword in prop_name:
+                        potential_timeseries.append(match.group(1))
+                        break
+            
+            if potential_timeseries and len(list(eventhouse_dir.glob("*.csv"))) > 0:
+                self.result.add_warning(
+                    f"Eventhouse data exists but no timeseries annotations found in TTL. "
+                    f"Properties like {potential_timeseries[:3]} may need '(timeseries)' in rdfs:comment",
+                    path=str(ttl_path.relative_to(self.demo_path)),
+                    suggestion="Add (timeseries) to rdfs:comment for Eventhouse-bound properties",
+                )
 
     def _validate_name_constraints(self, name: str, name_type: str, context: str) -> None:
         """

@@ -603,9 +603,47 @@ def convert_to_fabric_definition(
     return {"parts": parts}
 
 
+def _apply_eventhouse_property_map(
+    entity_types: List[EntityType],
+    eventhouse_property_map: Dict[str, set],
+) -> None:
+    """
+    Cross-reference entity properties with eventhouse bindings and move
+    matching properties to timeseries_properties.
+    
+    This is a secondary check to catch timeseries properties that weren't
+    annotated with (timeseries) in the TTL rdfs:comment.
+    
+    Args:
+        entity_types: List of parsed entity types (modified in place)
+        eventhouse_property_map: Mapping of entity_name -> set of property names
+    """
+    for entity in entity_types:
+        eventhouse_props = eventhouse_property_map.get(entity.name, set())
+        if not eventhouse_props:
+            continue
+        
+        # Move properties from static to timeseries if they're in eventhouse bindings
+        props_to_move = []
+        for prop in entity.properties:
+            if prop.name in eventhouse_props and not prop.is_timeseries:
+                prop.is_timeseries = True
+                props_to_move.append(prop)
+                logger.info(
+                    f"Marked property {prop.name} on {entity.name} as timeseries "
+                    f"(from bindings.yaml eventhouse binding)"
+                )
+        
+        # Move from properties to timeseries_properties
+        for prop in props_to_move:
+            entity.properties.remove(prop)
+            entity.timeseries_properties.append(prop)
+
+
 def parse_ttl_content(
     ttl_content: str,
     id_prefix: int = TTLToFabricConverter.DEFAULT_ID_PREFIX,
+    eventhouse_property_map: Optional[Dict[str, set]] = None,
 ) -> Tuple[Dict[str, Any], str]:
     """
     Parse TTL content and return the Fabric Ontology definition.
@@ -613,6 +651,8 @@ def parse_ttl_content(
     Args:
         ttl_content: TTL content as string
         id_prefix: Base prefix for generating unique IDs
+        eventhouse_property_map: Optional mapping of entity_name -> set of property names
+            that should be marked as timeseries (from bindings.yaml eventhouse bindings)
         
     Returns:
         Tuple of (Fabric Ontology definition dict, extracted ontology name)
@@ -628,6 +668,10 @@ def parse_ttl_content(
     
     converter = TTLToFabricConverter(id_prefix=id_prefix)
     result = converter.parse_ttl(ttl_content)
+    
+    # Cross-reference with eventhouse bindings to mark timeseries properties
+    if eventhouse_property_map:
+        _apply_eventhouse_property_map(result.entity_types, eventhouse_property_map)
     
     # Try to extract ontology name from the TTL
     graph = Graph()
@@ -658,6 +702,7 @@ def parse_ttl_content(
 def parse_ttl_file(
     file_path: str,
     id_prefix: int = TTLToFabricConverter.DEFAULT_ID_PREFIX,
+    eventhouse_property_map: Optional[Dict[str, set]] = None,
 ) -> Tuple[Dict[str, Any], str]:
     """
     Parse a TTL file and return the Fabric Ontology definition.
@@ -665,6 +710,8 @@ def parse_ttl_file(
     Args:
         file_path: Path to the TTL file
         id_prefix: Base prefix for generating unique IDs
+        eventhouse_property_map: Optional mapping of entity_name -> set of property names
+            that should be marked as timeseries (from bindings.yaml eventhouse bindings)
         
     Returns:
         Tuple of (Fabric Ontology definition dict, extracted ontology name)
@@ -678,4 +725,4 @@ def parse_ttl_file(
         raise FileNotFoundError(f"TTL file not found: {file_path}")
     
     ttl_content = path.read_text(encoding="utf-8")
-    return parse_ttl_content(ttl_content, id_prefix)
+    return parse_ttl_content(ttl_content, id_prefix, eventhouse_property_map)

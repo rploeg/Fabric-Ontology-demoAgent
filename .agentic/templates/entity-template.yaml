@@ -49,16 +49,25 @@ entity:
       required: false
   
   # Timeseries properties (optional - stored in Eventhouse)
+  # ⛔ CRITICAL: In the TTL file, add "(timeseries)" in rdfs:comment for each property!
+  # Example TTL:
+  #   :Temperature a owl:DatatypeProperty ;
+  #       rdfs:label "Temperature" ;
+  #       rdfs:comment "Current temperature reading (timeseries)" ;
+  #       rdfs:domain :Sensor ;
+  #       rdfs:range xsd:double .
   timeseries_properties:
     - name: "{MetricName}"
       type: double  # Usually double or int for metrics
       unit: "{unit of measure}"
       description: "{What this metric measures}"
+      ttl_comment: "{description} (timeseries)"  # ⛔ Include "(timeseries)" in TTL!
       
     - name: "{MetricName2}"
       type: double
       unit: "{unit}"
       description: "{Description}"
+      ttl_comment: "{description} (timeseries)"
 
   # Data binding configuration
   bindings:
@@ -132,6 +141,28 @@ entity:
 #
 # ⚠️ NEVER use 'decimal' - Fabric Graph does NOT support Decimal type (returns NULL)
 # Use 'double' instead for all monetary/precision values
+
+# =============================================================================
+# TTL TIMESERIES ANNOTATION (CRITICAL)
+# =============================================================================
+# For properties bound to Eventhouse (timeseries data), add "(timeseries)" in rdfs:comment.
+# This ensures the property is classified as timeseries in the Fabric API.
+#
+# Static property (Lakehouse) - no annotation needed:
+#   :TargetTempC a owl:DatatypeProperty ;
+#       rdfs:domain :RefrigerationUnit ;
+#       rdfs:range xsd:double ;
+#       rdfs:label "TargetTempC" .
+#
+# Timeseries property (Eventhouse) - MUST have (timeseries) annotation:
+#   :RefrigTemperatureC a owl:DatatypeProperty ;
+#       rdfs:domain :RefrigerationUnit ;
+#       rdfs:range xsd:double ;
+#       rdfs:label "RefrigTemperatureC" ;
+#       rdfs:comment "Current internal temperature (timeseries)" .
+#
+# ⛔ WITHOUT the (timeseries) annotation, eventhouse properties will be
+#    incorrectly classified as static and bound to Lakehouse!
 
 # =============================================================================
 # Example: Product Entity
