@@ -9,7 +9,6 @@ import pytest
 from pathlib import Path
 
 from demo_automation.binding import (
-    OntologyBindingBuilder,
     RelationshipContextualization,
     ParsedRelationshipBinding,
     BindingMarkdownParser,
@@ -17,6 +16,13 @@ from demo_automation.binding import (
     BindingType,
     SourceType,
     parse_demo_bindings,
+)
+from demo_automation.binding.sdk_binding_bridge import (
+    SDKBindingBridge,
+    EntityBindingConfig,
+    RelationshipContextConfig,
+    TTLEntityInfo,
+    TTLRelationshipInfo,
 )
 # Import the parser's BindingType for use with BindingMarkdownParser
 from demo_automation.binding.binding_parser import BindingType as ParserBindingType
@@ -87,67 +93,168 @@ class TestRelationshipContextualization:
         assert len(id1) == 36  # UUID format
 
 
-class TestOntologyBindingBuilderRelationships:
-    """Tests for relationship methods in OntologyBindingBuilder."""
+class TestSDKBindingBridgeRelationships:
+    """Tests for relationship methods in SDKBindingBridge."""
 
     @pytest.fixture
-    def builder(self):
-        """Create a builder instance."""
-        return OntologyBindingBuilder(
+    def bridge(self):
+        """Create a bridge instance with lakehouse."""
+        return SDKBindingBridge(
             workspace_id="workspace-123",
-            ontology_id="ontology-456",
-        )
-
-    def test_add_relationship_contextualization(self, builder):
-        """Test adding a relationship contextualization."""
-        builder.add_relationship_contextualization(
-            relationship_type_id="produces",
             lakehouse_id="lakehouse-789",
-            table_name="DimProductionBatch",
-            source_key_column="FacilityId",
-            source_key_property_id="facility-key",
-            target_key_column="BatchId",
-            target_key_property_id="batch-key",
+            seed=42,
         )
 
-        ctxs = builder.get_contextualizations()
-        assert len(ctxs) == 1
-        assert "produces" in ctxs
-        assert ctxs["produces"].table_name == "DimProductionBatch"
-        assert ctxs["produces"].source_type == SourceType.LAKEHOUSE_TABLE
-
-    def test_add_eventhouse_relationship_contextualization(self, builder):
-        """Test adding an Eventhouse relationship contextualization."""
-        builder.add_eventhouse_relationship_contextualization(
-            relationship_type_id="hasEvent",
+    @pytest.fixture
+    def bridge_with_eventhouse(self):
+        """Create a bridge instance with both lakehouse and eventhouse."""
+        return SDKBindingBridge(
+            workspace_id="workspace-123",
+            lakehouse_id="lakehouse-789",
             eventhouse_id="eventhouse-abc",
             database_name="TelemetryDB",
-            table_name="BatchEvents",
-            source_key_column="BatchId",
-            source_key_property_id="batch-key",
-            target_key_column="EventId",
-            target_key_property_id="event-key",
+            cluster_uri="https://test.kusto.fabric.microsoft.com",
+            seed=42,
         )
 
-        ctxs = builder.get_contextualizations()
-        assert len(ctxs) == 1
-        assert ctxs["hasEvent"].source_type == SourceType.KUSTO_TABLE
-        assert ctxs["hasEvent"].database_name == "TelemetryDB"
+    @pytest.fixture
+    def source_entity(self):
+        """Sample source entity (Facility)."""
+        return TTLEntityInfo(
+            name="Facility",
+            properties=[
+                {"name": "FacilityId", "value_type": "String", "is_key": True},
+                {"name": "FacilityName", "value_type": "String"},
+            ],
+            key_property_name="FacilityId",
+        )
 
-    def test_register_entity_key_property(self, builder):
-        """Test registering entity key properties."""
-        builder.register_entity_key_property("Facility", "facility-key-123")
-        builder.register_entity_key_property("ProductionBatch", "batch-key-456")
+    @pytest.fixture
+    def target_entity(self):
+        """Sample target entity (ProductionBatch)."""
+        return TTLEntityInfo(
+            name="ProductionBatch",
+            properties=[
+                {"name": "BatchId", "value_type": "String", "is_key": True},
+                {"name": "BatchName", "value_type": "String"},
+            ],
+            key_property_name="BatchId",
+        )
 
-        keys = builder.get_entity_key_properties()
-        assert keys["Facility"] == "facility-key-123"
-        assert keys["ProductionBatch"] == "batch-key-456"
+    @pytest.fixture
+    def source_binding(self):
+        """Binding config for source entity."""
+        return EntityBindingConfig(
+            entity_name="Facility",
+            binding_type="static",
+            table_name="DimFacility",
+            key_column="FacilityId",
+            column_mappings={"FacilityId": "FacilityId", "FacilityName": "FacilityName"},
+        )
 
-    def test_add_contextualization_from_parsed(self, builder):
+    @pytest.fixture
+    def target_binding(self):
+        """Binding config for target entity."""
+        return EntityBindingConfig(
+            entity_name="ProductionBatch",
+            binding_type="static",
+            table_name="DimProductionBatch",
+            key_column="BatchId",
+            column_mappings={"BatchId": "BatchId", "BatchName": "BatchName"},
+        )
+
+    def test_add_relationship_with_lakehouse_contextualization(
+        self, bridge, source_entity, target_entity, source_binding, target_binding
+    ):
+        """Test adding a relationship with lakehouse contextualization."""
+        # Add entities first
+        bridge.add_entity_with_binding(source_entity, source_binding)
+        bridge.add_entity_with_binding(target_entity, target_binding)
+
+        # Create relationship with contextualization
+        ttl_rel = TTLRelationshipInfo(
+            name="produces",
+            source_entity_name="Facility",
+            target_entity_name="ProductionBatch",
+        )
+        context = RelationshipContextConfig(
+            relationship_name="produces",
+            source_entity="Facility",
+            target_entity="ProductionBatch",
+            source_type="lakehouse",
+            table_name="DimProductionBatch",
+            source_key_column="FacilityId",
+            target_key_column="BatchId",
+        )
+
+        rel_builder = bridge.add_relationship_with_context(ttl_rel, context)
+
+        assert rel_builder._name == "produces"
+        assert len(rel_builder._contextualizations) == 1
+
+    def test_add_relationship_with_eventhouse_contextualization(
+        self, bridge_with_eventhouse, source_entity, target_entity, source_binding, target_binding
+    ):
+        """Test adding an Eventhouse relationship contextualization."""
+        # Add entities first
+        bridge_with_eventhouse.add_entity_with_binding(source_entity, source_binding)
+        
+        # Add event entity for timeseries
+        event_entity = TTLEntityInfo(
+            name="BatchEvent",
+            properties=[
+                {"name": "EventId", "value_type": "String", "is_key": True},
+                {"name": "EventType", "value_type": "String"},
+            ],
+            key_property_name="EventId",
+        )
+        event_binding = EntityBindingConfig(
+            entity_name="BatchEvent",
+            binding_type="static",
+            table_name="DimBatchEvent",
+            key_column="EventId",
+            column_mappings={"EventId": "EventId", "EventType": "EventType"},
+        )
+        bridge_with_eventhouse.add_entity_with_binding(event_entity, event_binding)
+
+        # Create relationship with eventhouse contextualization
+        ttl_rel = TTLRelationshipInfo(
+            name="hasEvent",
+            source_entity_name="Facility",
+            target_entity_name="BatchEvent",
+        )
+        context = RelationshipContextConfig(
+            relationship_name="hasEvent",
+            source_entity="Facility",
+            target_entity="BatchEvent",
+            source_type="eventhouse",
+            table_name="BatchEvents",
+            source_key_column="FacilityId",
+            target_key_column="EventId",
+            database_name="TelemetryDB",
+        )
+
+        rel_builder = bridge_with_eventhouse.add_relationship_with_context(ttl_rel, context)
+
+        assert rel_builder._name == "hasEvent"
+        assert len(rel_builder._contextualizations) == 1
+
+    def test_entity_key_property_tracking(self, bridge, source_entity, source_binding):
+        """Test that entity key properties are tracked through the builder."""
+        builder = bridge.add_entity_with_binding(source_entity, source_binding)
+
+        # Key property should be tracked in the builder
+        key_props = [p for p in builder._properties if p.id in builder._key_property_ids]
+        assert len(key_props) == 1
+        assert key_props[0].name == "FacilityId"
+
+    def test_add_contextualization_from_parsed(
+        self, bridge, source_entity, target_entity, source_binding, target_binding
+    ):
         """Test adding contextualization from parsed binding."""
-        # Register entity keys first
-        builder.register_entity_key_property("Facility", "facility-key-123")
-        builder.register_entity_key_property("ProductionBatch", "batch-key-456")
+        # Add entities first
+        bridge.add_entity_with_binding(source_entity, source_binding)
+        bridge.add_entity_with_binding(target_entity, target_binding)
 
         parsed = ParsedRelationshipBinding(
             relationship_name="produces",
@@ -159,66 +266,75 @@ class TestOntologyBindingBuilderRelationships:
             source_type="lakehouse",
         )
 
-        builder.add_contextualization_from_parsed(
-            parsed=parsed,
-            lakehouse_id="lakehouse-789",
+        # Convert parsed to config
+        context = RelationshipContextConfig.from_parsed(parsed)
+        ttl_rel = TTLRelationshipInfo(
+            name=parsed.relationship_name,
+            source_entity_name=parsed.source_entity,
+            target_entity_name=parsed.target_entity,
         )
 
-        ctxs = builder.get_contextualizations()
-        assert len(ctxs) == 1
-        assert ctxs["produces"].source_key_property_id == "facility-key-123"
-        assert ctxs["produces"].target_key_property_id == "batch-key-456"
+        rel_builder = bridge.add_relationship_with_context(ttl_rel, context)
 
-    def test_build_definition_parts_with_contextualizations(self, builder):
-        """Test building definition parts includes contextualizations."""
-        # Add an entity binding
-        builder.add_lakehouse_binding(
-            entity_type_id="Product",
-            lakehouse_id="lakehouse-789",
-            table_name="DimProduct",
-            key_column="ProductId",
-            property_mappings={"ProductId": "prop-1"},
+        assert rel_builder._name == "produces"
+        assert len(rel_builder._contextualizations) == 1
+
+    def test_build_definition_with_contextualizations(
+        self, bridge, source_entity, target_entity, source_binding, target_binding
+    ):
+        """Test building definition includes contextualizations."""
+        # Add entities with bindings
+        bridge.add_entity_with_binding(source_entity, source_binding)
+        bridge.add_entity_with_binding(target_entity, target_binding)
+
+        # Add relationship with contextualization
+        ttl_rel = TTLRelationshipInfo(
+            name="produces",
+            source_entity_name="Facility",
+            target_entity_name="ProductionBatch",
         )
-
-        # Add a relationship contextualization
-        builder.add_relationship_contextualization(
-            relationship_type_id="produces",
-            lakehouse_id="lakehouse-789",
+        context = RelationshipContextConfig(
+            relationship_name="produces",
+            source_entity="Facility",
+            target_entity="ProductionBatch",
+            source_type="lakehouse",
             table_name="DimProductionBatch",
             source_key_column="FacilityId",
-            source_key_property_id="facility-key",
             target_key_column="BatchId",
-            target_key_property_id="batch-key",
+        )
+        rel_builder = bridge.add_relationship_with_context(ttl_rel, context)
+        rel_builder.done()  # Complete the relationship to add it to the ontology
+
+        # Build the definition
+        definition = bridge.build()
+
+        # Should have entity types and relationship types
+        assert definition.entity_types is not None
+        assert definition.relationship_types is not None
+        assert len(definition.entity_types) == 2
+        assert len(definition.relationship_types) == 1
+
+    def test_fluent_api(self, bridge):
+        """Test fluent API pattern."""
+        # Add entity and verify builder is returned
+        # Note: "Product" is a reserved word, so we use "ProductItem"
+        entity = TTLEntityInfo(
+            name="ProductItem",
+            properties=[{"name": "ProductId", "value_type": "String", "is_key": True}],
+        )
+        binding = EntityBindingConfig(
+            entity_name="ProductItem",
+            binding_type="static",
+            table_name="DimProduct",
+            key_column="ProductId",
+            column_mappings={"ProductId": "ProductId"},
         )
 
-        parts = builder.build_definition_parts()
-
-        # Should have definition.json + entity binding + contextualization parts
-        assert len(parts) == 3
-
-        paths = [p["path"] for p in parts]
-        assert any("EntityTypes/Product/DataBindings" in p for p in paths)
-        assert any("RelationshipTypes/produces/Contextualizations" in p for p in paths)
-
-    def test_chaining(self, builder):
-        """Test method chaining."""
-        result = (
-            builder
-            .register_entity_key_property("Facility", "fac-key")
-            .register_entity_key_property("ProductionBatch", "batch-key")
-            .add_relationship_contextualization(
-                relationship_type_id="produces",
-                lakehouse_id="lakehouse-789",
-                table_name="DimProductionBatch",
-                source_key_column="FacilityId",
-                source_key_property_id="fac-key",
-                target_key_column="BatchId",
-                target_key_property_id="batch-key",
-            )
-        )
-
-        assert result is builder
-        assert len(builder.get_contextualizations()) == 1
+        builder = bridge.add_entity_with_binding(entity, binding)
+        
+        # Builder should be returned for further configuration
+        assert builder is not None
+        assert builder._name == "ProductItem"
 
 
 class TestRelationshipMarkdownParser:
