@@ -1,6 +1,6 @@
 # Fabric Ontology Demo Generation - Agent Workflow
 
-> **Spec Version**: 3.4  
+> **Spec Version**: 3.5  
 > **Last Updated**: January 2026  
 > **Purpose**: Phase-by-phase workflow for generating error-free Fabric Ontology demos
 
@@ -8,11 +8,23 @@
 
 ## Validation Rules Reference
 
-⚠️ **IMPORTANT**: All validation rules are defined in [`schemas/validation-rules.yaml`](schemas/validation-rules.yaml). This file is the **single source of truth** for:
-- Entity/property name patterns and length limits
-- Reserved GQL words (linked to [official Microsoft docs](https://learn.microsoft.com/en-us/fabric/graph/gql-reference-reserved-terms))
-- Data type constraints
+⚠️ **CRITICAL - READ BEFORE GENERATING ANY NAMES**: All validation rules are defined in the **Unofficial Fabric Ontology SDK** at:
+
+**📄 Canonical Source**: [https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK/blob/main/porting/contracts/validation-rules.yaml](https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK/blob/main/porting/contracts/validation-rules.yaml)
+
+This file is the **single source of truth** for:
+- **Reserved Words** (317 GQL reserved words - MUST check before naming ANY entity, property, or relationship)
+- Entity/relationship type name patterns and length limits (1-26 characters)
+- Property name patterns and length limits (1-52 characters)
+- Ontology name patterns and length limits (1-52 characters, NO hyphens)
+- Data type constraints (NO Decimal - use Double)
 - Binding validation rules
+
+⛔ **BEFORE NAMING ANY ENTITY OR PROPERTY**, you MUST verify the name is NOT in the `reservedWords` list in the SDK validation rules file. Common violations include:
+- `Order` (reserved - use `SalesOrder`, `PurchaseOrder`, `TradeOrder`)
+- `Match`, `Return`, `Filter`, `Where`, `Node`, `Edge`, `Path`
+- `Count`, `Sum`, `Avg`, `Min`, `Max`
+- See full list in the validation-rules.yaml file
 
 **Official Microsoft Documentation**:
 - [Entity Type Creation](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-entity-types) - naming rules, key constraints
@@ -39,7 +51,7 @@ Before starting, confirm with user:
 Every demo MUST be generated in this exact structure (case-sensitive paths):
 
 ```
-{DemoName}/
+demo-{DemoName}/
 ├── README.md
 ├── .demo-metadata.yaml
 ├── demo-questions.md
@@ -66,18 +78,29 @@ Every demo MUST be generated in this exact structure (case-sensitive paths):
 - TTL and slide files live in `Ontology/`.
 - All relative paths referenced in docs and YAML must match these locations exactly.
 
----
+**Agent instructions** Do each phase one at a time so that we do not hit token limits
 
+---
 ## Phase 1: Discovery
+
+⛔ **BEFORE PROPOSING ANY ENTITY NAMES**: Read the `reservedWords` list in [`validation-rules.yaml`](https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK/blob/main/porting/contracts/validation-rules.yaml)
 
 **Output**: Brief summary confirming:
 - Company/industry context
 - 6-8 proposed entity types with descriptions
+  - ⛔ **Verify each name is NOT a reserved word** (e.g., use `TradeOrder` not `Order`)
 - Key relationships (aim for 8-12)
 - Which entities will have timeseries data
 - 2-3 multi-hop traversal scenarios
 
+**Common Reserved Word Violations to Avoid:**
+- ❌ `Order` → ✅ `SalesOrder`, `TradeOrder`, `PurchaseOrder`, `StockOrder`
+- ❌ `Match` → ✅ `TradeMatch`, `OrderMatch`
+- ❌ `Record` → ✅ `TradeRecord`, `DataRecord`
+
 **Action**: Ask "Does this scope look correct? Ready for Phase 2: Design?"
+
+**Agent instructions** Do not procceed till user say yes
 
 ---
 
@@ -100,11 +123,13 @@ Generate:
 
 ### Validation Checklist
 
-> **See [`schemas/validation-rules.yaml`](schemas/validation-rules.yaml) for complete validation rules**
+> ⛔ **MANDATORY**: Read [`Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml`](../../../Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml) BEFORE naming entities/properties
 
+- [ ] ⛔ **NO RESERVED WORDS**: Check EVERY entity and property name against `reservedWords` in validation-rules.yaml
 - [ ] All entity keys are string or int type ([keyDataTypes](https://learn.microsoft.com/en-us/fabric/iq/ontology/resources-glossary))
 - [ ] Property names are unique across ALL entities ([globalPropertyUniqueness](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-bind-data))
-- [ ] Property names ≤26 characters, alphanumeric with hyphens/underscores, start/end alphanumeric
+- [ ] Entity/relationship type names ≤26 characters, property names ≤52 characters
+- [ ] Names: alphanumeric with hyphens/underscores, start with letter
 - [ ] No reserved GQL words in property names ([reservedWords](https://learn.microsoft.com/en-us/fabric/graph/gql-reference-reserved-terms))
 - [ ] Relationships have distinct source and target entities ([sourceTargetDistinct](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-relationship-types))
 
@@ -156,29 +181,51 @@ The parser uses regex `Key:\s*(\w+)` to extract the key property name.
 
 ---
 
-## ⚠️ CRITICAL: Property and Entity Naming Constraints
+## ⛔ CRITICAL: Property and Entity Naming Constraints
 
-> **Source**: [`schemas/validation-rules.yaml`](schemas/validation-rules.yaml) and [Microsoft Fabric Ontology Documentation](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-entity-types)
+> **CANONICAL SOURCE**: [`Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml`](../../../Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml)
+> 
+> **READ THIS FILE BEFORE NAMING ANYTHING** - It contains 280+ reserved words that CANNOT be used.
 
 ### Entity Type Names
 - **Length**: 1–26 characters
-- **Pattern**: `^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$`
-- Must start and end with alphanumeric character
-- Can contain hyphens and underscores
+- **Pattern**: `^[a-zA-Z][a-zA-Z0-9_-]{0,25}$`
+- Must start with a letter
+- Can contain letters, numbers, hyphens and underscores
+- ⛔ **MUST NOT be a reserved word** (case-insensitive)
 
 ### Property Names
-- **Length**: 1–26 characters  
-- **Pattern**: `^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$`
+- **Length**: 1–52 characters  
+- **Pattern**: `^[a-zA-Z][a-zA-Z0-9_-]{0,51}$`
 - **MUST be unique across ALL entity types in the ontology** (ERROR, not warning)
-- Must start and end with alphanumeric character
+- Must start with a letter
+- Can contain letters, numbers, hyphens and underscores
 - Recommendation: Use entity prefix for uniqueness (e.g., `Product_Name`, `Batch_Status`)
+- ⛔ **MUST NOT be a reserved word** (case-insensitive)
 
-### GQL Reserved Words to AVOID
+### ⛔ RESERVED WORDS - NEVER USE AS ENTITY OR PROPERTY NAMES
 
-> **Complete list**: [GQL Reserved Words Reference](https://learn.microsoft.com/en-us/fabric/graph/gql-reference-reserved-terms)
+> **Full list (317 words)**: See `reservedWords` section in [`validation-rules.yaml`](../../../Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml)
 
-Never use these as property or entity names (excerpt - see link for full list):
+**COMMONLY VIOLATED RESERVED WORDS:**
+```
+❌ Order      → ✅ Use: SalesOrder, PurchaseOrder, TradeOrder, StockOrder
+❌ Match      → ✅ Use: TradeMatch, OrderMatch
+❌ Return     → ✅ Use: ProductReturn, OrderReturn
+❌ Node       → ✅ Use: NetworkNode, GraphNode
+❌ Edge       → ✅ Use: NetworkEdge, Connection
+❌ Path       → ✅ Use: RoutePath, NetworkPath
+❌ Record     → ✅ Use: DataRecord, TradeRecord
+❌ Key        → ✅ Use: AccessKey, PrimaryKey
+❌ Label      → ✅ Use: ItemLabel, ProductLabel
+❌ Value      → ✅ Use: AssetValue, TradeValue
+❌ Type       → ✅ Use: AssetType, OrderType
+❌ Count      → ✅ Use: ItemCount, TradeCount
+❌ Sum        → ✅ Use: TotalSum, OrderSum
+❌ Min/Max    → ✅ Use: MinValue, MaxValue, MinPrice, MaxPrice
+```
 
+**GQL KEYWORDS (all reserved):**
 ```
 MATCH, RETURN, FILTER, WHERE, LET, ORDER, LIMIT, OFFSET,
 DISTINCT, GROUP, BY, ASC, DESC, AND, OR, NOT, TRUE, FALSE,

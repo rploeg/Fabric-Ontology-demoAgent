@@ -1,9 +1,26 @@
 # Entity Definition Template
 # Use this template when defining new entity types
 
+# ⛔ BEFORE CREATING ANY ENTITY:
+# Check the reserved words list at:
+#   https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK/blob/main/porting/contracts/validation-rules.yaml
+#
+# VALIDATION RULES (317 reserved words total):
+#   - Entity/Relationship type names: 1-26 characters, start with letter
+#   - Property names: 1-52 characters, start with letter
+#   - Ontology names: 1-52 characters, start with letter, NO hyphens
+#
+# COMMONLY VIOLATED RESERVED WORDS:
+#   ❌ Order      → ✅ Use: SalesOrder, PurchaseOrder, TradeOrder, StockOrder
+#   ❌ Match      → ✅ Use: TradeMatch, OrderMatch
+#   ❌ Return     → ✅ Use: ProductReturn, OrderReturn
+#   ❌ Record     → ✅ Use: DataRecord, TradeRecord
+#   ❌ Key        → ✅ Use: AccessKey, PrimaryKey
+#   ❌ Node, Edge, Path, Value, Type, Count, Sum, Min, Max (all reserved)
+
 # Entity type definition
 entity:
-  name: "{EntityName}"
+  name: "{EntityName}"  # ⛔ MUST NOT be a reserved GQL word!
   description: "{Brief description of what this entity represents}"
   
   # Key definition - MUST be string or int
@@ -53,27 +70,45 @@ entity:
 # ENTITY TYPE NAMING RULES (from Microsoft Fabric Ontology Docs)
 # =============================================================================
 # 1. Length: 1–26 characters
-# 2. Pattern: ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$
-# 3. Must start and end with alphanumeric character
-# 4. Can contain hyphens and underscores
+# 2. Pattern: ^[a-zA-Z][a-zA-Z0-9_-]{0,25}$
+# 3. Must start with a letter
+# 4. Can contain letters, numbers, hyphens and underscores
+# 5. ⛔ MUST NOT BE A RESERVED WORD - Check validation-rules.yaml!
+
+# =============================================================================
+# ⛔ GQL RESERVED WORDS - NEVER USE AS ENTITY OR PROPERTY NAMES
+# =============================================================================
+# Canonical source: https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK/blob/main/porting/contracts/validation-rules.yaml
+# 
+# COMMON VIOLATIONS (317 reserved words total):
+#   ❌ Order      → ✅ SalesOrder, PurchaseOrder, TradeOrder, StockOrder
+#   ❌ Match      → ✅ TradeMatch, OrderMatch
+#   ❌ Return     → ✅ ProductReturn, OrderReturn
+#   ❌ Node       → ✅ NetworkNode, GraphNode
+#   ❌ Edge       → ✅ NetworkEdge, Connection
+#   ❌ Path       → ✅ RoutePath, NetworkPath
+#   ❌ Record     → ✅ DataRecord, TradeRecord
+#   ❌ Key        → ✅ AccessKey, PrimaryKey
+#   ❌ Label      → ✅ ItemLabel, ProductLabel
+#   ❌ Value      → ✅ AssetValue, TradeValue
+#   ❌ Type       → ✅ AssetType, OrderType
+#
+# ALL GQL KEYWORDS ARE RESERVED (case-insensitive):
+#   MATCH, RETURN, FILTER, WHERE, LET, ORDER, LIMIT, OFFSET, DISTINCT,
+#   GROUP, BY, ASC, DESC, AND, OR, NOT, TRUE, FALSE, NULL, IS, IN,
+#   STARTS, ENDS, CONTAINS, WITH, AS, NODE, EDGE, PATH, TRAIL, UNION, ALL,
+#   count, sum, avg, min, max, coalesce, size, labels, nodes, edges
 
 # =============================================================================
 # PROPERTY NAMING RULES (from Microsoft Fabric Ontology Docs)
 # =============================================================================
-# 1. Length: 1–26 characters
-# 2. Pattern: ^[a-zA-Z0-9][a-zA-Z0-9_-]{0,24}[a-zA-Z0-9]$
+# 1. Length: 1–52 characters
+# 2. Pattern: ^[a-zA-Z][a-zA-Z0-9_-]{0,51}$
 # 3. ⚠️ MUST be UNIQUE across ALL entity types in the ENTIRE ontology
-# 4. Must start and end with alphanumeric character
-# 5. Avoid GQL reserved words (see list below)
-# 6. Recommendation: Use entity prefix for uniqueness (e.g., Product_Name, Batch_Status)
-
-# =============================================================================
-# GQL RESERVED WORDS TO AVOID AS PROPERTY/ENTITY NAMES
-# =============================================================================
-# MATCH, RETURN, FILTER, WHERE, LET, ORDER, LIMIT, OFFSET, DISTINCT,
-# GROUP, BY, ASC, DESC, AND, OR, NOT, TRUE, FALSE, NULL, IS, IN,
-# STARTS, ENDS, CONTAINS, WITH, AS, NODE, EDGE, PATH, TRAIL, UNION, ALL,
-# count, sum, avg, min, max, coalesce, size, labels, nodes, edges
+# 4. Must start with a letter
+# 5. Can contain letters, numbers, hyphens and underscores
+# 6. ⛔ MUST NOT be a GQL reserved word (see list above)
+# 7. Recommendation: Use entity prefix for uniqueness (e.g., Product_Name, Batch_Status)
 
 # =============================================================================
 # TYPE CONSTRAINTS (from Microsoft Fabric Graph Docs)
