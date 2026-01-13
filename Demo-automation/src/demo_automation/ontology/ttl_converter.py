@@ -64,6 +64,7 @@ class EntityTypeProperty:
     name: str
     value_type: str = "String"
     description: str = ""
+    is_timeseries: bool = False
 
 
 @dataclass
@@ -76,6 +77,7 @@ class EntityType:
     key_property_name: Optional[str] = None  # Key property name from TTL comment
     base_entity_type_id: Optional[str] = None
     properties: List[EntityTypeProperty] = field(default_factory=list)
+    timeseries_properties: List[EntityTypeProperty] = field(default_factory=list)
 
 
 @dataclass
@@ -316,11 +318,23 @@ class TTLToFabricConverter:
             ranges = list(graph.objects(prop_uri, RDFS.range))
             value_type = self._get_xsd_type(ranges[0] if ranges else None)
             
+            # Check rdfs:comment for "(timeseries)" annotation
+            is_timeseries = False
+            comments = list(graph.objects(prop_uri, RDFS.comment))
+            prop_description = ""
+            if comments:
+                prop_description = str(comments[0])
+                if "(timeseries)" in prop_description.lower():
+                    is_timeseries = True
+                    logger.debug(f"Property {prop_name} marked as timeseries from rdfs:comment")
+            
             # Create property and add to domain entities
             prop = EntityTypeProperty(
                 id=prop_id,
                 name=prop_name,
                 value_type=value_type,
+                description=prop_description,
+                is_timeseries=is_timeseries,
             )
             
             if domains:
@@ -328,13 +342,19 @@ class TTLToFabricConverter:
                     if isinstance(domain_uri, URIRef):
                         domain_id = self._uri_to_id.get(str(domain_uri))
                         if domain_id:
-                            # Find entity and add property
+                            # Find entity and add property to appropriate list
                             for entity in self._entity_types:
                                 if entity.id == domain_id:
-                                    entity.properties.append(prop)
-                                    logger.debug(
-                                        f"Added property {prop_name} to {entity.name}"
-                                    )
+                                    if is_timeseries:
+                                        entity.timeseries_properties.append(prop)
+                                        logger.debug(
+                                            f"Added timeseries property {prop_name} to {entity.name}"
+                                        )
+                                    else:
+                                        entity.properties.append(prop)
+                                        logger.debug(
+                                            f"Added property {prop_name} to {entity.name}"
+                                        )
                                     break
             else:
                 # No domain specified - skip with warning
@@ -474,7 +494,7 @@ def convert_to_fabric_definition(
     
     # 3. Add entity types with full Fabric-compliant structure
     for entity in entity_types:
-        # Build properties list with required fields
+        # Build properties list with required fields (static properties)
         properties = []
         for prop in entity.properties:
             prop_data = {
@@ -487,6 +507,19 @@ def convert_to_fabric_definition(
                 prop_data["description"] = prop.description
             properties.append(prop_data)
         
+        # Build timeseries properties list
+        timeseries_properties = []
+        for prop in entity.timeseries_properties:
+            prop_data = {
+                "id": prop.id,
+                "name": prop.name,
+                "displayName": prop.name.replace("_", " "),
+                "valueType": prop.value_type,
+            }
+            if prop.description:
+                prop_data["description"] = prop.description
+            timeseries_properties.append(prop_data)
+        
         # Build entity payload with all required Fabric fields
         entity_payload = {
             "id": entity.id,
@@ -497,6 +530,11 @@ def convert_to_fabric_definition(
             "visibility": "Visible",
             "properties": properties,
         }
+        
+        # Add timeseries properties if present
+        if timeseries_properties:
+            entity_payload["timeseriesProperties"] = timeseries_properties
+            logger.debug(f"Entity {entity.name}: {len(properties)} static, {len(timeseries_properties)} timeseries properties")
         
         # Add optional fields if present
         # Resolve key_property_name to key_property_id if needed

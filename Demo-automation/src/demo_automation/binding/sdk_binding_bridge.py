@@ -195,33 +195,47 @@ class SDKBindingBridge:
         name: str,
         properties: List[Dict[str, Any]],
         key_property_name: Optional[str] = None,
+        eventhouse_properties: Optional[set] = None,
     ) -> EntityTypeBuilder:
         """
         Add an entity type to the ontology.
         
         Args:
             name: Entity type name
-            properties: List of property definitions [{name, value_type, is_key?}]
+            properties: List of property definitions [{name, value_type, is_key?, is_timeseries?}]
             key_property_name: Name of the key property (alternative to is_key in properties)
+            eventhouse_properties: Set of property names from eventhouse bindings (timeseries)
             
         Returns:
             EntityTypeBuilder for further configuration
         """
         entity_builder = self._builder.add_entity_type(name)
+        eventhouse_props = eventhouse_properties or set()
         
         for prop in properties:
             prop_name = prop.get("name")
             value_type = prop.get("value_type", "String")
             is_key = prop.get("is_key", False)
+            is_timeseries = prop.get("is_timeseries", False)
             
             # Check if this is the key property by name
             if key_property_name and prop_name.lower() == key_property_name.lower():
                 is_key = True
             
+            # Cross-reference with eventhouse binding config
+            # Properties in eventhouse bindings are timeseries
+            if prop_name in eventhouse_props:
+                is_timeseries = True
+            
             # Map TTL type to SDK type
             sdk_type = map_ttl_type_to_string(value_type)
             
-            entity_builder.add_property(prop_name, sdk_type, is_key=is_key)
+            # Use appropriate SDK method based on property type
+            if is_timeseries:
+                entity_builder.add_timeseries_property(prop_name, sdk_type)
+                logger.debug(f"Added timeseries property: {prop_name} ({sdk_type}) to {name}")
+            else:
+                entity_builder.add_property(prop_name, sdk_type, is_key=is_key)
         
         self._entity_builders[name] = entity_builder
         logger.debug(f"Added entity type: {name} with {len(properties)} properties")
@@ -231,6 +245,7 @@ class SDKBindingBridge:
         self,
         ttl_entity: TTLEntityInfo,
         binding: EntityBindingConfig,
+        eventhouse_properties: Optional[set] = None,
     ) -> EntityTypeBuilder:
         """
         Add an entity type from TTL info with data binding.
@@ -241,6 +256,7 @@ class SDKBindingBridge:
         Args:
             ttl_entity: Entity type information from TTL conversion
             binding: Binding configuration from parsed binding files
+            eventhouse_properties: Set of property names from eventhouse bindings (timeseries)
             
         Returns:
             EntityTypeBuilder for further configuration
@@ -250,6 +266,7 @@ class SDKBindingBridge:
             name=ttl_entity.name,
             properties=ttl_entity.properties,
             key_property_name=ttl_entity.key_property_name,
+            eventhouse_properties=eventhouse_properties,
         )
         
         # Add appropriate binding

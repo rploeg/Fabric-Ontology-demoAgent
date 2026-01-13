@@ -94,7 +94,7 @@ graph LR
 
 ```gql
 MATCH (s:Supplier {SupplierId: 'SUP-001'})<-[:SUPPLIED_BY]-(c:Component)<-[:USES_COMPONENT]-(a:Assembly)-[:ASSEMBLED_INTO]->(v:Vehicle)
-WHERE v.Vehicle_Status IN ['InProgress', 'Planned']
+FILTER v.Vehicle_Status IN ['InProgress', 'Planned']
 RETURN DISTINCT v.VehicleId, v.Vehicle_VIN, v.Vehicle_Model, v.Vehicle_Status,
        COLLECT(DISTINCT c.Component_Name) AS AffectedComponents
 ```
@@ -146,7 +146,7 @@ graph LR
 
 ```gql
 MATCH (q:QualityEvent)-[:AFFECTS]->(a:Assembly)
-WHERE q.Event_Severity = 'Critical'
+FILTER q.Event_Severity = 'Critical'
 RETURN a.AssemblyId, a.Assembly_Type, 
        q.EventId, q.Event_Description,
        a.Temperature, a.Torque, a.Timestamp
@@ -202,8 +202,8 @@ graph LR
 
 ```gql
 MATCH (dest:Facility {FacilityId: 'FAC-001'})<-[:DELIVERED_TO]-(sh:Shipment)-[:ORIGINATED_FROM]->(origin:Facility)
-WHERE sh.Shipment_ArrivalDate >= datetime('2025-11-01') 
-  AND sh.Shipment_ArrivalDate < datetime('2025-12-01')
+FILTER sh.Shipment_ArrivalDate >= zoned_datetime('2025-11-01T00:00:00Z') 
+  AND sh.Shipment_ArrivalDate < zoned_datetime('2025-12-01T00:00:00Z')
 MATCH (sh)-[:CONTAINS]->(c:Component)
 RETURN sh.ShipmentId, sh.Shipment_TrackingNum, sh.Shipment_Status, sh.Shipment_Carrier,
        origin.Facility_Name AS OriginFacility,
@@ -268,17 +268,13 @@ graph TB
 ```gql
 MATCH (po:ProductionOrder)-[:ORDERED_FOR]->(v:Vehicle {VehicleId: 'VEH-001'})-[:PRODUCED_AT]->(f:Facility)
 MATCH (v)<-[:ASSEMBLED_INTO]-(a:Assembly)
-OPTIONAL MATCH (a)-[:USES_COMPONENT]->(c:Component)-[:SUPPLIED_BY]->(s:Supplier)
-OPTIONAL MATCH (q:QualityEvent)-[:AFFECTS]->(a)
+MATCH (a)-[:USES_COMPONENT]->(c:Component)-[:SUPPLIED_BY]->(s:Supplier)
 RETURN v.VehicleId, v.Vehicle_VIN, v.Vehicle_Model,
        po.Order_Number, po.Order_Priority,
        f.Facility_Name,
-       COLLECT(DISTINCT {
-           assembly: a.Assembly_Type,
-           components: COLLECT(DISTINCT c.Component_Name),
-           suppliers: COLLECT(DISTINCT s.Supplier_Name),
-           qualityEvents: COLLECT(DISTINCT q.Event_Type)
-       }) AS Genealogy
+       a.Assembly_Type,
+       COLLECT(DISTINCT c.Component_Name) AS Components,
+       COLLECT(DISTINCT s.Supplier_Name) AS Suppliers
 ```
 
 ### Expected Results (Simplified)
@@ -301,6 +297,25 @@ RETURN v.VehicleId, v.Vehicle_VIN, v.Vehicle_Model,
 ---
 
 ## Data Agent Instructions
+
+### GQL Syntax Requirements for Fabric Graph
+When generating GQL queries with aggregations:
+1. **Use LET for GROUP BY columns**: Property access (`node.Property`) is NOT allowed in GROUP BY. First assign properties to variables using `LET`, then use those variables in GROUP BY.
+2. **Use FILTER instead of WHERE**: For filtering after MATCH, use `FILTER` statement.
+3. **Use zoned_datetime()**: For datetime literals, use `zoned_datetime('2025-01-10T00:00:00Z')` NOT `datetime()`.
+4. **No OPTIONAL MATCH**: This is not supported in Fabric Graph.
+5. **GROUP BY is required with aggregations**: When using `count()`, `sum()`, `avg()`, etc., all non-aggregated columns must be in GROUP BY.
+
+**Example pattern:**
+```gql
+MATCH (n:Node)-[:REL]->(m:Other)
+FILTER n.property = 'value'
+LET nodeName = n.Name
+LET otherName = m.Name  
+RETURN nodeName, otherName, count(*) AS total
+GROUP BY nodeName, otherName
+ORDER BY total DESC
+```
 
 When using AI assistants to query this ontology:
 
@@ -332,6 +347,8 @@ When using AI assistants to query this ontology:
 
 ### Query Tips
 1. Use `DISTINCT` when aggregating across many-to-many relationships
-2. Filter early with WHERE clauses for better performance
-3. Use COLLECT() to aggregate related items
-4. Timeseries queries can include timestamp ordering
+2. Use `FILTER` statement for filtering (not WHERE after MATCH)
+3. Use `zoned_datetime()` for datetime comparisons
+4. Use `LET` to assign properties to variables before using in GROUP BY
+5. Use COLLECT() to aggregate related items
+6. Timeseries queries can include timestamp ordering

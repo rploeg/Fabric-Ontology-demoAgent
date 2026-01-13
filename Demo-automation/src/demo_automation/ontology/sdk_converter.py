@@ -232,6 +232,7 @@ def create_bridge_from_ttl(
     database_name: Optional[str] = None,
     cluster_uri: Optional[str] = None,
     seed: Optional[int] = None,
+    eventhouse_property_map: Optional[Dict[str, set]] = None,
 ):
     """
     Create an SDKBindingBridge pre-populated with TTL entity and relationship types.
@@ -252,6 +253,7 @@ def create_bridge_from_ttl(
         database_name: Optional KQL database name
         cluster_uri: Optional Eventhouse cluster URI
         seed: Optional seed for reproducible ID generation
+        eventhouse_property_map: Optional dict mapping entity_name -> set of eventhouse property names
         
     Returns:
         SDKBindingBridge with entity/relationship types (no bindings yet)
@@ -269,14 +271,18 @@ def create_bridge_from_ttl(
     
     # Map TTL entity IDs to names for relationship resolution
     entity_id_to_name = {e.id: e.name for e in conversion_result.entity_types}
+    eventhouse_props = eventhouse_property_map or {}
     
     # Add entities (without bindings - bindings added separately)
     for ttl_entity in conversion_result.entity_types:
         sdk_info = ttl_entity_to_sdk_info(ttl_entity)
+        # Get eventhouse properties for this entity if available
+        entity_eventhouse_props = eventhouse_props.get(sdk_info.name, set())
         bridge.add_entity_type(
             name=sdk_info.name,
             properties=sdk_info.properties,
             key_property_name=sdk_info.key_property_name,
+            eventhouse_properties=entity_eventhouse_props,
         )
     
     # Complete all entities before adding relationships

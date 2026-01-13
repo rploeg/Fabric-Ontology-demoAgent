@@ -618,3 +618,229 @@ class TestSDKBindingBridgeIntegration:
         builder = basic_bridge.get_builder()
         assert builder is not None
         assert builder == basic_bridge._builder
+
+
+# =============================================================================
+# Timeseries Property Tests
+# =============================================================================
+
+class TestTimeseriesPropertyHandling:
+    """Tests for timeseries property handling in SDK binding bridge."""
+    
+    def test_add_entity_with_eventhouse_properties(self, workspace_id, lakehouse_id, eventhouse_id, cluster_uri):
+        """Test that eventhouse properties are added as timeseries properties."""
+        # Create fresh bridge for this test
+        bridge = SDKBindingBridge(
+            workspace_id=workspace_id,
+            lakehouse_id=lakehouse_id,
+            eventhouse_id=eventhouse_id,
+            database_name="TestDB",
+            cluster_uri=cluster_uri,
+            seed=42,
+        )
+        
+        entity = TTLEntityInfo(
+            name="SecurityAsset",
+            properties=[
+                {"name": "SecurityAssetId", "value_type": "String", "is_key": True},
+                {"name": "SecurityAssetName", "value_type": "String"},
+                {"name": "LastPrice", "value_type": "Double"},
+                {"name": "BidPrice", "value_type": "Double"},
+                {"name": "TradingVolume", "value_type": "BigInt"},
+            ],
+            key_property_name="SecurityAssetId",
+        )
+        
+        # Define eventhouse properties (timeseries)
+        eventhouse_props = {"LastPrice", "BidPrice", "TradingVolume"}
+        
+        binding = EntityBindingConfig(
+            entity_name="SecurityAsset",
+            binding_type="static",
+            table_name="DimSecurityAsset",
+            key_column="SecurityAssetId",
+            column_mappings={"SecurityAssetId": "SecurityAssetId", "SecurityAssetName": "SecurityAssetName"},
+        )
+        
+        bridge.add_entity_with_binding(entity, binding, eventhouse_properties=eventhouse_props)
+        bridge.complete_all_entities()
+        
+        definition = bridge.build()
+        
+        # Find the SecurityAsset entity
+        security_entity = None
+        for e in definition.entity_types:
+            if e.name == "SecurityAsset":
+                security_entity = e
+                break
+        
+        assert security_entity is not None
+        
+        # Check that static properties are in properties
+        static_prop_names = [p.name for p in security_entity.properties]
+        assert "SecurityAssetId" in static_prop_names
+        assert "SecurityAssetName" in static_prop_names
+        
+        # Check that timeseries properties are in timeseries_properties
+        timeseries_prop_names = [p.name for p in security_entity.timeseries_properties]
+        assert "LastPrice" in timeseries_prop_names
+        assert "BidPrice" in timeseries_prop_names
+        assert "TradingVolume" in timeseries_prop_names
+        
+        # Timeseries properties should NOT be in static properties
+        assert "LastPrice" not in static_prop_names
+        assert "BidPrice" not in static_prop_names
+        assert "TradingVolume" not in static_prop_names
+    
+    def test_add_entity_type_with_eventhouse_properties(self, workspace_id, lakehouse_id, eventhouse_id, cluster_uri):
+        """Test add_entity_type with eventhouse_properties parameter."""
+        # Create fresh bridge for this test
+        bridge = SDKBindingBridge(
+            workspace_id=workspace_id,
+            lakehouse_id=lakehouse_id,
+            eventhouse_id=eventhouse_id,
+            database_name="TestDB",
+            cluster_uri=cluster_uri,
+            seed=100,
+        )
+        
+        properties = [
+            {"name": "TradeRecordId", "value_type": "String", "is_key": True},
+            {"name": "TradePrice", "value_type": "Double"},
+            {"name": "TradeLatency", "value_type": "Double"},
+            {"name": "TradeMarketImpact", "value_type": "Double"},
+        ]
+        
+        eventhouse_props = {"TradeLatency", "TradeMarketImpact"}
+        
+        bridge.add_entity_type(
+            name="TradeRecord",
+            properties=properties,
+            key_property_name="TradeRecordId",
+            eventhouse_properties=eventhouse_props,
+        )
+        # Don't call .done() - let build() handle it via complete_all_entities()
+        
+        definition = bridge.build()
+        
+        trade_entity = definition.entity_types[0]
+        assert trade_entity.name == "TradeRecord"
+        
+        # TradeRecordId and TradePrice should be static
+        static_names = [p.name for p in trade_entity.properties]
+        assert "TradeRecordId" in static_names
+        assert "TradePrice" in static_names
+        
+        # TradeLatency and TradeMarketImpact should be timeseries
+        ts_names = [p.name for p in trade_entity.timeseries_properties]
+        assert "TradeLatency" in ts_names
+        assert "TradeMarketImpact" in ts_names
+    
+    def test_is_timeseries_flag_from_property(self, workspace_id, lakehouse_id, eventhouse_id, cluster_uri):
+        """Test that is_timeseries flag in property dict is respected."""
+        # Create fresh bridge for this test
+        bridge = SDKBindingBridge(
+            workspace_id=workspace_id,
+            lakehouse_id=lakehouse_id,
+            eventhouse_id=eventhouse_id,
+            database_name="TestDB",
+            cluster_uri=cluster_uri,
+            seed=200,
+        )
+        
+        properties = [
+            {"name": "SensorDeviceId", "value_type": "String", "is_key": True},
+            {"name": "TemperatureValue", "value_type": "Double", "is_timeseries": True},
+            {"name": "HumidityValue", "value_type": "Double", "is_timeseries": True},
+            {"name": "LocationName", "value_type": "String", "is_timeseries": False},
+        ]
+        
+        bridge.add_entity_type(
+            name="SensorDevice",
+            properties=properties,
+            key_property_name="SensorDeviceId",
+        )
+        # Don't call .done() - let build() handle it via complete_all_entities()
+        
+        definition = bridge.build()
+        
+        sensor = definition.entity_types[0]
+        
+        static_names = [p.name for p in sensor.properties]
+        assert "SensorDeviceId" in static_names
+        assert "LocationName" in static_names
+        
+        ts_names = [p.name for p in sensor.timeseries_properties]
+        assert "TemperatureValue" in ts_names
+        assert "HumidityValue" in ts_names
+    
+    def test_eventhouse_properties_override_is_timeseries_false(self, workspace_id, lakehouse_id, eventhouse_id, cluster_uri):
+        """Test that eventhouse_properties set overrides is_timeseries=False."""
+        # Create fresh bridge for this test
+        bridge = SDKBindingBridge(
+            workspace_id=workspace_id,
+            lakehouse_id=lakehouse_id,
+            eventhouse_id=eventhouse_id,
+            database_name="TestDB",
+            cluster_uri=cluster_uri,
+            seed=300,
+        )
+        
+        properties = [
+            {"name": "DeviceUnitId", "value_type": "String", "is_key": True},
+            {"name": "PowerConsumption", "value_type": "Double", "is_timeseries": False},  # Explicit false
+        ]
+        
+        # But it's in eventhouse properties, so should be timeseries
+        eventhouse_props = {"PowerConsumption"}
+        
+        bridge.add_entity_type(
+            name="DeviceUnit",
+            properties=properties,
+            key_property_name="DeviceUnitId",
+            eventhouse_properties=eventhouse_props,
+        )
+        # Don't call .done() - let build() handle it via complete_all_entities()
+        
+        definition = bridge.build()
+        
+        device = definition.entity_types[0]
+        
+        # PowerConsumption should be timeseries because it's in eventhouse_properties
+        ts_names = [p.name for p in device.timeseries_properties]
+        assert "PowerConsumption" in ts_names
+    
+    def test_no_eventhouse_properties_all_static(self, workspace_id, lakehouse_id):
+        """Test that without eventhouse_properties, all are static."""
+        # Create fresh bridge for this test (no eventhouse)
+        bridge = SDKBindingBridge(
+            workspace_id=workspace_id,
+            lakehouse_id=lakehouse_id,
+            seed=400,
+        )
+        
+        properties = [
+            {"name": "ProductItemId", "value_type": "String", "is_key": True},
+            {"name": "ProductItemName", "value_type": "String"},
+            {"name": "UnitPrice", "value_type": "Double"},
+        ]
+        
+        bridge.add_entity_type(
+            name="ProductItem",
+            properties=properties,
+            key_property_name="ProductItemId",
+        )
+        # Don't call .done() - let build() handle it via complete_all_entities()
+        
+        definition = bridge.build()
+        
+        product = definition.entity_types[0]
+        
+        static_names = [p.name for p in product.properties]
+        assert len(static_names) == 3
+        assert "ProductItemId" in static_names
+        assert "ProductItemName" in static_names
+        assert "UnitPrice" in static_names
+        
+        # No timeseries properties
+        assert len(product.timeseries_properties) == 0

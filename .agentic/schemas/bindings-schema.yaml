@@ -103,13 +103,23 @@ definitions:
         description: Source table name (e.g., DimCustomer, FactTransaction)
       keyColumn:
         type: string
-        description: Column that uniquely identifies entity instances
+        description: |
+          Column that uniquely identifies entity instances.
+          ⛔ CRITICAL: This keyColumn MUST also be included as the FIRST entry
+          in the properties array. The Fabric API requires all entity key
+          properties to be explicitly mapped in propertyBindings.
       file:
         type: string
         description: Path to CSV file relative to demo folder (e.g., Data/Lakehouse/DimCustomer.csv)
       properties:
         type: array
-        description: Property-to-column mappings
+        description: |
+          Property-to-column mappings.
+          ⛔ CRITICAL: The keyColumn MUST be included as the first property mapping.
+          Example: If keyColumn is 'CustomerId', properties MUST include:
+            - property: CustomerId
+              column: CustomerId
+              type: string
         items:
           $ref: "#/definitions/propertyMapping"
 
@@ -156,18 +166,32 @@ definitions:
     properties:
       property:
         type: string
-        description: Ontology property name
+        description: |
+          Ontology property name.
+          ⛔ The entity's key property (matching keyColumn) MUST be included
+          as the first entry in the properties array.
       column:
         type: string
-        description: Source column name
+        description: Source column name (usually same as property name)
       type:
         type: string
         enum: [string, int, double, boolean, datetime]
-        description: Data type
+        description: Data type (key properties are typically 'string' or 'int')
       is_key:
         type: boolean
         default: false
-        description: Whether this is the entity key
+        description: |
+          Whether this is the entity key property.
+          When true, this property MUST match the keyColumn value.
+      propertyType:
+        type: string
+        enum: [static, timeseries]
+        default: static
+        description: |
+          Whether this property is static (lakehouse) or timeseries (eventhouse).
+          Properties in eventhouse.entities sections implicitly default to 'timeseries'.
+          Properties in lakehouse.entities sections implicitly default to 'static'.
+          Use this field to explicitly override the default behavior if needed.
 
   relationshipBinding:
     type: object

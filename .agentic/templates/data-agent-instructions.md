@@ -73,27 +73,51 @@ Use case: {When to use this pattern}
 
 ## QUERY PATTERNS
 
+### ⛔ CRITICAL: GQL Syntax Requirements for Fabric Graph
+
+When generating GQL queries with aggregations:
+1. **Use LET for GROUP BY columns**: Property access (`node.Property`) is NOT allowed in GROUP BY. First assign properties to variables using `LET`, then use those variables in GROUP BY.
+2. **Use FILTER instead of WHERE**: For filtering after MATCH, use `FILTER` statement.
+3. **Use zoned_datetime()**: For datetime literals, use `zoned_datetime('2025-01-10T00:00:00Z')` NOT `datetime()`.
+4. **GROUP BY is required with aggregations**: When using `count()`, `sum()`, `avg()`, etc., all non-aggregated columns must be in GROUP BY.
+
 ### Common Filters
 ```gql
--- Filter by status
+-- Filter by status (use FILTER, not WHERE)
+MATCH (n:Entity)
 FILTER n.Status = 'Active'
+RETURN n
 
--- Filter by date range
-FILTER n.Date >= datetime('2024-01-01')
+-- Filter by date range (use zoned_datetime)
+MATCH (n:Entity)
+FILTER n.Date >= zoned_datetime('2024-01-01T00:00:00Z')
+RETURN n
 
 -- Filter by text contains
-FILTER CONTAINS(n.Name, 'keyword')
+MATCH (n:Entity)
+FILTER n.Name CONTAINS 'keyword'
+RETURN n
 ```
 
-### Aggregation Examples
+### Aggregation Examples (MUST use LET + GROUP BY)
 ```gql
--- Count by category
-RETURN category, COUNT(*) AS total
+-- ❌ WRONG: Property access in GROUP BY
+MATCH (n:Entity)
+RETURN n.Category, count(*) AS total
+GROUP BY n.Category  -- ERROR!
+
+-- ✅ CORRECT: Use LET for GROUP BY columns
+MATCH (n:Entity)
+LET category = n.Category
+RETURN category, count(*) AS total
 GROUP BY category
 
--- Sum metrics
-RETURN entity, SUM(metric) AS total_metric
-GROUP BY entity
+-- Sum metrics with proper syntax
+MATCH (a:Entity)-[:REL]->(b:Related)
+LET entityName = a.Name
+RETURN entityName, sum(b.Amount) AS totalAmount
+GROUP BY entityName
+ORDER BY totalAmount DESC
 ```
 
 ### Multi-Hop Templates
@@ -124,7 +148,7 @@ RETURN a, z
 ```gql
 -- Combine static and timeseries analysis
 MATCH (batch:ProductionBatch)-[:hasEvent]->(event:QualityEvent)
-WHERE batch.Temperature > 100
+FILTER batch.Temperature > 100
 RETURN batch.BatchId, event.EventType, batch.Temperature
 ```
 

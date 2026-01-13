@@ -31,7 +31,13 @@ entity:
     description: "Unique identifier for {EntityName}"
   
   # Static properties (stored in Lakehouse)
+  # ⛔ CRITICAL: The key property MUST be included as the FIRST property
   static_properties:
+    - name: "{KeyPropertyName}"  # ⛔ KEY MUST BE FIRST!
+      type: string  # Must match key.type
+      description: "Unique identifier (same as entity key)"
+      required: true
+      
     - name: "{PropertyName}"
       type: string  # Allowed: string, int, double, boolean, datetime
       description: "{What this property represents}"
@@ -140,7 +146,13 @@ example:
       type: string
       description: "Unique product identifier (e.g., PRD-001)"
     
+    # ⛔ CRITICAL: Key property (ProductId) MUST be FIRST in the list
     static_properties:
+      - name: ProductId  # ⛔ KEY MUST BE FIRST!
+        type: string
+        description: "Unique product identifier"
+        required: true
+        
       - name: Product_Name
         type: string
         description: "Display name of the product"
@@ -168,3 +180,10 @@ example:
         source: lakehouse
         table: DimProduct
         key_column: ProductId
+      # ⛔ In bindings.yaml, ProductId MUST be listed in properties array:
+      #   properties:
+      #     - property: ProductId    # KEY FIRST!
+      #       column: ProductId
+      #       type: string
+      #     - property: Product_Name
+      #       ...

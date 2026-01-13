@@ -436,3 +436,122 @@ class TestSdkConverterIntegration:
         assert props_by_name["DecimalProp"].data_type.value == "Double"
         assert props_by_name["BooleanProp"].data_type.value == "Boolean"
         assert props_by_name["DateTimeProp"].data_type.value == "DateTime"
+
+
+# =============================================================================
+# Timeseries Property Tests
+# =============================================================================
+
+class TestTimeseriesProperties:
+    """Tests for timeseries property handling in create_bridge_from_ttl."""
+    
+    def test_create_bridge_with_eventhouse_property_map(self, sample_conversion_result, workspace_id, lakehouse_id):
+        """Test that eventhouse property map correctly marks timeseries properties."""
+        # Add timeseries properties to the entity
+        sample_conversion_result.entity_types[0].properties.append(
+            EntityTypeProperty(id="1000000000020", name="Temperature", value_type="Double")
+        )
+        sample_conversion_result.entity_types[0].properties.append(
+            EntityTypeProperty(id="1000000000021", name="Humidity", value_type="Double")
+        )
+        
+        # Define which properties are from eventhouse
+        eventhouse_property_map = {
+            "Facility": {"Temperature", "Humidity"},
+        }
+        
+        bridge = create_bridge_from_ttl(
+            conversion_result=sample_conversion_result,
+            workspace_id=workspace_id,
+            lakehouse_id=lakehouse_id,
+            seed=42,
+            eventhouse_property_map=eventhouse_property_map,
+        )
+        
+        definition = bridge.build()
+        
+        # Find Facility entity
+        facility = next(e for e in definition.entity_types if e.name == "Facility")
+        
+        # Temperature and Humidity should be timeseries
+        ts_names = [p.name for p in facility.timeseries_properties]
+        assert "Temperature" in ts_names
+        assert "Humidity" in ts_names
+        
+        # Original properties should be static
+        static_names = [p.name for p in facility.properties]
+        assert "FacilityId" in static_names
+        assert "FacilityName" in static_names
+        assert "Temperature" not in static_names
+        assert "Humidity" not in static_names
+    
+    def test_create_bridge_without_eventhouse_property_map(self, sample_conversion_result, workspace_id, lakehouse_id):
+        """Test that without eventhouse map, all properties are static."""
+        bridge = create_bridge_from_ttl(
+            conversion_result=sample_conversion_result,
+            workspace_id=workspace_id,
+            lakehouse_id=lakehouse_id,
+            seed=42,
+            eventhouse_property_map=None,
+        )
+        
+        definition = bridge.build()
+        
+        for entity in definition.entity_types:
+            # All properties should be static
+            assert len(entity.timeseries_properties) == 0
+    
+    def test_create_bridge_eventhouse_property_map_empty_set(self, sample_conversion_result, workspace_id, lakehouse_id):
+        """Test entity with empty set in eventhouse map."""
+        eventhouse_property_map = {
+            "Facility": set(),  # Empty set
+        }
+        
+        bridge = create_bridge_from_ttl(
+            conversion_result=sample_conversion_result,
+            workspace_id=workspace_id,
+            lakehouse_id=lakehouse_id,
+            seed=42,
+            eventhouse_property_map=eventhouse_property_map,
+        )
+        
+        definition = bridge.build()
+        
+        facility = next(e for e in definition.entity_types if e.name == "Facility")
+        assert len(facility.timeseries_properties) == 0
+    
+    def test_entity_type_with_timeseries_flag(self, workspace_id, lakehouse_id):
+        """Test entity with is_timeseries flag set on properties."""
+        entity = EntityType(
+            id="1",
+            name="Sensor",
+            key_property_name="SensorId",
+            properties=[
+                EntityTypeProperty(id="1", name="SensorId", value_type="String"),
+                EntityTypeProperty(id="2", name="Location", value_type="String"),
+            ],
+            timeseries_properties=[
+                EntityTypeProperty(id="3", name="Temperature", value_type="Double", is_timeseries=True),
+                EntityTypeProperty(id="4", name="Pressure", value_type="Double", is_timeseries=True),
+            ],
+        )
+        
+        result = ConversionResult(entity_types=[entity], relationship_types=[])
+        
+        bridge = create_bridge_from_ttl(
+            conversion_result=result,
+            workspace_id=workspace_id,
+            lakehouse_id=lakehouse_id,
+            seed=42,
+        )
+        
+        definition = bridge.build()
+        
+        sensor = definition.entity_types[0]
+        
+        # Static properties
+        static_names = [p.name for p in sensor.properties]
+        assert "SensorId" in static_names
+        assert "Location" in static_names
+        
+        # Timeseries properties should be handled via the bridge

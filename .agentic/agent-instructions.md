@@ -1,8 +1,26 @@
 # Fabric Ontology Demo Generation - Agent Workflow
 
-> **Spec Version**: 3.5  
+> **Spec Version**: 3.6  
 > **Last Updated**: January 2026  
 > **Purpose**: Phase-by-phase workflow for generating error-free Fabric Ontology demos
+
+---
+
+## ⛔ HARD CONSTRAINTS SUMMARY (From validation-rules.yaml)
+
+Before generating ANY names, memorize these constraints:
+
+| Constraint | Limit | Pattern |
+|------------|-------|---------|
+| **Entity Type Name** | 1-26 chars | `^[a-zA-Z][a-zA-Z0-9_-]{0,25}$` |
+| **Relationship Type Name** | 1-26 chars | `^[a-zA-Z][a-zA-Z0-9_-]{0,25}$` |
+| **Property Name** | 1-26 chars | `^[a-zA-Z][a-zA-Z0-9_-]{0,25}$` |
+| **Ontology Name** | 1-52 chars | `^[a-zA-Z][a-zA-Z0-9_]{0,51}$` (NO hyphens!) |
+| **Reserved Words** | 280+ words | Case-insensitive check required |
+| **Key Data Types** | String or BigInt ONLY | No DateTime, Boolean, Double as keys |
+| **Decimal Type** | ❌ NOT SUPPORTED | Use Double instead (Decimal returns NULL) |
+| **Property Uniqueness** | GLOBAL | Property names unique across ALL entities |
+| **Key in Properties** | ⛔ REQUIRED | keyColumn MUST be in properties array |
 
 ---
 
@@ -32,6 +50,91 @@ This file is the **single source of truth** for:
 - [Data Binding](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-bind-data) - property uniqueness, binding order
 - [GQL Reserved Words](https://learn.microsoft.com/en-us/fabric/graph/gql-reference-reserved-terms) - complete reserved words list
 - [Relationship Types](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-relationship-types) - source/target constraints
+
+---
+
+## ⭐ NAMING STRATEGY (CRITICAL - Read Before Phase 1)
+
+### Property Naming Convention (26-char limit)
+
+To ensure ALL property names stay within 26 characters while maintaining uniqueness:
+
+**Formula**: `{ShortPrefix}_{PropertyName}` where total ≤ 26 chars
+
+| Entity Name Length | Prefix Strategy | Example |
+|-------------------|-----------------|---------|
+| 1-8 chars | Use full name | `BatchRun_Status` (16 chars) ✅ |
+| 9-12 chars | Use abbreviation | `ProcLine_Status` (15 chars) ✅ |
+| 13+ chars | Use short code | `PkgGoods_Units` (14 chars) ✅ |
+
+### Recommended Short Prefixes
+
+| Full Entity Name | Short Prefix | Max Property Suffix |
+|-----------------|--------------|---------------------|
+| DairyPlant | `DairyPlant_` | 15 chars remaining |
+| ProcessingLine | `ProcLine_` | 17 chars remaining |
+| StorageTank | `Tank_` | 21 chars remaining |
+| BatchRun | `Batch_` | 20 chars remaining |
+| RawIngredient | `Ingredient_` | 15 chars remaining |
+| PackagedGoods | `PkgGoods_` | 17 chars remaining |
+| QualityCheck | `QC_` | 23 chars remaining |
+| SupplySource | `Source_` | 19 chars remaining |
+| ManufacturedProduct | `MfgProd_` | 18 chars remaining |
+
+### Property Suffix Guidelines
+
+Keep suffixes SHORT - common abbreviations:
+- `Name` (4) - entity name
+- `Id` (2) - identifier
+- `Type` → `Kind` (4) - avoid reserved word "type"
+- `Status` → `State` (5) - shorter alternative
+- `Description` → `Desc` (4) - abbreviate
+- `Timestamp` → `Time` (4) - abbreviate
+- `Temperature` → `Temp` (4) - abbreviate
+- `Quantity` → `Qty` (3) - abbreviate
+- `Production` → `Prod` (4) - abbreviate
+- `CertifiedOrganic` → `Organic` (7) - simplify
+- `UnitsProduced` → `Units` (5) - simplify
+
+### ⚠️ Character Count Check
+
+Before finalizing ANY property name, COUNT THE CHARACTERS:
+
+```
+PkgGoods_ProdDate     = 17 chars ✅ (under 26)
+PackagedGoods_ProductionDate = 28 chars ❌ (over 26!)
+```
+
+### Naming Validation Checklist
+
+For EVERY name you generate, verify:
+1. [ ] Total length ≤ 26 characters (count them!)
+2. [ ] Starts with a letter (a-z, A-Z)
+3. [ ] Only contains: letters, numbers, underscore (_), hyphen (-)
+4. [ ] NOT a reserved word (check validation-rules.yaml)
+5. [ ] Property names are UNIQUE across ALL entities
+6. [ ] No `Type` suffix (reserved) - use `Kind` instead
+7. [ ] No `Value`, `Count`, `Sum`, `Min`, `Max` as standalone names
+
+### 🔢 LENGTH COUNTING TOOL
+
+Use this pattern to verify names BEFORE generating any file:
+
+```
+Entity: "ProcessingLine" = 14 chars ✅
+Property: "ProcLine_FlowRate" = 17 chars ✅
+Property: "PackagedGoods_ProductionDate" = 28 chars ❌ VIOLATION!
+         └─────────────────────────────┘
+         Fix → "PkgGoods_ProdDate" = 17 chars ✅
+```
+
+**MANDATORY**: For any entity with name > 10 chars, use SHORT PREFIX:
+- StorageTank (11) → `Tank_` prefix
+- ProcessingLine (14) → `ProcLine_` prefix  
+- PackagedGoods (13) → `PkgGoods_` prefix
+- RawIngredient (13) → `Ingredient_` prefix
+- QualityCheck (12) → `QC_` prefix
+- ManufacturedProduct (19) → `MfgProd_` prefix
 
 ---
 
@@ -107,6 +210,20 @@ demo-{DemoName}/
 ---
 
 ## Phase 2: Design (2 responses)
+
+### ⛔ PRE-DESIGN: Property Name Planning Table (MANDATORY)
+
+**Before writing ontology-structure.md**, create this planning table to verify ALL names stay ≤26 chars:
+
+```markdown
+| Entity Name | Len | Prefix | Properties (with char count) |
+|-------------|-----|--------|------------------------------|
+| DairyPlant | 10 | `DairyPlant_` | DairyPlant_Id (13✅), DairyPlant_Name (16✅), DairyPlant_Location (20✅) |
+| ProcessingLine | 14 | `ProcLine_` | ProcLine_Id (11✅), ProcLine_Name (14✅), ProcLine_LineType (18✅) |
+| PackagedGoods | 13 | `PkgGoods_` | PkgGoods_Id (11✅), PkgGoods_Units (14✅), PkgGoods_ProdDate (17✅) |
+```
+
+⚠️ **If any property exceeds 26 chars, STOP and abbreviate before proceeding!**
 
 ### Response 1: ontology-structure.md (save to `{DemoName}/ontology-structure.md`)
 
@@ -252,6 +369,23 @@ size, labels, nodes, edges, upper, lower, trim, char_length, product
 
 ## Phase 4: Data Generation 
 
+### ⛔ PRE-DATA GENERATION CHECK (MANDATORY)
+
+Before creating ANY CSV file, verify your Phase 2 Property Planning Table:
+
+```markdown
+⚠️ FINAL NAME LENGTH CHECK - ALL property names MUST be ≤ 26 chars:
+
+| Property Name | Length | Status |
+|--------------|--------|--------|
+| DairyPlant_Id | 13 | ✅ |
+| ProcLine_FlowRate | 17 | ✅ |
+| PkgGoods_ProdDate | 17 | ✅ |
+| PackagedGoods_ProductionDate | 28 | ❌ VIOLATION! |
+```
+
+**If ANY property exceeds 26 chars, FIX IT before creating CSVs!**
+
 ### 1. Dimension Tables (Lakehouse → place in `Data/Lakehouse/`)
 - DimManufacturedProduct, DimFacility, DimSupplier, etc.
 - 15-30 rows each
@@ -286,6 +420,7 @@ Timestamp,AssemblyId,Temperature,Torque,CycleTime
 
 ### Data Validation Checklist
 
+- [ ] ⛔ **ALL column names ≤ 26 characters** (count every name!)
 - [ ] All key values are unique within table
 - [ ] Key values contain no NULLs
 - [ ] Key columns are string or int type ONLY
@@ -360,6 +495,37 @@ eventhouse:
 ```
 
 > ⚠️ **Parser Requirement**: The root keys MUST be `_schema_version`, `lakehouse`, and `eventhouse` (not a flat `entities:` list). The parser looks for `lakehouse.entities` and `eventhouse.entities` specifically.
+
+#### ⛔ CRITICAL: Key Property MUST Be in Properties Array
+
+The `keyColumn` MUST also be listed as the **first entry** in the `properties` array. The Fabric API requires all entity key properties to be explicitly mapped in `propertyBindings`.
+
+**❌ WRONG - Will fail at setup with "Missing mapping for key property":**
+```yaml
+- entity: DairyPlant
+  sourceTable: DimDairyPlant
+  keyColumn: DairyPlantId
+  properties:
+    - property: DairyPlant_Name    # ❌ Missing DairyPlantId!
+      column: DairyPlant_Name
+      type: string
+```
+
+**✅ CORRECT - Key property is first in properties array:**
+```yaml
+- entity: DairyPlant
+  sourceTable: DimDairyPlant
+  keyColumn: DairyPlantId
+  properties:
+    - property: DairyPlantId       # ✅ Key MUST be first property
+      column: DairyPlantId
+      type: string
+    - property: DairyPlant_Name
+      column: DairyPlant_Name
+      type: string
+```
+
+> ⚠️ **Real-world lesson**: The demo-DairyIndustry setup failed because all 8 entities were missing their key properties from the `properties` array. The error message was: `"All entity key properties must be mapped. Missing mapping for: 'DairyPlantId'"`
 
 #### ⚠️ CRITICAL: Relationship Binding Rules (from MS Fabric Ontology Tutorial)
 
@@ -486,13 +652,52 @@ Each question must include:
 ### GQL Validation Checklist
 
 - [ ] Use MATCH, not SELECT
-- [ ] Use FILTER or WHERE clause, not HAVING
+- [ ] Use FILTER statement (not WHERE after MATCH) for filtering results
 - [ ] Use bounded quantifiers {1,4} not unbounded *
 - [ ] No OPTIONAL MATCH (not supported in Fabric Graph)
-- [ ] Aggregations in RETURN with GROUP BY
+- [ ] **Aggregations REQUIRE GROUP BY** - see syntax rules below
 - [ ] Max 8 hops in variable-length patterns
 - [ ] Query results must be < 64MB (truncated otherwise)
 - [ ] Query timeout is 20 minutes max
+
+### ⛔ CRITICAL: GQL Aggregation Syntax for Fabric Graph
+
+When using aggregation functions (`count`, `sum`, `avg`, `min`, `max`), you MUST:
+
+1. **Use LET statements for GROUP BY columns** - Property access (`node.Property`) is NOT allowed in GROUP BY clause
+2. **Use FILTER instead of WHERE** - For filtering after MATCH pattern
+3. **Use zoned_datetime()** - Not `datetime()` for datetime literals
+4. **Include ALL non-aggregated columns in GROUP BY**
+
+**❌ WRONG - Will cause syntax error:**
+```gql
+MATCH (n:Entity)-[:REL]->(m:Other)
+WHERE n.Status = 'Active'
+RETURN n.Name, m.Category, count(*) AS total
+-- ERROR: n.Name cannot be used in GROUP BY
+```
+
+**✅ CORRECT - Fabric Graph compliant:**
+```gql
+MATCH (n:Entity)-[:REL]->(m:Other)
+FILTER n.Status = 'Active'
+LET entityName = n.Name
+LET category = m.Category
+RETURN entityName, category, count(*) AS total
+GROUP BY entityName, category
+ORDER BY total DESC
+```
+
+**Pattern for queries with aggregations:**
+```gql
+MATCH (pattern)
+FILTER conditions
+LET var1 = node1.Property1
+LET var2 = node2.Property2
+RETURN var1, var2, count(*) AS cnt, sum(node.Metric) AS total
+GROUP BY var1, var2
+ORDER BY total DESC
+```
 
 ### GQL Features NOT YET Supported
 
@@ -503,6 +708,9 @@ Do NOT use these in demo queries:
 - Path value constructor
 - Scalar subqueries
 - Undirected edge patterns
+- `datetime()` function - use `zoned_datetime()` instead
+- Property access in GROUP BY - use LET variables instead
+- count(DISTINCT var) with GROUP BY - may cause issues
 
 Add comprehensive Data Agent Instructions at the end. It should include at the start "Support group by in GQL"
 
@@ -629,6 +837,7 @@ If validation reports **ERRORS**, you MUST fix them before proceeding:
 
 | Error Type | Action Required |
 |------------|----------------|
+| `Property 'X' exceeds 26 characters (N chars)` | ⚠️ Shorten using prefix abbreviation: e.g., `PackagedGoods_ProductionDate` (28) → `PkgGoods_ProdDate` (17) |
 | `Entity 'X' is a reserved word` | ⚠️ CRITICAL: Rename entity to non-reserved name (e.g., Product → ManufacturedProduct), then bulk-update ALL 11+ files: TTL, bindings, CSVs, queries, metadata |
 | `targetKeyColumn 'X' does not match target entity's key 'Y'` | Create edge table with column renamed to 'Y' |
 | `Entity 'X' has N static bindings - only 1 allowed` | Remove duplicate bindings or change to TimeSeries |
@@ -636,6 +845,21 @@ If validation reports **ERRORS**, you MUST fix them before proceeding:
 | `Property 'X' is not unique - also exists in Entity Y` | Rename with entity prefix (e.g., `Entity_Property`) |
 | `Invalid data type: decimal` | Change to `double` in TTL and data |
 | `Key column has NULL values` | Fix data to ensure all keys have values |
+
+#### Property Length Fix Strategy
+
+When you encounter `Property 'X' exceeds 26 characters`:
+
+1. **Identify the entity prefix**: e.g., `PackagedGoods_` (14 chars)
+2. **Calculate remaining chars**: 26 - 14 = 12 chars for property name
+3. **Abbreviate the property name**: 
+   - `ProductionDate` (14) → `ProdDate` (8)
+   - `UnitsProduced` (13) → `Units` (5)
+   - `CertifiedOrganic` (16) → `Organic` (7)
+4. **Use short prefix if entity name is long**:
+   - `PackagedGoods` (13) → `PkgGoods_` (9)
+   - `ProcessingLine` (14) → `ProcLine_` (9)
+   - `ManufacturedProduct` (19) → `MfgProd_` (8)
 
 ### Step 4: Re-validate
 
@@ -647,7 +871,7 @@ python -m demo_automation validate ../../{DemoName}
 
 **Repeat Steps 2-4 until validation passes with 0 errors.**
 
-**⚠️ REAL-WORLD EXAMPLE**: The Rockwell demo failed validation with "Entity 'Product' is a reserved word". Fixing this required:
+**⚠️ REAL-WORLD EXAMPLE 1**: The Rockwell demo failed validation with "Entity 'Product' is a reserved word". Fixing this required:
 1. Renaming Product → ManufacturedProduct in ontology class definition
 2. Updating all derived property names (ProductId → ManufacturedProductId, ProductName → ManufacturedProductName, etc.)
 3. Updating all CSV column headers (DimProduct.csv, FactBatchProduct.csv)
@@ -656,6 +880,21 @@ python -m demo_automation validate ../../{DemoName}
 6. Updating documentation (README.md, binding guides, metadata)
 
 After complete refactoring across all 11+ files: ✅ **Validation passed (0 errors, 0 warnings)**
+
+**⚠️ REAL-WORLD EXAMPLE 2**: The Summit Dairy demo failed validation with 3 property name length violations:
+```
+❌ PackagedGoods_UnitsProduced (27 chars) - exceeds 26 char limit
+❌ PackagedGoods_ProductionDate (28 chars) - exceeds 26 char limit  
+❌ SupplySource_CertifiedOrganic (29 chars) - exceeds 26 char limit
+```
+**Fix applied**:
+- `PackagedGoods_UnitsProduced` → `PkgGoods_Units` (14 chars)
+- `PackagedGoods_ProductionDate` → `PkgGoods_ProdDate` (17 chars)
+- `SupplySource_CertifiedOrganic` → `SupplySource_Organic` (20 chars)
+
+Files updated: TTL, bindings.yaml, CSVs (DimPackagedGoods, DimSupplySource), lakehouse-binding.md, demo-questions.md
+
+**Lesson**: For entities with names >10 chars, ALWAYS use abbreviated prefixes in Phase 2 Property Planning Table.
 
 ### Step 5: Confirm Success
 

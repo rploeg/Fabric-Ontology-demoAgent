@@ -66,15 +66,54 @@ RETURN a.prop, b.prop
 MATCH (a:Entity1)-[:rel]->{1,4}(b:EntityN)
 RETURN a, b
 
--- Filtering
+-- Filtering (use FILTER, not WHERE after MATCH)
 MATCH (n:Entity)
 FILTER n.property = 'value'
 RETURN n
+```
 
--- Aggregation
+### ⛔ CRITICAL: Aggregation with GROUP BY
+
+**Fabric Graph requires LET statements for GROUP BY columns.**
+Property access (node.Property) is NOT allowed in GROUP BY clause.
+
+**❌ WRONG:**
+```gql
 MATCH (a:Entity1)-[:rel]->(b:Entity2)
-RETURN a.category, COUNT(b) AS total
-GROUP BY a.category
+RETURN a.category, count(b) AS total
+GROUP BY a.category  -- ERROR: Cannot use a.category
+```
+
+**✅ CORRECT:**
+```gql
+MATCH (a:Entity1)-[:rel]->(b:Entity2)
+LET category = a.category
+RETURN category, count(b) AS total
+GROUP BY category
+```
+
+### Aggregation Query Template
+
+```gql
+MATCH (a:Entity1)-[:rel]->(b:Entity2)
+FILTER a.status = 'Active'                    -- Use FILTER not WHERE
+LET groupCol1 = a.Property1                   -- Assign to variable
+LET groupCol2 = b.Property2                   -- for GROUP BY
+RETURN groupCol1,
+       groupCol2,
+       count(*) AS recordCount,
+       sum(b.Amount) AS totalAmount
+GROUP BY groupCol1, groupCol2                 -- Use variable names
+ORDER BY totalAmount DESC
+```
+
+### DateTime Filtering
+
+```gql
+-- Use zoned_datetime(), NOT datetime()
+MATCH (n:Entity)
+FILTER n.Timestamp > zoned_datetime('2025-01-10T00:00:00Z')
+RETURN n
 ```
 
 ### NOT Supported
@@ -83,6 +122,9 @@ GROUP BY a.category
 - Unbounded quantifiers (use {1,8} max)
 - UNION DISTINCT (only UNION ALL)
 - Multiple labels on nodes/edges
+- `datetime()` function - use `zoned_datetime()`
+- Property access in GROUP BY - use LET variables
+- count(DISTINCT var) with GROUP BY may cause issues
 
 ---
 
