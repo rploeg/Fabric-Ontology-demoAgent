@@ -5,10 +5,11 @@
 # Check the reserved words list at:
 #   https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK/blob/main/porting/contracts/validation-rules.yaml
 #
-# VALIDATION RULES (317 reserved words total):
+# VALIDATION RULES (see validation-rules.yaml for complete list):
 #   - Entity/Relationship type names: 1-26 characters, start with letter
-#   - Property names: 1-52 characters, start with letter
+#   - Property names: 1-26 characters, start with letter
 #   - Ontology names: 1-52 characters, start with letter, NO hyphens
+#   - Avoid problematicWords (singular/plural conflicts like Factory/Factories)
 #
 # COMMONLY VIOLATED RESERVED WORDS:
 #   ❌ Order      → ✅ Use: SalesOrder, PurchaseOrder, TradeOrder, StockOrder
@@ -80,7 +81,7 @@ entity:
 # =============================================================================
 # Canonical source: https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK/blob/main/porting/contracts/validation-rules.yaml
 # 
-# COMMON VIOLATIONS (317 reserved words total):
+# COMMON VIOLATIONS (see validation-rules.yaml for complete reserved words list):
 #   ❌ Order      → ✅ SalesOrder, PurchaseOrder, TradeOrder, StockOrder
 #   ❌ Match      → ✅ TradeMatch, OrderMatch
 #   ❌ Return     → ✅ ProductReturn, OrderReturn
@@ -102,8 +103,8 @@ entity:
 # =============================================================================
 # PROPERTY NAMING RULES (from Microsoft Fabric Ontology Docs)
 # =============================================================================
-# 1. Length: 1–52 characters
-# 2. Pattern: ^[a-zA-Z][a-zA-Z0-9_-]{0,51}$
+# 1. Length: 1–26 characters
+# 2. Pattern: ^[a-zA-Z][a-zA-Z0-9_-]{0,25}$
 # 3. ⚠️ MUST be UNIQUE across ALL entity types in the ENTIRE ontology
 # 4. Must start with a letter
 # 5. Can contain letters, numbers, hyphens and underscores

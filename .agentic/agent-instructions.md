@@ -13,12 +13,13 @@
 **📄 Canonical Source**: [https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK/blob/main/porting/contracts/validation-rules.yaml](https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK/blob/main/porting/contracts/validation-rules.yaml)
 
 This file is the **single source of truth** for:
-- **Reserved Words** (317 GQL reserved words - MUST check before naming ANY entity, property, or relationship)
+- **Reserved Words** (GQL reserved words - MUST check before naming ANY entity, property, or relationship)
 - Entity/relationship type name patterns and length limits (1-26 characters)
-- Property name patterns and length limits (1-52 characters)
+- Property name patterns and length limits (1-26 characters)
 - Ontology name patterns and length limits (1-52 characters, NO hyphens)
 - Data type constraints (NO Decimal - use Double)
 - Binding validation rules
+- **Problematic Words** (avoid singular/plural conflicts like Factory/Factories)
 
 ⛔ **BEFORE NAMING ANY ENTITY OR PROPERTY**, you MUST verify the name is NOT in the `reservedWords` list in the SDK validation rules file. Common violations include:
 - `Order` (reserved - use `SalesOrder`, `PurchaseOrder`, `TradeOrder`)
@@ -95,6 +96,7 @@ demo-{DemoName}/
 
 **Common Reserved Word Violations to Avoid:**
 - ❌ `Order` → ✅ `SalesOrder`, `TradeOrder`, `PurchaseOrder`, `StockOrder`
+- ❌ `Product` → ✅ `ManufacturedProduct`, `ServiceProduct` (CRITICAL: "product" is reserved word)
 - ❌ `Match` → ✅ `TradeMatch`, `OrderMatch`
 - ❌ `Record` → ✅ `TradeRecord`, `DataRecord`
 
@@ -128,7 +130,7 @@ Generate:
 - [ ] ⛔ **NO RESERVED WORDS**: Check EVERY entity and property name against `reservedWords` in validation-rules.yaml
 - [ ] All entity keys are string or int type ([keyDataTypes](https://learn.microsoft.com/en-us/fabric/iq/ontology/resources-glossary))
 - [ ] Property names are unique across ALL entities ([globalPropertyUniqueness](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-bind-data))
-- [ ] Entity/relationship type names ≤26 characters, property names ≤52 characters
+- [ ] Entity/relationship type names ≤26 characters, property names ≤26 characters
 - [ ] Names: alphanumeric with hyphens/underscores, start with letter
 - [ ] No reserved GQL words in property names ([reservedWords](https://learn.microsoft.com/en-us/fabric/graph/gql-reference-reserved-terms))
 - [ ] Relationships have distinct source and target entities ([sourceTargetDistinct](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-create-relationship-types))
@@ -195,8 +197,8 @@ The parser uses regex `Key:\s*(\w+)` to extract the key property name.
 - ⛔ **MUST NOT be a reserved word** (case-insensitive)
 
 ### Property Names
-- **Length**: 1–52 characters  
-- **Pattern**: `^[a-zA-Z][a-zA-Z0-9_-]{0,51}$`
+- **Length**: 1–26 characters  
+- **Pattern**: `^[a-zA-Z][a-zA-Z0-9_-]{0,25}$`
 - **MUST be unique across ALL entity types in the ontology** (ERROR, not warning)
 - Must start with a letter
 - Can contain letters, numbers, hyphens and underscores
@@ -205,7 +207,9 @@ The parser uses regex `Key:\s*(\w+)` to extract the key property name.
 
 ### ⛔ RESERVED WORDS - NEVER USE AS ENTITY OR PROPERTY NAMES
 
-> **Full list (317 words)**: See `reservedWords` section in [`validation-rules.yaml`](../../../Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml)
+> **Full list**: See `reservedWords` section in [`validation-rules.yaml`](../../../Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml)
+>
+> **Also avoid problematicWords**: Singular forms that conflict with plurals (e.g., Factory→ManufacturingFacility, Category→ProductCategory)
 
 **COMMONLY VIOLATED RESERVED WORDS:**
 ```
@@ -231,22 +235,34 @@ MATCH, RETURN, FILTER, WHERE, LET, ORDER, LIMIT, OFFSET,
 DISTINCT, GROUP, BY, ASC, DESC, AND, OR, NOT, TRUE, FALSE,
 NULL, IS, IN, STARTS, ENDS, CONTAINS, WITH, AS, NODE, EDGE,
 PATH, TRAIL, UNION, ALL, count, sum, avg, min, max, coalesce,
-size, labels, nodes, edges, upper, lower, trim, char_length
+size, labels, nodes, edges, upper, lower, trim, char_length, product
 ```
+
+⚠️ **REAL-WORLD LESSON**: The Rockwell demo encountered a critical validation error where the entity `Product` failed because "product" appears in the GQL reserved words list (see validation-rules.yaml lines 241, 384). The fix was to rename `Product` → `ManufacturedProduct` across ALL files:
+- Ontology class definitions
+- All property names (ProductId → ManufacturedProductId, ProductName → ManufacturedProductName, etc.)
+- CSV dimension and edge tables
+- Bindings configuration (entity definition + relationship target)
+- GQL queries and variable names (p: → mp:)
+- All documentation and metadata files
+
+**Lesson**: When renaming entities, ALL derived property names inherit the violation risk. Bulk refactor systematically across all 11+ files to ensure consistency.
 
 ---
 
 ## Phase 4: Data Generation 
 
 ### 1. Dimension Tables (Lakehouse → place in `Data/Lakehouse/`)
-- DimProduct, DimFacility, DimSupplier, etc.
+- DimManufacturedProduct, DimFacility, DimSupplier, etc.
 - 15-30 rows each
 - Keys must be unique strings/integers
+- ⚠️ **Avoid reserved words**: Check all table and column names against validation-rules.yaml
 
 ### 2. Fact Tables (Lakehouse → place in `Data/Lakehouse/`)
 - FactQualityEvent, FactOrder, etc.
 - 30-50 rows each
 - Include foreign keys to dimensions
+- ⚠️ **Column naming**: Use entity-prefix pattern (e.g., ManufacturedProductId for FK to ManufacturedProduct entity)
 
 ### 3. Edge Tables (Lakehouse → place in `Data/Lakehouse/`)
 - FactBatchComponent (ProductionBatch-Component relationship)
@@ -259,6 +275,7 @@ size, labels, nodes, edges, upper, lower, trim, char_length
 - MUST include: Timestamp, EntityKey, Metric columns
 - **CRITICAL**: Data MUST be in COLUMNAR format (each row = one timestamped observation)
 - **Format**: Each row represents one entity at one timestamp with metric values as columns
+- **Column naming**: Use same entity key column name as in static binding (e.g., ManufacturedProductId if that's the static key)
 
 #### Timeseries Columnar Format Example:
 ```csv
@@ -272,12 +289,13 @@ Timestamp,AssemblyId,Temperature,Torque,CycleTime
 - [ ] All key values are unique within table
 - [ ] Key values contain no NULLs
 - [ ] Key columns are string or int type ONLY
-- [ ] Foreign keys reference valid parent records
+- [ ] Foreign keys reference valid parent records and use EXACT entity key names
 - [ ] No decimal type columns (use double/float for precision values)
 - [ ] Timestamps in ISO 8601 format (e.g., 2024-01-15T10:30:00Z)
 - [ ] Boolean values as true/false (lowercase, not 1/0)
 - [ ] No NULL in key columns
 - [ ] All property values match declared data types
+- [ ] ⚠️ **Column names do NOT contain reserved words** (e.g., ❌ ProductId for FK, ✅ ManufacturedProductId)
 
 **Action**: Ask "All data generated. Ready for Phase 5: Bindings?" after all CSVs.
 
@@ -362,6 +380,8 @@ Based on the official Microsoft Fabric Ontology tutorial, relationship bindings 
   sourceKeyColumn: CustomerId     # FK that identifies which Customer
   targetKeyColumn: CardId         # Key that identifies which CreditCard
 ```
+
+⚠️ **CRITICAL - REAL-WORLD VALIDATION FAILURE**: If your CSV has FK columns named differently (e.g., OriginFacilityId, DestinationFacilityId), the binding will FAIL validation because targetKeyColumn must be named EXACTLY the same as the target entity's key property. Solution: Create separate edge tables with columns renamed to match entity keys exactly.
 
 #### ⚠️ CRITICAL: BOTH sourceKeyColumn AND targetKeyColumn MUST Match Entity Key Names
 
@@ -609,6 +629,7 @@ If validation reports **ERRORS**, you MUST fix them before proceeding:
 
 | Error Type | Action Required |
 |------------|----------------|
+| `Entity 'X' is a reserved word` | ⚠️ CRITICAL: Rename entity to non-reserved name (e.g., Product → ManufacturedProduct), then bulk-update ALL 11+ files: TTL, bindings, CSVs, queries, metadata |
 | `targetKeyColumn 'X' does not match target entity's key 'Y'` | Create edge table with column renamed to 'Y' |
 | `Entity 'X' has N static bindings - only 1 allowed` | Remove duplicate bindings or change to TimeSeries |
 | `Property 'X' uses reserved GQL word` | Rename property with entity prefix |
@@ -626,6 +647,16 @@ python -m demo_automation validate ../../{DemoName}
 
 **Repeat Steps 2-4 until validation passes with 0 errors.**
 
+**⚠️ REAL-WORLD EXAMPLE**: The Rockwell demo failed validation with "Entity 'Product' is a reserved word". Fixing this required:
+1. Renaming Product → ManufacturedProduct in ontology class definition
+2. Updating all derived property names (ProductId → ManufacturedProductId, ProductName → ManufacturedProductName, etc.)
+3. Updating all CSV column headers (DimProduct.csv, FactBatchProduct.csv)
+4. Updating bindings.yaml (entity + relationship target)
+5. Updating all 5 GQL queries (variable names, property references)
+6. Updating documentation (README.md, binding guides, metadata)
+
+After complete refactoring across all 11+ files: ✅ **Validation passed (0 errors, 0 warnings)**
+
 ### Step 5: Confirm Success
 
 ✅ **Demo is ready when:**
@@ -634,6 +665,8 @@ python -m demo_automation validate ../../{DemoName}
 - All critical constraints are satisfied
 
 **Action**: Report validation results to user. If errors exist, list them and offer to fix. If clean, confirm: "Demo validated successfully! Ready for `fabric-demo setup`."
+
+**⚠️ If entity name is reserved**: Offer to systematically refactor across all 11+ files using bulk find-and-replace to ensure consistency
 
 
 ---
@@ -649,6 +682,7 @@ Before finishing, verify ALL of the following for `fabric-demo setup` to work:
 - [ ] Relationships under `lakehouse.relationships[]` use `relationship`, `sourceEntity`, `targetEntity`, `sourceTable`, `sourceKeyColumn`, `targetKeyColumn`
 - [ ] **`sourceKeyColumn` name MUST exactly match the SOURCE entity's key property name**
 - [ ] **`targetKeyColumn` name MUST exactly match the TARGET entity's key property name**
+- [ ] ⚠️ **Entity names used in bindings MUST be validated against reserved words** (e.g., ❌ Product, ✅ ManufacturedProduct)
 - [ ] If a table has multiple FK columns to the same entity (e.g., OriginFacilityId, DestFacilityId), create **separate Edge tables** with the columns renamed to match entity keys
 - [ ] Eventhouse entities under `eventhouse.entities[]` include `timestampColumn`
 - [ ] All paths use **forward slashes** (`Data/Lakehouse/`, not `Data\Lakehouse\`)
@@ -664,7 +698,8 @@ Before finishing, verify ALL of the following for `fabric-demo setup` to work:
 - [ ] Property names are 1-26 characters
 - [ ] Names start and end with alphanumeric characters
 - [ ] Property names are UNIQUE across ALL entities in the ontology
-- [ ] No GQL reserved words used as names
+- [ ] ⚠️ **NO GQL reserved words** - check all entity and property names against validation-rules.yaml (including common violations like Product, Order, Match, etc.)
+- [ ] If any entity name is reserved, rename and bulk-update across ALL files (TTL, bindings, CSVs, queries, documentation)
 
 ### Folder Structure
 - [ ] Case matches exactly: `Bindings/`, `Data/`, `Ontology/` (parser is case-insensitive but consistency matters)
@@ -676,16 +711,18 @@ Before finishing, verify ALL of the following for `fabric-demo setup` to work:
 - [ ] All CSVs have headers in first row
 - [ ] Key columns contain unique values (no duplicates)
 - [ ] Key columns are string or int type only
-- [ ] Foreign keys reference valid parent records
+- [ ] Foreign keys reference valid parent records and use EXACT entity key column names
 - [ ] No NULL values in key columns
 - [ ] Timestamps in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)
 - [ ] Booleans as lowercase `true`/`false`
 - [ ] No decimal columns (use double/float)
+- [ ] ⚠️ **Column names do NOT contain reserved words** (check especially FK column names)
 
 ### .demo-metadata.yaml
 - [ ] `ontology.file` path uses forward slashes
 - [ ] `data.lakehouse.folder` path uses forward slashes
 - [ ] All entity names match TTL class names exactly
+- [ ] All entity names are NOT reserved words (check against validation-rules.yaml)
 - [ ] All entity keys specify `keyType: string` or `keyType: int`
 
 ### Graph Query Constraints

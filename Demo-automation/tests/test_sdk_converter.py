@@ -52,10 +52,10 @@ def sample_entity_type_with_decimal():
     """Entity type with decimal property (should map to Double)."""
     return EntityType(
         id="1000000000002",
-        name="Product",
-        key_property_name="ProductId",
+        name="ManufacturedProduct",
+        key_property_name="ManufacturedProductId",
         properties=[
-            EntityTypeProperty(id="1000000000020", name="ProductId", value_type="String"),
+            EntityTypeProperty(id="1000000000020", name="ManufacturedProductId", value_type="String"),
             EntityTypeProperty(id="1000000000021", name="Price", value_type="Decimal"),
             EntityTypeProperty(id="1000000000022", name="Weight", value_type="Float"),
         ],
@@ -70,7 +70,7 @@ def sample_relationship_type():
         name="produces",
         source=RelationshipEnd(entity_type_id="1000000000001", multiplicity="Many"),
         target=RelationshipEnd(entity_type_id="1000000000002", multiplicity="Many"),
-        description="Facility produces Products",
+        description="Facility produces ManufacturedProducts",
     )
 
 
@@ -159,7 +159,7 @@ class TestTtlRelationshipToSdkInfo:
         """Test basic relationship type conversion."""
         entity_id_to_name = {
             "1000000000001": "Facility",
-            "1000000000002": "Product",
+            "1000000000002": "ManufacturedProduct",
         }
         
         sdk_info = ttl_relationship_to_sdk_info(sample_relationship_type, entity_id_to_name)
@@ -167,12 +167,12 @@ class TestTtlRelationshipToSdkInfo:
         assert isinstance(sdk_info, TTLRelationshipInfo)
         assert sdk_info.name == "produces"
         assert sdk_info.source_entity_name == "Facility"
-        assert sdk_info.target_entity_name == "Product"
+        assert sdk_info.target_entity_name == "ManufacturedProduct"
     
     def test_missing_source_entity(self, sample_relationship_type):
         """Test with missing source entity in mapping."""
         entity_id_to_name = {
-            "1000000000002": "Product",
+            "1000000000002": "ManufacturedProduct",
             # Missing source entity
         }
         
@@ -207,7 +207,7 @@ class TestTtlToSdkBuilder:
         assert len(definition.entity_types) == 2
         entity_names = [e.name for e in definition.entity_types]
         assert "Facility" in entity_names
-        assert "Product" in entity_names
+        assert "ManufacturedProduct" in entity_names
     
     def test_builds_relationships(self, sample_conversion_result):
         """Test that relationships are built correctly."""
