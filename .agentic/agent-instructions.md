@@ -484,7 +484,7 @@ Do NOT use these in demo queries:
 - Scalar subqueries
 - Undirected edge patterns
 
-Add comprehensive Data Agent Instructions at the end.
+Add comprehensive Data Agent Instructions at the end. It should include at the start "Support group by in GQL"
 
 **Action**: Ask "Questions complete. Ready for Phase 7: README?"
 
