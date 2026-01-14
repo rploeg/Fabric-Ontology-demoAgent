@@ -722,6 +722,29 @@ GROUP BY var1, var2
 ORDER BY total DESC
 ```
 
+### ⚠️ Reserved Words as Query Aliases
+
+**GQL reserved words CANNOT be used as column aliases in RETURN statements.**
+
+| ❌ Will Fail | ✅ Use Instead |
+|--------------|---------------|
+| `AS Product` | `AS ProductName` |
+| `AS Type` | `AS TypeName`, `AS AssetKind` |
+| `AS Name` | `AS EntityName`, `AS DisplayName` |
+| `AS Id` | `AS EntityId`, `AS RecordId` |
+| `AS Value` | `AS MetricValue`, `AS DataValue` |
+| `AS Order` | `AS SortOrder`, `AS TradeOrder` |
+| `AS Count` | `AS TotalCount`, `AS ItemCount` |
+| `AS Sum` | `AS TotalSum`, `AS AmountSum` |
+| `AS Path` | `AS RoutePath`, `AS TracePath` |
+| `AS Node` | `AS GraphNode`, `AS NetworkNode` |
+| `AS Date` | `AS EventDate`, `AS RecordDate` |
+| `AS Time` | `AS EventTime`, `AS RecordTime` |
+| `AS Start` | `AS StartTime`, `AS StartDate` |
+| `AS End` | `AS EndTime`, `AS EndDate` |
+
+**Real failure**: `AS Product` caused "mismatched input 'Product'" error in Dairy demo.
+
 ### GQL Features NOT YET Supported
 
 Do NOT use these in demo queries:
@@ -734,6 +757,8 @@ Do NOT use these in demo queries:
 - `datetime()` function - use `zoned_datetime()` instead
 - Property access in GROUP BY - use LET variables instead
 - count(DISTINCT var) with GROUP BY - may cause issues
+- **Reserved words as aliases** - use descriptive suffixes (e.g., `ProductName` not `Product`)
+- **DECIMAL literals** - use integers (e.g., `> 4` not `> 4.0`) or cast to DOUBLE
 
 Add comprehensive Data Agent Instructions at the end. It should include at the start "Support group by in GQL"
 

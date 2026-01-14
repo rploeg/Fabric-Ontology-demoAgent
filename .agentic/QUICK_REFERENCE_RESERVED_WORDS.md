@@ -27,6 +27,27 @@ Before naming ANY entity, property, or relationship, verify against:
 
 ---
 
+## ⚠️ Query Alias Reserved Words
+
+**GQL reserved words also apply to `AS` aliases in RETURN statements!**
+
+| ❌ Will Fail | ✅ Use Instead |
+|--------------|---------------|
+| `AS Product` | `AS ProductName` |
+| `AS Type` | `AS TypeName`, `AS AssetKind` |
+| `AS Name` | `AS EntityName`, `AS DisplayName` |
+| `AS Id` | `AS EntityId`, `AS RecordId` |
+| `AS Value` | `AS MetricValue`, `AS DataValue` |
+| `AS Data` | `AS DataContent`, `AS RecordData` |
+| `AS Date` | `AS EventDate`, `AS RecordDate` |
+| `AS Time` | `AS EventTime`, `AS RecordTime` |
+| `AS Start` | `AS StartTime`, `AS StartDate` |
+| `AS End` | `AS EndTime`, `AS EndDate` |
+
+**Real failure**: `AS Product` caused syntax error in Dairy demo Q3.
+
+---
+
 ## 🔴 If Validation FAILS with "Entity 'X' is a reserved word"
 
 ### Step 1: Rename Entity

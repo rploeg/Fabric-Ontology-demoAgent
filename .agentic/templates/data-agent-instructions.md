@@ -120,6 +120,20 @@ GROUP BY entityName
 ORDER BY totalAmount DESC
 ```
 
+### ⛔ Reserved Words as Aliases
+
+GQL reserved words CANNOT be used as column aliases:
+```gql
+-- ❌ WRONG: 'Product' is reserved
+RETURN n.ProductName AS Product  -- SYNTAX ERROR!
+
+-- ✅ CORRECT: Use descriptive alias
+RETURN n.ProductName AS ProductName
+RETURN n.ProductName AS ItemName
+```
+
+**Avoid these aliases**: Product, Type, Order, Count, Sum, Node, Path, Key, Value, Name, Id, Data, Date, Time, End, Start, Label, Index, Schema, Table, Query, Filter, Match, Return, Group
+
 ### Multi-Hop Templates
 ```gql
 -- 3-hop traversal

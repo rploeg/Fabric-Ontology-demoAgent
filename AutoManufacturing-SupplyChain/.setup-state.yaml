@@ -34,6 +34,9 @@ steps:
       - FactQualityEvent.csv
       - FactShipment.csv
       skipped: []
+  load_tables:
+    status: in_progress
+    started_at: '2026-01-14T00:49:38.422747+00:00'
 resources:
   lakehouse:
     id: 6ce5da4c-8ff3-463c-82d3-8b90e99d7d4b

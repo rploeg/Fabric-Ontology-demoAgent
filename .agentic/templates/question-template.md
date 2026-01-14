@@ -116,6 +116,24 @@ FILTER n.Timestamp > zoned_datetime('2025-01-10T00:00:00Z')
 RETURN n
 ```
 
+### ⛔ Reserved Words as Aliases
+
+**GQL reserved words CANNOT be used as column aliases in RETURN.**
+
+| ❌ Avoid | ✅ Use Instead |
+|----------|---------------|
+| `AS Product` | `AS ProductName` |
+| `AS Type` | `AS TypeName`, `AS AssetKind` |
+| `AS Order` | `AS SortOrder`, `AS OrderNum` |
+| `AS Count` | `AS TotalCount`, `AS ItemCount` |
+| `AS Sum` | `AS TotalSum`, `AS AmountSum` |
+| `AS Node` | `AS NodeName`, `AS GraphNode` |
+| `AS Path` | `AS RoutePath`, `AS PathName` |
+| `AS Key` | `AS KeyValue`, `AS ItemKey` |
+| `AS Value` | `AS MetricValue`, `AS DataValue` |
+| `AS Name` | `AS EntityName`, `AS DisplayName` |
+| `AS Id` | `AS EntityId`, `AS RecordId` |
+
 ### NOT Supported
 
 - OPTIONAL MATCH
@@ -125,6 +143,7 @@ RETURN n
 - `datetime()` function - use `zoned_datetime()`
 - Property access in GROUP BY - use LET variables
 - count(DISTINCT var) with GROUP BY may cause issues
+- **DECIMAL literals** - use integers (`> 4` not `> 4.0`) or cast to DOUBLE
 
 ---
 
