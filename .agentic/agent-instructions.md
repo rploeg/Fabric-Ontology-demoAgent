@@ -24,7 +24,7 @@ Before generating ANY names, memorize these constraints:
 
 ---
 
-## Validation Rules Reference
+## Reserved Words Reference
 
 ⚠️ **CRITICAL - READ BEFORE GENERATING ANY NAMES**: All validation rules are defined in the **Unofficial Fabric Ontology SDK** at:
 
@@ -696,21 +696,14 @@ For EACH entity with timeseries properties:
 
 ## Phase 6: Demo Questions
 
-**Output**: `demo-questions.md` saved to `{DemoName}/demo-questions.md` with 5 questions covering:
+**Output**: `demo-questions.md` saved to `{DemoName}/demo-questions.md` with 5 questions covering different aspects that is important to that particular business:
 
-| # | Theme | Minimum Hops |
-|---|-------|--------------|
-| 1 | Supply Chain Traceability | 3 |
-| 2 | Impact Assessment | 4 |
-| 3 | Operational Correlation | 2 + timeseries |
-| 4 | Compliance/Regulatory | 2 |
-| 5 | End-to-End Genealogy | 4 |
 
 Each question must include:
-- Business question in quotes
+- Business question
 - Why it matters (business context)
 - Graph traversal diagram
-- GQL query (syntactically correct)
+- GQL query that is syntactically correct and works on the demo data and ontology
 - Expected results table
 - "Why Ontology is Better" comparison
 
