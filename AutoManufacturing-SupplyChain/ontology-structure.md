@@ -121,7 +121,7 @@ This ontology models an automotive manufacturing ecosystem connecting **NextGen 
 | AFFECTS | QualityEvent | Assembly | Many-to-One | FactQualityEvent |
 | ORIGINATED_FROM | Shipment | Facility | Many-to-One | FactShipment |
 | DELIVERED_TO | Shipment | Facility | Many-to-One | FactShipment |
-| CONTAINS | Shipment | Component | Many-to-Many | EdgeShipmentComponent |
+| SHIPS_COMPONENT | Shipment | Component | Many-to-Many | EdgeShipmentComponent |
 | OPERATES_FROM | Supplier | Facility | Many-to-One | DimSupplier |
 
 ---
@@ -138,7 +138,7 @@ erDiagram
     QualityEvent }o--|| Assembly : "affects"
     Shipment }o--|| Facility : "originated from"
     Shipment }o--|| Facility : "delivered to"
-    Shipment }o--o{ Component : "contains"
+    Shipment }o--o{ Component : "SHIPS_COMPONENT"
     Supplier }o--|| Facility : "operates from"
     
     Vehicle {

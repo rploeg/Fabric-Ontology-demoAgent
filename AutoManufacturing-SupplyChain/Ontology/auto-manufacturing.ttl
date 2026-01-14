@@ -398,9 +398,9 @@
     rdfs:domain :Shipment ;
     rdfs:range :Facility .
 
-:contains a owl:ObjectProperty ;
-    rdfs:label "CONTAINS" ;
-    rdfs:comment "Shipment contains Component" ;
+:ships_component a owl:ObjectProperty ;
+    rdfs:label "SHIPS_COMPONENT" ;
+    rdfs:comment "Shipment ships Component" ;
     rdfs:domain :Shipment ;
     rdfs:range :Component .
 

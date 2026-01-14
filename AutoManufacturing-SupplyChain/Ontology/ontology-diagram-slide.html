@@ -211,7 +211,7 @@ erDiagram
     QualityEvent }o--|| Assembly : "AFFECTS"
     Shipment }o--|| Facility : "ORIGINATED_FROM"
     Shipment }o--|| Facility : "DELIVERED_TO"
-    Shipment }o--o{ Component : "CONTAINS"
+    Shipment }o--o{ Component : "SHIPS_COMPONENT"
     Supplier }o--|| Facility : "OPERATES_FROM"
     
     Vehicle {

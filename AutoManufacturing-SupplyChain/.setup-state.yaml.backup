@@ -34,7 +34,157 @@ steps:
       - FactQualityEvent.csv
       - FactShipment.csv
       skipped: []
+  load_tables:
+    status: completed
+    started_at: '2026-01-14T00:49:38.422747+00:00'
+    completed_at: '2026-01-14T00:53:10.022186+00:00'
+    details:
+      loaded:
+      - DimAssembly
+      - DimComponent
+      - DimFacility
+      - DimProductionOrder
+      - DimSupplier
+      - DimVehicle
+      - EdgeAssemblyComponent
+      - EdgeShipmentComponent
+      - EdgeShipmentDestination
+      - EdgeShipmentOrigin
+      - FactQualityEvent
+      - FactShipment
+      skipped: []
+  create_eventhouse:
+    status: completed
+    artifact_id: cb10f805-090d-400a-b06f-5258d5f0891d
+    artifact_name: AutoManufacturing_SupplyChain_Telemetry
+    started_at: '2026-01-14T00:53:10.032041+00:00'
+    completed_at: '2026-01-14T00:53:18.393246+00:00'
+  ingest_data:
+    status: completed
+    started_at: '2026-01-14T00:53:18.404422+00:00'
+    completed_at: '2026-01-14T00:53:41.554033+00:00'
+    details:
+      ingested_tables:
+      - AssemblyTelemetry
+      - FacilityTelemetry
+  create_ontology:
+    status: completed
+    artifact_id: 3e53e0aa-b5dd-4aa4-acc0-c47977de48d9
+    artifact_name: AutoManufacturing_SupplyChain_Ontology
+    started_at: '2026-01-14T00:53:41.568924+00:00'
+    completed_at: '2026-01-14T00:54:49.249901+00:00'
+    details:
+      entity_count: 8
+      relationship_count: 10
+      ttl_file: C:\AY github\Fabric-Ontology-demoAgent\AutoManufacturing-SupplyChain\ontology\auto-manufacturing.ttl
+  configure_bindings:
+    status: completed
+    started_at: '2026-01-14T00:54:49.263656+00:00'
+    completed_at: '2026-01-14T00:56:28.679692+00:00'
+    details:
+      lakehouse_bindings: 8
+      eventhouse_bindings: 2
+      relationship_contextualizations: 10
+      validation_errors: []
+  verify:
+    status: completed
+    started_at: '2026-01-14T00:56:28.693976+00:00'
+    completed_at: '2026-01-14T00:56:55.205277+00:00'
+    details:
+      passed:
+      - '✓ Lakehouse exists: AutoManufacturing_SupplyChain_Lakehouse'
+      - ✓ Lakehouse has all 12 expected tables
+      - '✓ Eventhouse exists: AutoManufacturing_SupplyChain_Telemetry'
+      - '✓ KQL Database exists: AutoManufacturing_SupplyChain_Telemetry'
+      - ✓ Eventhouse has all 2 expected tables
+      - ✓ All eventhouse tables have data
+      - '✓ Ontology exists: AutoManufacturing_SupplyChain_Ontology'
+      - ✓ Ontology has 0 entities, 0 relationships, 0 properties
+      - ✓ Data bindings configured
+      failed: []
+      warnings: []
+      verification:
+        lakehouse:
+          id: 6ce5da4c-8ff3-463c-82d3-8b90e99d7d4b
+          name: AutoManufacturing_SupplyChain_Lakehouse
+          expected_tables:
+          - DimAssembly
+          - DimFacility
+          - EdgeShipmentComponent
+          - EdgeShipmentDestination
+          - EdgeShipmentOrigin
+          - FactQualityEvent
+          - EdgeAssemblyComponent
+          - DimProductionOrder
+          - DimVehicle
+          - DimSupplier
+          - DimComponent
+          - FactShipment
+          existing_tables:
+          - DimAssembly
+          - DimFacility
+          - EdgeShipmentComponent
+          - EdgeShipmentDestination
+          - EdgeShipmentOrigin
+          - FactQualityEvent
+          - EdgeAssemblyComponent
+          - DimProductionOrder
+          - DimVehicle
+          - DimSupplier
+          - DimComponent
+          - FactShipment
+          missing_tables: []
+        eventhouse:
+          id: cb10f805-090d-400a-b06f-5258d5f0891d
+          name: AutoManufacturing_SupplyChain_Telemetry
+          kql_database_id: 5a79b937-4e92-4f6e-bffb-f01edb216484
+          kql_database_name: AutoManufacturing_SupplyChain_Telemetry
+          expected_tables:
+          - FacilityTelemetry
+          - AssemblyTelemetry
+          existing_tables:
+          - 0
+          - 1
+          - 2
+          - '2026-01-14T00:56:31.3101911Z'
+          - '{"Visualization":null,"Title":null,"XColumn":null,"Series":null,"YColumns":null,"AnomalyColumns":null,"XTitle":null,"YTitle":null,"XAxis":null,"YAxis":null,"Legend":null,"YSplit":null,"Accumulate":false,"IsQuerySorted":false,"Kind":null,"Ymin":"NaN","Ymax":"NaN","Xmin":null,"Xmax":null}'
+          - FacilityTelemetry
+          - AssemblyTelemetry
+          missing_tables: []
+          table_row_counts:
+            AssemblyTelemetry: 50
+            FacilityTelemetry: 50
+        ontology:
+          id: 3e53e0aa-b5dd-4aa4-acc0-c47977de48d9
+          name: AutoManufacturing_SupplyChain_Ontology
+          entity_count: 0
+          relationship_count: 0
+          property_count: 0
+  refresh_graph:
+    status: completed
+    started_at: '2026-01-14T00:56:55.227540+00:00'
+    completed_at: '2026-01-14T00:56:55.642697+00:00'
+    details:
+      ontology_id: 3e53e0aa-b5dd-4aa4-acc0-c47977de48d9
+      ontology_name: AutoManufacturing_SupplyChain_Ontology
+      expected_graph_name: AutoManufacturing_SupplyChain_Ontology_graph_3e53e0aab5dd4aa4acc0c47977de48d9
+      action: manual_refresh_required
+      instructions:
+      - 1. Open the Fabric workspace in your browser
+      - '2. Locate the graph item: ''AutoManufacturing_SupplyChain_Ontology_graph_3e53e0aab5dd4aa4acc0c47977de48d9'''
+      - 3. Click '...' to expand the options menu
+      - 4. Select 'Schedule'
+      - 5. Click 'Refresh now' to sync the data
 resources:
   lakehouse:
     id: 6ce5da4c-8ff3-463c-82d3-8b90e99d7d4b
     name: AutoManufacturing_SupplyChain_Lakehouse
+  eventhouse:
+    id: cb10f805-090d-400a-b06f-5258d5f0891d
+    name: AutoManufacturing_SupplyChain_Telemetry
+  kql_database:
+    id: 5a79b937-4e92-4f6e-bffb-f01edb216484
+    name: AutoManufacturing_SupplyChain_Telemetry
+  ontology:
+    id: 3e53e0aa-b5dd-4aa4-acc0-c47977de48d9
+    name: AutoManufacturing_SupplyChain_Ontology

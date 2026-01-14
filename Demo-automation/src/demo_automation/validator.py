@@ -742,6 +742,10 @@ class DemoPackageValidator:
             )
             return
         
+        # CRITICAL: Validate relationship name against reserved words and naming rules
+        # This catches Fabric-specific reserved words like CONTAINS, STARTS, ENDS, PATH
+        self._validate_name_constraints(rel_name, "Relationship name", f"bindings.yaml ({source_type})")
+        
         if not table_name:
             self.result.add_warning(
                 f"Relationship '{rel_name}' missing 'sourceTable' field",

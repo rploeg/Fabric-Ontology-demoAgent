@@ -194,6 +194,7 @@ demo-{DemoName}/
 - 6-8 proposed entity types with descriptions
   - ⛔ **Verify each name is NOT a reserved word** (e.g., use `TradeOrder` not `Order`)
 - Key relationships (aim for 8-12)
+  - ⛔ **Verify each relationship name is NOT a reserved word** (e.g., use `SHIPS_COMPONENT` not `CONTAINS`)
 - Which entities will have timeseries data
 - 2-3 multi-hop traversal scenarios
 
@@ -202,6 +203,12 @@ demo-{DemoName}/
 - ❌ `Product` → ✅ `ManufacturedProduct`, `ServiceProduct` (CRITICAL: "product" is reserved word)
 - ❌ `Match` → ✅ `TradeMatch`, `OrderMatch`
 - ❌ `Record` → ✅ `TradeRecord`, `DataRecord`
+
+**Common Reserved RELATIONSHIP Name Violations:**
+- ❌ `CONTAINS` → ✅ `SHIPS_COMPONENT`, `INCLUDES_ITEM`, `HAS_PART`
+- ❌ `STARTS` → ✅ `BEGINS_AT`, `ORIGINATES_FROM`
+- ❌ `ENDS` → ✅ `TERMINATES_AT`, `FINISHES_AT`
+- ❌ `PATH` → ✅ `ROUTE_TO`, `TRAVERSES`
 
 **Action**: Ask "Does this scope look correct? Ready for Phase 2: Design?"
 
@@ -242,9 +249,10 @@ Generate:
 
 ### Validation Checklist
 
-> ⛔ **MANDATORY**: Read [`Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml`](../../../Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml) BEFORE naming entities/properties
+> ⛔ **MANDATORY**: Read [`Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml`](../../../Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml) BEFORE naming entities/properties/relationships
 
-- [ ] ⛔ **NO RESERVED WORDS**: Check EVERY entity and property name against `reservedWords` in validation-rules.yaml
+- [ ] ⛔ **NO RESERVED WORDS**: Check EVERY entity, property, AND RELATIONSHIP name against `reservedWords` in validation-rules.yaml
+- [ ] ⛔ **RELATIONSHIP NAMES**: Verify no Fabric-specific reserved words (CONTAINS, STARTS, ENDS, PATH, NODE, EDGE)
 - [ ] All entity keys are string or int type ([keyDataTypes](https://learn.microsoft.com/en-us/fabric/iq/ontology/resources-glossary))
 - [ ] Property names are unique across ALL entities ([globalPropertyUniqueness](https://learn.microsoft.com/en-us/fabric/iq/ontology/how-to-bind-data))
 - [ ] Entity/relationship type names ≤26 characters, property names ≤26 characters
@@ -323,7 +331,7 @@ The parser uses regex to detect `(timeseries)` (case-insensitive) in `rdfs:comme
 
 ---
 
-## ⛔ CRITICAL: Property and Entity Naming Constraints
+## ⛔ CRITICAL: Property, Entity, and Relationship Naming Constraints
 
 > **CANONICAL SOURCE**: [`Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml`](../../../Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml)
 > 
@@ -345,7 +353,21 @@ The parser uses regex to detect `(timeseries)` (case-insensitive) in `rdfs:comme
 - Recommendation: Use entity prefix for uniqueness (e.g., `Product_Name`, `Batch_Status`)
 - ⛔ **MUST NOT be a reserved word** (case-insensitive)
 
-### ⛔ RESERVED WORDS - NEVER USE AS ENTITY OR PROPERTY NAMES
+### Relationship Type Names
+- **Length**: 1–26 characters
+- **Pattern**: `^[a-zA-Z][a-zA-Z0-9_-]{0,25}$`
+- Must start with a letter
+- Can contain letters, numbers, hyphens and underscores
+- ⛔ **MUST NOT be a reserved word** (case-insensitive)
+- ⛔ **FABRIC-SPECIFIC RESERVED WORDS FOR RELATIONSHIPS**:
+  - `CONTAINS` → Use `SHIPS_COMPONENT`, `INCLUDES`, `HAS_ITEM`
+  - `ENDS` → Use `TERMINATES_AT`, `FINISHES_AT`
+  - `STARTS` → Use `BEGINS_AT`, `ORIGINATES_FROM`
+  - `EDGE` → Use `CONNECTION`, `LINK`
+  - `NODE` → Use `VERTEX`, `POINT`
+  - `PATH` → Use `ROUTE`, `TRAVERSAL`
+
+### ⛔ RESERVED WORDS - NEVER USE AS ENTITY, PROPERTY, OR RELATIONSHIP NAMES
 
 > **Full list**: See `reservedWords` section in [`validation-rules.yaml`](../../../Unofficial-Fabric-Ontology-SDK/porting/contracts/validation-rules.yaml)
 >
@@ -369,13 +391,23 @@ The parser uses regex to detect `(timeseries)` (case-insensitive) in `rdfs:comme
 ❌ Min/Max    → ✅ Use: MinValue, MaxValue, MinPrice, MaxPrice
 ```
 
-**GQL KEYWORDS (all reserved):**
+**GQL KEYWORDS (all reserved - applies to entities, properties, AND relationships):**
 ```
 MATCH, RETURN, FILTER, WHERE, LET, ORDER, LIMIT, OFFSET,
 DISTINCT, GROUP, BY, ASC, DESC, AND, OR, NOT, TRUE, FALSE,
 NULL, IS, IN, STARTS, ENDS, CONTAINS, WITH, AS, NODE, EDGE,
 PATH, TRAIL, UNION, ALL, count, sum, avg, min, max, coalesce,
 size, labels, nodes, edges, upper, lower, trim, char_length, product
+```
+
+⚠️ **FABRIC-SPECIFIC RESERVED WORDS (commonly missed for relationships):**
+```
+❌ CONTAINS   → ✅ Use: SHIPS_COMPONENT, INCLUDES_ITEM, HAS_PART
+❌ STARTS     → ✅ Use: BEGINS_AT, ORIGINATES_FROM, INITIATED_BY
+❌ ENDS       → ✅ Use: TERMINATES_AT, FINISHES_AT, COMPLETED_AT
+❌ CONSTRUCT  → ✅ Use: BUILDS, ASSEMBLES, CREATES
+❌ FILTER     → ✅ Use: FILTERS_BY, SCREENS, SELECTS
+❌ ELEMENT    → ✅ Use: COMPONENT, PART, MEMBER
 ```
 
 ⚠️ **REAL-WORLD LESSON**: The Rockwell demo encountered a critical validation error where the entity `Product` failed because "product" appears in the GQL reserved words list (see validation-rules.yaml lines 241, 384). The fix was to rename `Product` → `ManufacturedProduct` across ALL files:
@@ -387,6 +419,16 @@ size, labels, nodes, edges, upper, lower, trim, char_length, product
 - All documentation and metadata files
 
 **Lesson**: When renaming entities, ALL derived property names inherit the violation risk. Bulk refactor systematically across all 11+ files to ensure consistency.
+
+⚠️ **REAL-WORLD LESSON (Relationships)**: The AutoManufacturing-SupplyChain demo failed with error: `'CONTAINS' is a reserved word`. The relationship `CONTAINS` (Shipment → Component) had to be renamed to `SHIPS_COMPONENT` across:
+- bindings.yaml (relationship name)
+- TTL file (owl:ObjectProperty label)
+- ontology-structure.md (relationship table and Mermaid diagram)
+- demo-questions.md (GQL queries and diagrams)
+- lakehouse-binding.md (binding instructions)
+- ontology-diagram-slide.html (visualization)
+
+**Lesson**: ALWAYS check relationship names against reserved words. Fabric-specific words like `CONTAINS`, `STARTS`, `ENDS` are easy to miss but will fail at upload time.
 
 ---
 
@@ -989,6 +1031,18 @@ Before finishing, verify ALL of the following for `fabric-demo setup` to work:
 - [ ] Property names are UNIQUE across ALL entities in the ontology
 - [ ] ⚠️ **NO GQL reserved words** - check all entity and property names against validation-rules.yaml (including common violations like Product, Order, Match, etc.)
 - [ ] If any entity name is reserved, rename and bulk-update across ALL files (TTL, bindings, CSVs, queries, documentation)
+
+### Relationship Naming (⛔ CRITICAL - Often Missed!)
+- [ ] Relationship names are 1-26 characters
+- [ ] ⛔ **NO GQL/Fabric reserved words** - check ALL relationship names against validation-rules.yaml
+- [ ] ⛔ **FABRIC-SPECIFIC VIOLATIONS TO AVOID**:
+  - ❌ `CONTAINS` → ✅ `SHIPS_COMPONENT`, `INCLUDES_ITEM`, `HAS_PART`
+  - ❌ `STARTS` → ✅ `BEGINS_AT`, `ORIGINATES_FROM`
+  - ❌ `ENDS` → ✅ `TERMINATES_AT`, `FINISHES_AT`
+  - ❌ `PATH` → ✅ `ROUTE_TO`, `TRAVERSES`
+  - ❌ `FILTER` → ✅ `FILTERS_BY`, `SCREENS`
+  - ❌ `CONSTRUCT` → ✅ `BUILDS`, `ASSEMBLES`
+- [ ] If any relationship name is reserved, rename and bulk-update across ALL files (TTL, bindings, ontology-structure, demo-questions, binding guides)
 
 ### Folder Structure
 - [ ] Case matches exactly: `Bindings/`, `Data/`, `Ontology/` (parser is case-insensitive but consistency matters)

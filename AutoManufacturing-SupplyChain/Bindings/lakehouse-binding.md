@@ -304,11 +304,11 @@ Before starting, ensure:
 
 ---
 
-### CONTAINS (Shipment → Component)
+### SHIPS_COMPONENT (Shipment → Component)
 
 | Configuration | Value |
 |---------------|-------|
-| Relationship | CONTAINS |
+| Relationship | SHIPS_COMPONENT |
 | Source Entity | Shipment |
 | Target Entity | Component |
 | Source Table | EdgeShipmentComponent |

@@ -194,8 +194,8 @@ graph LR
     D <-- DELIVERED_TO --- SH2[Shipment]
     SH1 -- ORIGINATED_FROM --> O1[Origin Facility]
     SH2 -- ORIGINATED_FROM --> O2[Origin Facility]
-    SH1 -- CONTAINS --> C1[Components]
-    SH2 -- CONTAINS --> C2[Components]
+    SH1 -- SHIPS_COMPONENT --> C1[Components]
+    SH2 -- SHIPS_COMPONENT --> C2[Components]
 ```
 
 ### GQL Query
@@ -204,7 +204,7 @@ graph LR
 MATCH (dest:Facility {FacilityId: 'FAC-001'})<-[:DELIVERED_TO]-(sh:Shipment)-[:ORIGINATED_FROM]->(origin:Facility)
 FILTER sh.Shipment_ArrivalDate >= zoned_datetime('2025-11-01T00:00:00Z') 
   AND sh.Shipment_ArrivalDate < zoned_datetime('2025-12-01T00:00:00Z')
-MATCH (sh)-[:CONTAINS]->(c:Component)
+MATCH (sh)-[:SHIPS_COMPONENT]->(c:Component)
 RETURN sh.ShipmentId, sh.Shipment_TrackingNum, sh.Shipment_Status, sh.Shipment_Carrier,
        origin.Facility_Name AS OriginFacility,
        COLLECT(c.Component_Name) AS Components
@@ -337,7 +337,7 @@ When using AI assistants to query this ontology:
 - QualityEvent -[AFFECTS]-> Assembly
 - Shipment -[ORIGINATED_FROM]-> Facility
 - Shipment -[DELIVERED_TO]-> Facility
-- Shipment -[CONTAINS]-> Component
+- Shipment -[SHIPS_COMPONENT]-> Component
 - Supplier -[OPERATES_FROM]-> Facility
 - ProductionOrder -[ORDERED_FOR]-> Vehicle
 

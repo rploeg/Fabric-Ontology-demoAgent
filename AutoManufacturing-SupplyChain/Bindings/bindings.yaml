@@ -254,7 +254,7 @@ lakehouse:
       sourceKeyColumn: ShipmentId
       targetKeyColumn: FacilityId
 
-    - relationship: CONTAINS
+    - relationship: SHIPS_COMPONENT
       sourceEntity: Shipment
       targetEntity: Component
       sourceTable: EdgeShipmentComponent
