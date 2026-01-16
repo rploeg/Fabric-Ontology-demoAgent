@@ -661,6 +661,102 @@ API Error: `targetKeyRefBindings targetPropertyId 'OriginFacilityId' must be pre
 1. The sourceTable must contain both `sourceKeyColumn` and `targetKeyColumn` as columns
 2. **`targetKeyColumn` must be named exactly the same as the target entity's key property**
 
+#### ⛔ CRITICAL: Relationship Names MUST Match TTL Definitions
+
+**Relationship names in `bindings.yaml` MUST exactly match the `rdfs:label` of the corresponding `owl:ObjectProperty` in the TTL ontology file.**
+
+The Fabric API validates that the relationship name in bindings matches a declared ObjectProperty in the ontology. Mismatched names will cause the upload to fail silently during `configure_bindings`.
+
+**❌ WRONG - Relationship names don't match TTL:**
+```yaml
+# In TTL file:
+# :AMR_IN_FLEET a owl:ObjectProperty ; rdfs:label "AMR_IN_FLEET" .
+# :SUPERVISED_BY a owl:ObjectProperty ; rdfs:label "SUPERVISED_BY" .
+
+# In bindings.yaml - THESE WILL FAIL:
+- relationship: MEMBER_OF_AMR      # ❌ TTL uses "AMR_IN_FLEET"
+- relationship: ASSIGNED_TO        # ❌ TTL uses "SUPERVISED_BY"
+```
+
+**✅ CORRECT - Relationship names match TTL exactly:**
+```yaml
+# In bindings.yaml - MATCHES TTL:
+- relationship: AMR_IN_FLEET       # ✅ Matches TTL ObjectProperty label
+- relationship: SUPERVISED_BY      # ✅ Matches TTL ObjectProperty label
+```
+
+> ⚠️ **Real-world lesson**: The demo-RoboticsOilGas setup failed with 12 relationship name mismatches. Local validation passed but Fabric upload failed because the validator did NOT cross-check TTL ObjectProperty names against bindings.yaml relationship names.
+
+#### ⛔ CRITICAL: Contextual Relationships Require FK Properties in Entity Definition
+
+When using a **dimension table** (Dim*) as the `sourceTable` for a relationship (instead of a dedicated Edge* or Fact* table), the **FK column used in the relationship MUST be declared as a property on the source entity**.
+
+This is a **contextual/embedded relationship** pattern where the FK is embedded in the entity's own table.
+
+| Relationship Type | sourceTable Pattern | FK Requirement |
+|------------------|---------------------|----------------|
+| Edge table (separate) | `Edge*`, `Fact*` | FK just needs to exist in CSV |
+| **Contextual (embedded)** | `Dim*` (same as entity source) | **FK MUST be declared as entity property** |
+
+**❌ WRONG - FK not declared as property (will fail at Fabric upload):**
+```yaml
+# FieldAsset uses DimFieldAsset as source, has ZoneId FK column
+- entity: FieldAsset
+  sourceTable: DimFieldAsset
+  keyColumn: AssetId
+  properties:
+    - property: AssetId
+    - property: Asset_Name
+    - property: Asset_Status
+    # ❌ MISSING: ZoneId property!
+
+- relationship: ASSET_IN_ZONE
+  sourceEntity: FieldAsset
+  targetEntity: FacilityZone
+  sourceTable: DimFieldAsset       # ← Contextual: using DIM table
+  sourceKeyColumn: AssetId
+  targetKeyColumn: Asset_ZoneId    # ← This column MUST be a property!
+```
+API Error: `Contextualization sourceKeyRefBindings targetPropertyId must be present in the source EntityType EntityIdParts`
+
+**✅ CORRECT - FK declared as property with entity prefix:**
+```yaml
+- entity: FieldAsset
+  sourceTable: DimFieldAsset
+  keyColumn: AssetId
+  properties:
+    - property: AssetId
+    - property: Asset_Name
+    - property: Asset_Status
+    - property: Asset_ZoneId       # ✅ FK declared as property!
+      column: Asset_ZoneId
+      type: string
+
+- relationship: ASSET_IN_ZONE
+  sourceEntity: FieldAsset
+  targetEntity: FacilityZone
+  sourceTable: DimFieldAsset
+  sourceKeyColumn: AssetId
+  targetKeyColumn: Asset_ZoneId    # ✅ Now works - property exists
+```
+
+**Property Naming Convention for FK Columns:**
+To avoid property uniqueness violations, use **entity-prefixed FK names**:
+- `ZoneId` on FieldAsset → `Asset_ZoneId`
+- `OperatorId` on Mission → `Mission_OperatorId`
+- `MissionId` on Waypoint → `Waypoint_MissionId`
+
+**TTL Requirement**: The FK property must ALSO be declared in the TTL file:
+```turtle
+:Asset_ZoneId a owl:DatatypeProperty ;
+    rdfs:domain :FieldAsset ;
+    rdfs:range xsd:string ;
+    rdfs:label "Asset_ZoneId" ;
+    rdfs:comment "FK to FacilityZone entity for ASSET_IN_ZONE relationship" .
+```
+
+> ⚠️ **Real-world lesson**: The demo-RoboticsOilGas setup failed because 3 contextual relationships (ASSET_IN_ZONE, SUPERVISED_BY, HAS_WAYPOINT) used Dim* tables but the FK columns (ZoneId, OperatorId, MissionId) were NOT declared as entity properties. Local validation passed because the validator only checked CSV column existence, not property declaration.
+
 ### Response 2: lakehouse-binding.md (human-readable) — save to `{DemoName}/Bindings/lakehouse-binding.md`
 
 Include:
@@ -700,7 +796,7 @@ For EACH entity with timeseries properties:
 
 
 Each question must include:
-- Business question
+- Business question that does not request multiply answers. Bad question "Which suppliers have delivered perishables to each refrigerator, and what are the refrigerator specifications'. Good question "Which suppliers have delivered perishables to each refrigerator"
 - Why it matters (business context)
 - Graph traversal diagram
 - GQL query that is syntactically correct and works on the demo data and ontology
@@ -929,6 +1025,9 @@ If validation reports **ERRORS**, you MUST fix them before proceeding:
 | `Invalid data type: decimal` | Change to `double` in TTL and data |
 | `Key column has NULL values` | Fix data to ensure all keys have values |
 | `Timeseries properties bound as static` | Add `(timeseries)` annotation in TTL rdfs:comment for eventhouse properties |
+| `Relationship 'X' not found in TTL` | Rename relationship in bindings.yaml to match TTL ObjectProperty `rdfs:label` |
+| `Contextual FK 'X' not in entity properties` | Add FK as entity property with entity prefix (e.g., `Entity_FKColumn`) |
+| `Relationship source/target mismatch` | Fix sourceEntity/targetEntity to match TTL domain/range |
 
 #### Property Length Fix Strategy
 
@@ -1009,6 +1108,8 @@ Before finishing, verify ALL of the following for `fabric-demo setup` to work:
 - [ ] If a table has multiple FK columns to the same entity (e.g., OriginFacilityId, DestFacilityId), create **separate Edge tables** with the columns renamed to match entity keys
 - [ ] Eventhouse entities under `eventhouse.entities[]` include `timestampColumn`
 - [ ] All paths use **forward slashes** (`Data/Lakehouse/`, not `Data\Lakehouse\`)
+- [ ] ⛔ **Relationship names MUST match TTL ObjectProperty `rdfs:label` exactly** (cross-validate!)
+- [ ] ⛔ **For contextual relationships (Dim* sourceTable), FK column MUST be declared as entity property with entity prefix**
 
 ### TTL Ontology
 - [ ] Each entity class has `rdfs:comment "Key: {PropertyName} (type)"` 
@@ -1016,6 +1117,7 @@ Before finishing, verify ALL of the following for `fabric-demo setup` to work:
 - [ ] No `xsd:decimal` types (use `xsd:double` instead)
 - [ ] Key properties use `xsd:string` or `xsd:integer` ONLY
 - [ ] ⛔ **Timeseries properties have `(timeseries)` in rdfs:comment** (required for eventhouse binding)
+- [ ] ⛔ **FK properties for contextual relationships are declared as DatatypeProperty** (e.g., `Asset_ZoneId`)
 
 ### Entity & Property Naming
 - [ ] Entity names are 1-26 characters

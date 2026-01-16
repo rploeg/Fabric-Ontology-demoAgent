@@ -176,6 +176,12 @@ class DemoPackageValidator:
         self._all_property_names: Set[str] = set()
         # Track entity keys for relationship validation
         self._entity_keys: Dict[str, str] = {}  # entity_name -> key_column
+        # Track entity property names for contextual FK validation
+        self._entity_properties: Dict[str, Set[str]] = {}  # entity_name -> set of property names
+        # Track entity property column mappings for contextual FK validation
+        self._entity_property_columns: Dict[str, Set[str]] = {}  # entity_name -> set of column names mapped to properties
+        # Track relationship bindings for TTL cross-validation
+        self._relationship_bindings: List[Dict[str, Any]] = []  # list of relationship dicts from bindings.yaml
 
     def validate(self) -> ValidationResult:
         """
@@ -205,6 +211,9 @@ class DemoPackageValidator:
         # Cross-validation checks
         self._check_property_uniqueness()
         self._check_ttl_constraints()
+        
+        # TTL ↔ bindings cross-validation (new in v3.6)
+        self._check_ttl_bindings_consistency()
 
         # Metadata checks
         self._check_metadata()
@@ -694,10 +703,18 @@ class DemoPackageValidator:
         
         # Validate property mappings
         properties = entity.get("properties", [])
+        entity_props = set()
+        entity_cols = set()  # Track column names mapped by properties
         for prop in properties:
             source_col = prop.get("column")
             target_prop = prop.get("property")
             prop_type = prop.get("type", "")
+            
+            # Track entity properties and columns for contextual FK validation
+            if target_prop:
+                entity_props.add(target_prop)
+            if source_col:
+                entity_cols.add(source_col)
             
             # Validate property name
             if target_prop:
@@ -723,6 +740,15 @@ class DemoPackageValidator:
                     f"maps to column '{source_col}' which doesn't exist",
                     suggestion=f"Check column name in {table_name}.csv",
                 )
+        
+        # Store entity properties and columns for contextual FK validation
+        if entity_name not in self._entity_properties:
+            self._entity_properties[entity_name] = set()
+        self._entity_properties[entity_name].update(entity_props)
+        
+        if entity_name not in self._entity_property_columns:
+            self._entity_property_columns[entity_name] = set()
+        self._entity_property_columns[entity_name].update(entity_cols)
 
     def _validate_yaml_relationship(
         self,
@@ -798,6 +824,42 @@ class DemoPackageValidator:
                     path=f"bindings.yaml (relationships)",
                     suggestion=f"Rename column to '{expected_key}' or create an edge table with the correct column name",
                 )
+        
+        # Track relationship for TTL cross-validation
+        self._relationship_bindings.append(relationship)
+        
+        # CRITICAL: Contextual FK validation for dimension tables
+        # When using a Dim* table as sourceTable, the FK column must be mapped to a property
+        # 
+        # Two patterns:
+        # 1. sourceTable matches source entity (e.g., ASSET_IN_ZONE: FieldAsset→Zone, sourceTable=DimFieldAsset)
+        #    → targetKeyColumn (ZoneId FK) must be mapped on source entity (FieldAsset)
+        # 2. sourceTable matches target entity (e.g., HAS_WAYPOINT: Mission→Waypoint, sourceTable=DimWaypoint)
+        #    → sourceKeyColumn (MissionId FK) must be mapped on target entity (Waypoint)
+        if table_name and table_name.startswith("Dim"):
+            source_entity_table = f"Dim{source_entity}"
+            target_entity_table = f"Dim{target_entity}"
+            
+            if table_name == source_entity_table and source_entity and target_key:
+                # Pattern 1: Source entity's table, check targetKeyColumn is mapped on source
+                source_cols = self._entity_property_columns.get(source_entity, set())
+                if target_key not in source_cols:
+                    self.result.add_error(
+                        f"Relationship '{rel_name}' uses contextual binding from dimension table '{table_name}' "
+                        f"but FK column '{target_key}' is NOT mapped to a property on entity '{source_entity}'",
+                        path=f"bindings.yaml (relationships)",
+                        suggestion=f"Add a property to '{source_entity}' that maps to column '{target_key}', or use a dedicated Edge* table",
+                    )
+            elif table_name == target_entity_table and target_entity and source_key:
+                # Pattern 2: Target entity's table, check sourceKeyColumn is mapped on target
+                target_cols = self._entity_property_columns.get(target_entity, set())
+                if source_key not in target_cols:
+                    self.result.add_error(
+                        f"Relationship '{rel_name}' uses contextual binding from dimension table '{table_name}' "
+                        f"but FK column '{source_key}' is NOT mapped to a property on entity '{target_entity}'",
+                        path=f"bindings.yaml (relationships)",
+                        suggestion=f"Add a property to '{target_entity}' that maps to column '{source_key}', or use a dedicated Edge* table",
+                    )
 
     def _validate_bindings_markdown_legacy(self, bindings_dir: Path) -> None:
         """Validate binding markdown files (legacy format)."""
@@ -1196,6 +1258,132 @@ class DemoPackageValidator:
                     path=str(ttl_path.relative_to(self.demo_path)),
                     suggestion="Add (timeseries) to rdfs:comment for Eventhouse-bound properties",
                 )
+
+    def _check_ttl_bindings_consistency(self) -> None:
+        """
+        Cross-validate TTL ObjectProperty names against bindings.yaml relationship names.
+        
+        This catches mismatches like:
+        - TTL: AMR_IN_FLEET vs bindings: MEMBER_OF_AMR
+        - TTL: SUPERVISED_BY vs bindings: ASSIGNED_TO
+        
+        Also validates that sourceEntity/targetEntity match TTL domain/range.
+        
+        Added in v3.6 to catch errors that previously only failed at Fabric upload.
+        """
+        if not self._relationship_bindings:
+            return  # No relationships to validate
+        
+        # Find ontology directory
+        ontology_dir = None
+        for variant in ["ontology", "Ontology"]:
+            candidate = self.demo_path / variant
+            if candidate.is_dir():
+                ontology_dir = candidate
+                break
+        
+        if not ontology_dir:
+            return
+        
+        ttl_files = list(ontology_dir.glob("*.ttl"))
+        if not ttl_files:
+            return
+        
+        ttl_path = ttl_files[0]
+        try:
+            with open(ttl_path, "r", encoding="utf-8") as f:
+                ttl_content = f.read()
+            
+            # Parse ObjectProperties from TTL
+            # Pattern: :RelationshipName a owl:ObjectProperty ; ... rdfs:domain :SourceEntity ; rdfs:range :TargetEntity
+            object_prop_pattern = re.compile(
+                r':(\w+)\s+a\s+owl:ObjectProperty\s*;[^.]*'
+                r'rdfs:domain\s+:(\w+)\s*;[^.]*'
+                r'rdfs:range\s+:(\w+)',
+                re.MULTILINE | re.DOTALL
+            )
+            
+            ttl_relationships: Dict[str, Dict[str, str]] = {}
+            for match in object_prop_pattern.finditer(ttl_content):
+                rel_name = match.group(1)
+                source_entity = match.group(2)
+                target_entity = match.group(3)
+                ttl_relationships[rel_name] = {
+                    "source": source_entity,
+                    "target": target_entity,
+                }
+            
+            if not ttl_relationships:
+                self.result.add_warning(
+                    "Could not parse ObjectProperties from TTL file",
+                    path=str(ttl_path.relative_to(self.demo_path)),
+                    suggestion="Check TTL syntax for ObjectProperty definitions",
+                )
+                return
+            
+            self.result.add_info(
+                f"Found {len(ttl_relationships)} ObjectProperties in TTL for cross-validation"
+            )
+            
+            ttl_rel_names = set(ttl_relationships.keys())
+            
+            # Check each bindings.yaml relationship against TTL
+            for rel_binding in self._relationship_bindings:
+                rel_name = rel_binding.get("relationship", "")
+                source_entity = rel_binding.get("sourceEntity", "")
+                target_entity = rel_binding.get("targetEntity", "")
+                
+                if not rel_name:
+                    continue
+                
+                # Check if relationship name exists in TTL
+                if rel_name not in ttl_rel_names:
+                    # Find similar names for suggestion
+                    similar = [r for r in ttl_rel_names if rel_name.split("_")[-1] in r or r.split("_")[-1] in rel_name]
+                    suggestion = f"Did you mean: {', '.join(similar[:3])}?" if similar else "Check TTL ObjectProperty definitions"
+                    
+                    self.result.add_error(
+                        f"Relationship '{rel_name}' in bindings.yaml not found in TTL",
+                        path="bindings.yaml (relationships)",
+                        suggestion=suggestion,
+                    )
+                    continue
+                
+                # Check source/target entity consistency
+                ttl_rel = ttl_relationships[rel_name]
+                if source_entity and ttl_rel["source"] != source_entity:
+                    self.result.add_error(
+                        f"Relationship '{rel_name}': sourceEntity '{source_entity}' "
+                        f"doesn't match TTL domain '{ttl_rel['source']}'",
+                        path="bindings.yaml (relationships)",
+                        suggestion=f"Change sourceEntity to '{ttl_rel['source']}' or update TTL",
+                    )
+                
+                if target_entity and ttl_rel["target"] != target_entity:
+                    self.result.add_error(
+                        f"Relationship '{rel_name}': targetEntity '{target_entity}' "
+                        f"doesn't match TTL range '{ttl_rel['target']}'",
+                        path="bindings.yaml (relationships)",
+                        suggestion=f"Change targetEntity to '{ttl_rel['target']}' or update TTL",
+                    )
+            
+            # Check for TTL relationships without bindings (warning only)
+            bindings_rel_names = {r.get("relationship", "") for r in self._relationship_bindings}
+            unbound_relationships = ttl_rel_names - bindings_rel_names
+            if unbound_relationships:
+                self.result.add_warning(
+                    f"TTL has {len(unbound_relationships)} ObjectProperties without bindings: "
+                    f"{', '.join(sorted(unbound_relationships)[:5])}{'...' if len(unbound_relationships) > 5 else ''}",
+                    path=str(ttl_path.relative_to(self.demo_path)),
+                    suggestion="Add relationship bindings in bindings.yaml or remove unused ObjectProperties from TTL",
+                )
+                
+        except Exception as e:
+            logger.warning(f"Failed to cross-validate TTL and bindings: {e}")
+            self.result.add_warning(
+                f"TTL/bindings cross-validation failed: {e}",
+                suggestion="Check TTL file syntax",
+            )
 
     def _validate_name_constraints(self, name: str, name_type: str, context: str) -> None:
         """
