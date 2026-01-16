@@ -35,4 +35,5 @@ tests/test_relationship_bindings.py
 tests/test_sdk_adapter.py
 tests/test_sdk_binding_bridge.py
 tests/test_sdk_converter.py
+tests/test_ttl_bytes_handling.py
 tests/test_validator.py

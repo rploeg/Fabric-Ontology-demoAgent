@@ -195,7 +195,7 @@ class TTLToFabricConverter:
         Parse TTL content and extract entity and relationship types.
         
         Args:
-            ttl_content: The TTL content as a string
+            ttl_content: The TTL content as a string (bytes will be auto-decoded)
             
         Returns:
             ConversionResult with entity types, relationship types, and warnings
@@ -203,6 +203,24 @@ class TTLToFabricConverter:
         Raises:
             ValueError: If TTL content is empty or has invalid syntax
         """
+        # Defensive bytes-to-string conversion (handles BOM and encoding issues)
+        if isinstance(ttl_content, bytes):
+            logger.warning(
+                "TTL content received as bytes instead of string. "
+                "This may indicate an encoding issue in the file reader. "
+                "Auto-decoding with utf-8-sig to handle potential BOM."
+            )
+            try:
+                ttl_content = ttl_content.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                ttl_content = ttl_content.decode("utf-8", errors="replace")
+                logger.warning("UTF-8-sig decode failed, using utf-8 with replacement chars")
+        
+        # Strip BOM if present in string form
+        if ttl_content and ttl_content.startswith("\ufeff"):
+            ttl_content = ttl_content[1:]
+            logger.debug("Stripped BOM from TTL content")
+        
         if not ttl_content or not ttl_content.strip():
             raise ValueError("Empty TTL content")
         
@@ -649,7 +667,7 @@ def parse_ttl_content(
     Parse TTL content and return the Fabric Ontology definition.
     
     Args:
-        ttl_content: TTL content as string
+        ttl_content: TTL content as string (bytes will be auto-decoded)
         id_prefix: Base prefix for generating unique IDs
         eventhouse_property_map: Optional mapping of entity_name -> set of property names
             that should be marked as timeseries (from bindings.yaml eventhouse bindings)
@@ -665,6 +683,24 @@ def parse_ttl_content(
             "rdflib is required for TTL parsing. "
             "Install it with: pip install rdflib"
         )
+    
+    # Defensive bytes-to-string conversion (handles BOM and encoding issues)
+    if isinstance(ttl_content, bytes):
+        logger.warning(
+            "TTL content received as bytes instead of string in parse_ttl_content. "
+            "This may indicate an encoding issue in the file reader. "
+            "Auto-decoding with utf-8-sig to handle potential BOM."
+        )
+        try:
+            ttl_content = ttl_content.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            ttl_content = ttl_content.decode("utf-8", errors="replace")
+            logger.warning("UTF-8-sig decode failed, using utf-8 with replacement chars")
+    
+    # Strip BOM if present in string form
+    if ttl_content and isinstance(ttl_content, str) and ttl_content.startswith("\ufeff"):
+        ttl_content = ttl_content[1:]
+        logger.debug("Stripped BOM from TTL content in parse_ttl_content")
     
     converter = TTLToFabricConverter(id_prefix=id_prefix)
     result = converter.parse_ttl(ttl_content)
@@ -724,5 +760,6 @@ def parse_ttl_file(
     if not path.exists():
         raise FileNotFoundError(f"TTL file not found: {file_path}")
     
-    ttl_content = path.read_text(encoding="utf-8")
+    # Use utf-8-sig to auto-strip BOM if present
+    ttl_content = path.read_text(encoding="utf-8-sig")
     return parse_ttl_content(ttl_content, id_prefix, eventhouse_property_map)

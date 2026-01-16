@@ -58,6 +58,8 @@ cd Demo-automation && pip install -e .
 # Configure workspace (one-time)
 python -m demo_automation config init
 
+(For quick start, use interactive login)
+
 # Validate and deploy
 python -m demo_automation validate ../AutoManufacturing-SupplyChain
 python -m demo_automation setup ../AutoManufacturing-SupplyChain

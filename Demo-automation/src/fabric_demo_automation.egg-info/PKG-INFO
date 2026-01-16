@@ -39,7 +39,7 @@ Automated setup tool for Microsoft Fabric Ontology demos. This CLI tool orchestr
 
 ## Dependencies
 
-This tool uses the [Fabric Ontology SDK](https://github.com/falloutxAY/Fabric-Ontology-SDK) (v0.2.0) for ontology operations including validation, entity/relationship building, and data bindings.
+This tool uses the [Unofficial Fabric Ontology SDK](https://github.com/falloutxAY/Unofficial-Fabric-Ontology-SDK) (v0.4.0) for ontology operations including validation, entity/relationship building, data bindings, and resilience patterns.
 
 ## Quick Start
 
