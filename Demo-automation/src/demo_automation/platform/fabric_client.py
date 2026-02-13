@@ -520,7 +520,27 @@ class FabricClient:
         if definition:
             body["definition"] = definition
 
-        response = self._make_request("POST", url, json=body)
+        # Retry on transient "ItemDisplayNameNotAvailableYet" errors
+        # This happens when the Fabric capacity is warming up or a
+        # previous item with the same name is being cleaned up.
+        max_retries = 6
+        retry_delay = 30  # seconds
+        for attempt in range(max_retries):
+            response = self._make_request("POST", url, json=body)
+            if response.status_code == 400 and attempt < max_retries - 1:
+                try:
+                    err_body = response.json()
+                    err_code = err_body.get("errorCode", "")
+                except Exception:
+                    err_code = response.text
+                if "ItemDisplayNameNotAvailableYet" in err_code or "ItemDisplayNameNotAvailableYet" in response.text:
+                    logger.warning(
+                        f"Name '{display_name}' not available yet, "
+                        f"retrying in {retry_delay}s (attempt {attempt + 1}/{max_retries})..."
+                    )
+                    time.sleep(retry_delay)
+                    continue
+            break
 
         # Handle LRO (202 Accepted)
         if response.status_code == 202:

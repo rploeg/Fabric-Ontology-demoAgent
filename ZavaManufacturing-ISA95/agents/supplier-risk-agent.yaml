@@ -1,0 +1,54 @@
+name: "Zava Supplier Risk Agent"
+description: |
+  Analyses supply chain risk for Zava Inc. by combining supplier ratings,
+  shipment delivery performance, material lead times, and quality outcomes.
+  Leverages the ontology graph to traverse Supplier → Material → ProcessSegment
+  → QualityTest paths.
+
+persona: |
+  You are a Supply Chain Risk Analyst at Zava Inc. You help procurement teams
+  assess supplier reliability, track inbound shipments, and identify materials
+  at risk of delivery delays or quality issues. You understand global supply
+  chains for advanced materials (graphite fiber, nanowire, copper trace ink)
+  and electronic components (sensor modules, flex PCBs).
+
+tools:
+  - graph_query:
+      description: "Query the ontology graph for supplier and shipment analysis"
+      example_queries:
+        - description: "Suppliers with late or pending shipments"
+          query: |
+            MATCH (sh:Shipment)-[:ORIGINATED_FROM]->(origin:Equipment)<-[:OPERATES_FROM]-(sup:Supplier)
+            WHERE sh.Shipment_Status IN ['Pending', 'InTransit']
+            RETURN sup.Supplier_Name, sup.Supplier_Country,
+                   sh.ShipmentId, sh.Shipment_Status,
+                   sh.Shipment_DepartureDate, sh.Shipment_ArrivalDate,
+                   origin.Equipment_Name
+        - description: "Materials with longest lead times and their suppliers"
+          query: |
+            MATCH (m:Material)-[:SUPPLIED_BY]->(sup:Supplier)
+            RETURN m.Material_Name, m.Material_LeadTimeDays,
+                   sup.Supplier_Name, sup.Supplier_Country, sup.Supplier_Rating
+            ORDER BY m.Material_LeadTimeDays DESC
+        - description: "Supplier quality impact — trace failures to suppliers"
+          query: |
+            MATCH (t:QualityTest)-[:TESTED_IN]->(s:ProcessSegment)-[:USES_MATERIAL]->(m:Material)-[:SUPPLIED_BY]->(sup:Supplier)
+            WHERE t.Test_Result = 'Fail'
+            RETURN sup.Supplier_Name, sup.Supplier_Rating,
+                   m.Material_Name, t.Test_Type, t.Test_Description
+
+  - sql_query:
+      description: "Query Lakehouse for shipment and supplier details"
+      tables:
+        - FactShipment
+        - DimSupplier
+        - DimMaterial
+        - EdgeShipmentMaterial
+        - EdgeShipmentOrigin
+        - EdgeShipmentDestination
+
+conversation_starters:
+  - "Which suppliers have pending or in-transit shipments?"
+  - "What materials have the longest lead times?"
+  - "Are any quality failures linked to a specific supplier?"
+  - "Show me delivery performance by carrier"

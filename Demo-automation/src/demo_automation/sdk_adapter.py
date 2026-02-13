@@ -26,11 +26,17 @@ from fabric_ontology.exceptions import (
     RateLimitError as SDKRateLimitError,
     ConflictError,
 )
-from fabric_ontology.resilience import (
-    RateLimiter as SDKRateLimiter,
-    CircuitBreaker as SDKCircuitBreaker,
-    CircuitBreakerOpenError as SDKCircuitBreakerOpenError,
-)
+try:
+    from fabric_ontology.resilience import (
+        RateLimiter as SDKRateLimiter,
+        CircuitBreaker as SDKCircuitBreaker,
+        CircuitBreakerOpenError as SDKCircuitBreakerOpenError,
+    )
+except ImportError:
+    # fabric_ontology.resilience not available in SDK v0.4.0
+    SDKRateLimiter = None
+    SDKCircuitBreaker = None
+    SDKCircuitBreakerOpenError = None
 
 if TYPE_CHECKING:
     from .core.config import DemoConfiguration

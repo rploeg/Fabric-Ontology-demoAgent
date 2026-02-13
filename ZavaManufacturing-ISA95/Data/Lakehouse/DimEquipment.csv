@@ -1,0 +1,161 @@
+EquipmentId,Equipment_Name,Equipment_Level,Equipment_Type,Equipment_Location,Equipment_Capacity
+EQP-001,Zava Redmond Innovation Center,Site,CoatingDev,Redmond WA USA,50000
+EQP-002,Zava Portland Production Campus,Site,Production,Portland OR USA,80000000
+EQP-003,Zava Distribution Hub,Site,Distribution,Portland OR USA,100000000
+EQP-004,Coating Development Lab,Area,CoatingDev,Redmond WA USA,25000
+EQP-005,Weave Hall A,WorkCenter,Weaving,Portland OR USA,40000000
+EQP-006,Weave Hall B,WorkCenter,Weaving,Portland OR USA,40000000
+EQP-007,QA & Testing Laboratory,Area,QualityControl,Redmond WA USA,0
+EQP-008,Finished Goods Warehouse,Area,Warehouse,Portland OR USA,50000000
+EQP-009,Toray Iiyama Carbon Plant,Site,Supplier,Iiyama Japan,10000
+EQP-010,NanoSilver Daejeon Lab,Site,Supplier,Daejeon South Korea,15000
+EQP-011,CopperTrace Dresden Hub,Site,Supplier,Dresden Germany,12000
+EQP-012,FR4-Global Taoyuan Fab,Site,Supplier,Taoyuan Taiwan,20000
+EQP-013,PolyCoat Austin Facility,Site,Supplier,Austin TX USA,0
+EQP-014,FlexConnect Bristol Works,Site,Supplier,Bristol UK,0
+EQP-015,SensorPak Stuttgart Center,Site,Supplier,Stuttgart Germany,8000
+EQP-016,Bravo-FiberWeaver-01,WorkUnit,Weaving,Portland OR USA,0
+EQP-017,Bravo-FiberWeaver-02,WorkUnit,Weaving,Portland OR USA,0
+EQP-018,Bravo-FiberWeaver-03,WorkUnit,Weaving,Portland OR USA,0
+EQP-019,Bravo-FiberWeaver-04,WorkUnit,Weaving,Portland OR USA,0
+EQP-020,Bravo-FiberWeaver-05,WorkUnit,Weaving,Portland OR USA,0
+EQP-021,Bravo-FiberWeaver-06,WorkUnit,Weaving,Portland OR USA,0
+EQP-022,Bravo-FiberWeaver-07,WorkUnit,Weaving,Portland OR USA,0
+EQP-023,Bravo-FiberWeaver-08,WorkUnit,Weaving,Portland OR USA,0
+EQP-024,Bravo-FiberWeaver-09,WorkUnit,Weaving,Portland OR USA,0
+EQP-025,Bravo-FiberWeaver-10,WorkUnit,Weaving,Portland OR USA,0
+EQP-026,Bravo-FiberWeaver-11,WorkUnit,Weaving,Portland OR USA,0
+EQP-027,Bravo-LabelApplicator-01,WorkUnit,Packing,Portland OR USA,0
+EQP-028,Bravo-CasePacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-029,Charlie-Laminator-01,WorkUnit,Laminating,Portland OR USA,0
+EQP-030,Charlie-FiberWeaver-01,WorkUnit,Weaving,Portland OR USA,0
+EQP-031,Charlie-FiberWeaver-02,WorkUnit,Weaving,Portland OR USA,0
+EQP-032,Charlie-FiberWeaver-03,WorkUnit,Weaving,Portland OR USA,0
+EQP-033,Charlie-FiberWeaver-04,WorkUnit,Weaving,Portland OR USA,0
+EQP-034,Charlie-FiberWeaver-05,WorkUnit,Weaving,Portland OR USA,0
+EQP-035,Charlie-StackerUnit-01,WorkUnit,Packing,Portland OR USA,0
+EQP-036,Charlie-BulkPacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-037,Charlie-CasePacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-038,Delta-Laminator-01,WorkUnit,Laminating,Portland OR USA,0
+EQP-039,Delta-FiberWeaver-01,WorkUnit,Weaving,Portland OR USA,0
+EQP-040,Delta-FiberWeaver-02,WorkUnit,Weaving,Portland OR USA,0
+EQP-041,Delta-FiberWeaver-03,WorkUnit,Weaving,Portland OR USA,0
+EQP-042,Delta-FiberWeaver-04,WorkUnit,Weaving,Portland OR USA,0
+EQP-043,Delta-FiberWeaver-05,WorkUnit,Weaving,Portland OR USA,0
+EQP-044,Delta-FiberWeaver-06,WorkUnit,Weaving,Portland OR USA,0
+EQP-045,Delta-FiberWeaver-08,WorkUnit,Weaving,Portland OR USA,0
+EQP-046,Delta-FiberWeaver-09,WorkUnit,Weaving,Portland OR USA,0
+EQP-047,Delta-FiberWeaver-10,WorkUnit,Weaving,Portland OR USA,0
+EQP-048,Delta-FiberWeaver-11,WorkUnit,Weaving,Portland OR USA,0
+EQP-049,Delta-FiberWeaver-12,WorkUnit,Weaving,Portland OR USA,0
+EQP-050,Delta-FiberWeaver-13,WorkUnit,Weaving,Portland OR USA,0
+EQP-051,Delta-BoxFormer-01,WorkUnit,Packing,Portland OR USA,0
+EQP-052,Delta-ConductivityTester-01,WorkUnit,QualityControl,Portland OR USA,0
+EQP-053,Delta-ConductivityTester-02,WorkUnit,QualityControl,Portland OR USA,0
+EQP-054,Delta-HeatSealer-01,WorkUnit,Packing,Portland OR USA,0
+EQP-055,Foxtrot-HeatPress-01,WorkUnit,Laminating,Portland OR USA,0
+EQP-056,Foxtrot-HeatPress-02,WorkUnit,Laminating,Portland OR USA,0
+EQP-057,Foxtrot-CasePacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-058,Golf-CasePacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-059,Hotel-FiberWeaver-01,WorkUnit,Weaving,Portland OR USA,0
+EQP-060,Hotel-FiberWeaver-02,WorkUnit,Weaving,Portland OR USA,0
+EQP-061,Hotel-FiberWeaver-03,WorkUnit,Weaving,Portland OR USA,0
+EQP-062,Hotel-FiberWeaver-04,WorkUnit,Weaving,Portland OR USA,0
+EQP-063,Hotel-FiberWeaver-05,WorkUnit,Weaving,Portland OR USA,0
+EQP-064,Hotel-FiberWeaver-06,WorkUnit,Weaving,Portland OR USA,0
+EQP-065,Hotel-FiberWeaver-07,WorkUnit,Weaving,Portland OR USA,0
+EQP-066,Hotel-FiberWeaver-08,WorkUnit,Weaving,Portland OR USA,0
+EQP-067,Hotel-FiberWeaver-09,WorkUnit,Weaving,Portland OR USA,0
+EQP-068,Hotel-FiberWeaver-10,WorkUnit,Weaving,Portland OR USA,0
+EQP-069,Hotel-FiberWeaver-11,WorkUnit,Weaving,Portland OR USA,0
+EQP-070,Hotel-FiberWeaver-12,WorkUnit,Weaving,Portland OR USA,0
+EQP-071,Hotel-FiberWeaver-13,WorkUnit,Weaving,Portland OR USA,0
+EQP-072,Hotel-CasePacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-073,Juliet-CasePacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-074,Golf-HeatPress-01,WorkUnit,Laminating,Portland OR USA,0
+EQP-075,Juliet-TensileTestRig-06,WorkUnit,Weaving,Portland OR USA,0
+EQP-076,Juliet-TensileTestRig-07,WorkUnit,Weaving,Portland OR USA,0
+EQP-077,Golf-TrayFormer-01,WorkUnit,Packing,Portland OR USA,0
+EQP-078,Juliet-TensileTestRig-08,WorkUnit,Weaving,Portland OR USA,0
+EQP-079,Juliet-TensileTestRig-03,WorkUnit,Weaving,Portland OR USA,0
+EQP-080,Juliet-TensileTestRig-04,WorkUnit,Weaving,Portland OR USA,0
+EQP-081,Juliet-TensileTestRig-05,WorkUnit,Weaving,Portland OR USA,0
+EQP-082,Foxtrot-TrayFormer-01,WorkUnit,Packing,Portland OR USA,0
+EQP-083,Kilo-TensileTestRig-02,WorkUnit,Weaving,Portland OR USA,0
+EQP-084,Juliet-ConductivityTester-02,WorkUnit,QualityControl,Portland OR USA,0
+EQP-085,Juliet-ConductivityTester-01,WorkUnit,QualityControl,Portland OR USA,0
+EQP-086,Bravo-ShieldWrapper-02,WorkUnit,Laminating,Portland OR USA,0
+EQP-087,Delta-FiberWeaver-07,WorkUnit,Weaving,Portland OR USA,0
+EQP-088,Hotel-BulkPacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-089,Bravo-Laminator-01,WorkUnit,Laminating,Portland OR USA,0
+EQP-090,Bravo-Laminator-02,WorkUnit,Laminating,Portland OR USA,0
+EQP-091,Bravo-ShieldWrapper-01,WorkUnit,Laminating,Portland OR USA,0
+EQP-092,Hotel-SensorPlacer-01,WorkUnit,Weaving,Portland OR USA,0
+EQP-093,Hotel-Laminator-01,WorkUnit,Laminating,Portland OR USA,0
+EQP-094,Bravo-CartoonPacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-095,Bravo-CartoonPacker-02,WorkUnit,Packing,Portland OR USA,0
+EQP-096,Charlie-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-097,Foxtrot-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-098,Delta-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-099,Alpha-FiberWeaver-04,WorkUnit,Weaving,Portland OR USA,0
+EQP-100,Delta-FiberWeaver-14,WorkUnit,Weaving,Portland OR USA,0
+EQP-101,India-FiberWeaver-00,WorkUnit,Weaving,Portland OR USA,0
+EQP-102,India-FiberWeaver-01,WorkUnit,Weaving,Portland OR USA,0
+EQP-103,India-FiberWeaver-03,WorkUnit,Weaving,Portland OR USA,0
+EQP-104,India-FiberWeaver-04,WorkUnit,Weaving,Portland OR USA,0
+EQP-105,India-FiberWeaver-05,WorkUnit,Weaving,Portland OR USA,0
+EQP-106,India-FiberWeaver-06,WorkUnit,Weaving,Portland OR USA,0
+EQP-107,India-FiberWeaver-07,WorkUnit,Weaving,Portland OR USA,0
+EQP-108,India-FiberWeaver-08,WorkUnit,Weaving,Portland OR USA,0
+EQP-109,Kilo-ConductivityTester-01,WorkUnit,QualityControl,Portland OR USA,0
+EQP-110,Echo-FiberWeaver-03,WorkUnit,Weaving,Portland OR USA,0
+EQP-111,Echo-FiberWeaver-05,WorkUnit,Weaving,Portland OR USA,0
+EQP-112,Echo-FiberWeaver-06,WorkUnit,Weaving,Portland OR USA,0
+EQP-113,Echo-PackingRobot-01,WorkUnit,Packing,Portland OR USA,0
+EQP-114,Echo-FiberWeaver-04,WorkUnit,Weaving,Portland OR USA,0
+EQP-115,Alpha-FiberWeaver-01,WorkUnit,Weaving,Portland OR USA,0
+EQP-116,Alpha-FiberWeaver-02,WorkUnit,Weaving,Portland OR USA,0
+EQP-117,Alpha-FiberWeaver-03,WorkUnit,Weaving,Portland OR USA,0
+EQP-118,Echo-BoxFormer-01,WorkUnit,Packing,Portland OR USA,0
+EQP-119,India-FiberWeaver-02,WorkUnit,Weaving,Portland OR USA,0
+EQP-120,India-FiberWeaver-09,WorkUnit,Weaving,Portland OR USA,0
+EQP-121,India-FiberWeaver-10,WorkUnit,Weaving,Portland OR USA,0
+EQP-122,Hotel-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-123,Alpha-ESDWrapper-01,WorkUnit,Packing,Portland OR USA,0
+EQP-124,Alpha-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-125,Alpha-StackerUnit-01,WorkUnit,Packing,Portland OR USA,0
+EQP-126,Alpha-PackingRobot-01,WorkUnit,Packing,Portland OR USA,0
+EQP-127,Bravo-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-128,Echo-Laminator-01,WorkUnit,Laminating,Portland OR USA,0
+EQP-129,Echo-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-130,Echo-FiberWeaver-01,WorkUnit,Weaving,Portland OR USA,0
+EQP-131,Echo-FiberWeaver-02,WorkUnit,Weaving,Portland OR USA,0
+EQP-132,Echo-SensorPlacer-01,WorkUnit,Weaving,Portland OR USA,0
+EQP-133,Echo-BulkPacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-134,Golf-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-135,India-BoxFormer-01,WorkUnit,Packing,Portland OR USA,0
+EQP-136,India-BoxFormer-02,WorkUnit,Packing,Portland OR USA,0
+EQP-137,India-BoxFormer-03,WorkUnit,Packing,Portland OR USA,0
+EQP-138,India-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-139,India-ShieldWrapper-01,WorkUnit,Laminating,Portland OR USA,0
+EQP-140,India-ShieldWrapper-02,WorkUnit,Laminating,Portland OR USA,0
+EQP-141,India-ShieldWrapper-03,WorkUnit,Laminating,Portland OR USA,0
+EQP-142,India-Laminator-01,WorkUnit,Laminating,Portland OR USA,0
+EQP-143,India-Laminator-02,WorkUnit,Laminating,Portland OR USA,0
+EQP-144,India-ConductivityTester-01,WorkUnit,QualityControl,Portland OR USA,0
+EQP-145,India-ConductivityTester-02,WorkUnit,QualityControl,Portland OR USA,0
+EQP-146,India-CasePacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-147,Juliet-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-148,Kilo-ConveyorBelt-01,WorkUnit,Transport,Portland OR USA,0
+EQP-149,Kilo-CasePacker-01,WorkUnit,Packing,Portland OR USA,0
+EQP-150,WeaveLine-Alpha,WorkCenter,Weaving,Portland OR USA,20000000
+EQP-151,WeaveLine-Bravo,WorkCenter,Weaving,Portland OR USA,20000000
+EQP-152,WeaveLine-Charlie,WorkCenter,Weaving,Portland OR USA,20000000
+EQP-153,WeaveLine-Delta,WorkCenter,Weaving,Portland OR USA,20000000
+EQP-154,WeaveLine-Echo,WorkCenter,Weaving,Portland OR USA,20000000
+EQP-155,WeaveLine-Foxtrot,WorkCenter,Weaving,Portland OR USA,20000000
+EQP-156,WeaveLine-Golf,WorkCenter,Weaving,Portland OR USA,20000000
+EQP-157,WeaveLine-Hotel,WorkCenter,Weaving,Portland OR USA,20000000
+EQP-158,WeaveLine-India,WorkCenter,Weaving,Portland OR USA,20000000
+EQP-159,WeaveLine-Juliet,WorkCenter,Weaving,Portland OR USA,20000000
+EQP-160,WeaveLine-Kilo,WorkCenter,Weaving,Portland OR USA,20000000

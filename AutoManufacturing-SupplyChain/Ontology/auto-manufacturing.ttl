@@ -82,6 +82,12 @@
     rdfs:domain :Vehicle ;
     rdfs:range xsd:dateTime .
 
+:Vehicle_FacilityId a owl:DatatypeProperty ;
+    rdfs:label "Vehicle_FacilityId" ;
+    rdfs:comment "FK to Facility where vehicle is produced" ;
+    rdfs:domain :Vehicle ;
+    rdfs:range xsd:string .
+
 # =============================================================================
 # Assembly Properties
 # =============================================================================
@@ -110,6 +116,12 @@
     rdfs:label "Assembly_StartDate" ;
     rdfs:domain :Assembly ;
     rdfs:range xsd:dateTime .
+
+:Assembly_VehicleId a owl:DatatypeProperty ;
+    rdfs:label "Assembly_VehicleId" ;
+    rdfs:comment "FK to Vehicle this assembly belongs to" ;
+    rdfs:domain :Assembly ;
+    rdfs:range xsd:string .
 
 :Temperature a owl:DatatypeProperty ;
     rdfs:label "Temperature" ;
@@ -163,6 +175,12 @@
     rdfs:domain :Component ;
     rdfs:range xsd:integer .
 
+:Component_SupplierId a owl:DatatypeProperty ;
+    rdfs:label "Component_SupplierId" ;
+    rdfs:comment "FK to Supplier who provides this component" ;
+    rdfs:domain :Component ;
+    rdfs:range xsd:string .
+
 # =============================================================================
 # Supplier Properties
 # =============================================================================
@@ -196,6 +214,12 @@
     rdfs:label "Supplier_Certified" ;
     rdfs:domain :Supplier ;
     rdfs:range xsd:boolean .
+
+:Supplier_FacilityId a owl:DatatypeProperty ;
+    rdfs:label "Supplier_FacilityId" ;
+    rdfs:comment "FK to Facility where supplier operates" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:string .
 
 # =============================================================================
 # Facility Properties
@@ -275,6 +299,12 @@
 
 :Order_Status a owl:DatatypeProperty ;
     rdfs:label "Order_Status" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:string .
+
+:Order_VehicleId a owl:DatatypeProperty ;
+    rdfs:label "Order_VehicleId" ;
+    rdfs:comment "FK to Vehicle this order is for" ;
     rdfs:domain :ProductionOrder ;
     rdfs:range xsd:string .
 

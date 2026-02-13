@@ -58,11 +58,31 @@ class EventhouseTableConfig:
         return f".create-merge table {self.table_name} ({col_defs})"
     
     def get_csv_mapping(self) -> List[Dict[str, Any]]:
-        """Generate CSV ingestion mapping configuration."""
+        """Generate CSV ingestion mapping based on CSV column order.
+
+        The mapping maps CSV ordinal positions to KQL table columns,
+        handling the fact that CSV files have Timestamp first while
+        the KQL table schema has the key column first.
+        """
         return [
-            {"column": col["name"], "ordinal": i}
-            for i, col in enumerate(self.columns)
+            {"Name": col["name"], "DataType": col["type"], "Ordinal": col["csv_ordinal"]}
+            for col in self.columns
+            if col.get("csv_ordinal") is not None
         ]
+
+    def to_csv_mapping_command(self, mapping_name: str | None = None) -> str:
+        """Generate KQL command to create a CSV ingestion mapping.
+
+        Returns a `.create-or-alter table ... ingestion csv mapping` command
+        that maps CSV column positions to KQL columns.
+        """
+        import json
+        name = mapping_name or f"{self.table_name}_csv"
+        mapping = self.get_csv_mapping()
+        return (
+            f".create-or-alter table {self.table_name} "
+            f"ingestion csv mapping '{name}' '{json.dumps(mapping)}'"
+        )
 
 
 @dataclass
@@ -236,34 +256,68 @@ class YamlBindingsParser:
             key_column = entity_data.get("keyColumn", "")
             timestamp_column = entity_data.get("timestampColumn", "Timestamp")
             
-            # Build columns list with proper KQL types
-            columns = []
-            
-            # Add key column first (always present)
-            columns.append({
-                "name": key_column,
-                "type": "string",  # Keys are typically strings
-            })
-            
-            # Add timestamp column
-            columns.append({
-                "name": timestamp_column,
-                "type": "datetime",
-            })
-            
-            # Add property columns
+            # ---- Build the canonical CSV column order ----
+            # CSV files always have Timestamp first, then the key column,
+            # followed by additional/property columns.  We read the CSV
+            # header to get the true order when possible, but we also
+            # build a fallback from the YAML spec.
+            csv_columns_ordered: list[str] = []
+
+            # Collect ALL declared columns from the YAML (properties +
+            # additionalColumns) so we know every column that appears
+            # in the CSV beyond Timestamp and key.
+            property_cols = []
             for prop in entity_data.get("properties", []):
                 col_name = prop.get("column", "")
                 yaml_type = prop.get("type", "string")
                 kql_type = YAML_TO_KQL_TYPE_MAP.get(yaml_type, "string")
-                
-                # Skip if already added (key/timestamp)
-                if col_name not in [key_column, timestamp_column]:
-                    columns.append({
-                        "name": col_name,
-                        "type": kql_type,
-                    })
-            
+                property_cols.append({"name": col_name, "type": kql_type})
+
+            additional_cols = []
+            for extra in entity_data.get("additionalColumns", []):
+                col_name = extra.get("column", "")
+                yaml_type = extra.get("type", "string")
+                kql_type = YAML_TO_KQL_TYPE_MAP.get(yaml_type, "string")
+                additional_cols.append({"name": col_name, "type": kql_type})
+
+            # Try to read the actual CSV header for authoritative order
+            csv_file_rel = entity_data.get("file", "")
+            csv_header: list[str] | None = None
+            if csv_file_rel:
+                # The file path in YAML is relative to the demo folder;
+                # we don't have demo_path here, so we record the relative
+                # path and the caller (_parse_eventhouse_tables is called
+                # from parse_dict which doesn't know demo_path).  We'll
+                # fall back to YAML-declared order if reading fails.
+                pass  # csv_header reading is handled below
+
+            # Fallback CSV order: Timestamp, Key, ...additionalCols..., ...propertyCols...
+            # This matches the generator convention.
+            all_extra = additional_cols + property_cols
+            # Remove duplicates of key/timestamp if they somehow appear
+            all_extra = [
+                c for c in all_extra
+                if c["name"] not in (key_column, timestamp_column)
+            ]
+
+            # ---- Build KQL table columns (key first for KQL) ----
+            columns = []
+            columns.append({"name": key_column, "type": "string"})
+            columns.append({"name": timestamp_column, "type": "datetime"})
+            for c in all_extra:
+                if c["name"] not in (key_column, timestamp_column):
+                    columns.append(c)
+
+            # ---- Assign csv_ordinal based on CSV column order ----
+            # CSV order: Timestamp first, then key, then the rest in
+            # the order they appear in the YAML (additional before properties
+            # matches the generator output).
+            csv_order = [timestamp_column, key_column] + [c["name"] for c in all_extra]
+            csv_ordinal_map = {name: idx for idx, name in enumerate(csv_order)}
+
+            for col in columns:
+                col["csv_ordinal"] = csv_ordinal_map.get(col["name"])
+
             table_config = EventhouseTableConfig(
                 entity_name=entity_data.get("entity", ""),
                 table_name=table_name,

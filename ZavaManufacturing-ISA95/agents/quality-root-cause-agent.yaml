@@ -1,0 +1,63 @@
+name: "Zava Quality Root-Cause Agent"
+description: |
+  Investigates quality test failures across the Zava smart textile manufacturing
+  process. Traces defects back through process segments, materials, and suppliers
+  to identify root causes. Leverages the ontology graph for multi-hop traversal:
+  QualityTest → ProcessSegment → Material → Supplier.
+
+persona: |
+  You are a Quality Engineering specialist at Zava Inc. You help manufacturing
+  teams investigate quality failures in ZavaCore smart mesh production. You have
+  deep knowledge of conductivity testing, tensile strength analysis, mesh gauge
+  checks, and contamination testing for conductive fiber textiles.
+
+tools:
+  - graph_query:
+      description: "Query the Zava Manufacturing ontology graph"
+      example_queries:
+        - description: "Find all failed quality tests with segment and material details"
+          query: |
+            MATCH (t:QualityTest)-[:TESTED_IN]->(s:ProcessSegment)-[:USES_MATERIAL]->(m:Material)
+            WHERE t.Test_Result = 'Fail'
+            RETURN t.TestId, t.Test_Type, t.Test_Description, t.Test_Resolution,
+                   s.SegmentId, s.Segment_Type, s.Segment_Code,
+                   m.Material_Name, m.Material_PartNumber
+        - description: "Trace a specific batch through all quality gates"
+          query: |
+            MATCH (s:ProcessSegment)-[:PRODUCED_IN]->(b:ProductBatch)
+            WHERE b.BatchId = 'BTC-007'
+            OPTIONAL MATCH (t:QualityTest)-[:TESTED_IN]->(s)
+            RETURN s.Segment_Type, s.Segment_Status,
+                   t.Test_Type, t.Test_Result, t.Test_Description
+            ORDER BY s.Segment_StartDate
+        - description: "Find materials from low-rated suppliers used in failed segments"
+          query: |
+            MATCH (t:QualityTest)-[:TESTED_IN]->(s:ProcessSegment)-[:USES_MATERIAL]->(m:Material)-[:SUPPLIED_BY]->(sup:Supplier)
+            WHERE t.Test_Result = 'Fail' AND sup.Supplier_Rating < 4.5
+            RETURN t.TestId, m.Material_Name, sup.Supplier_Name, sup.Supplier_Rating
+
+  - sql_query:
+      description: "Query Lakehouse tables for detailed quality analysis"
+      tables:
+        - FactQualityTest
+        - DimProcessSegment
+        - DimMaterial
+        - DimSupplier
+
+  - kql_query:
+      description: "Query Eventhouse telemetry for process conditions during quality events"
+      tables:
+        - ProcessSegmentTelemetry
+      example_queries:
+        - description: "Check temperature and moisture during a segment"
+          query: |
+            ProcessSegmentTelemetry
+            | where SegmentId == 'SEG-025'
+            | summarize avg(Temperature), avg(MoistureContent), avg(CycleTime)
+              by bin(Timestamp, 1h)
+
+conversation_starters:
+  - "Which coating segments had conductivity test failures?"
+  - "Trace quality results for batch BTC-007 (ZavaCore Systems Elite)"
+  - "Are there any patterns in tensile strength failures across batches?"
+  - "Which materials are associated with the most quality issues?"

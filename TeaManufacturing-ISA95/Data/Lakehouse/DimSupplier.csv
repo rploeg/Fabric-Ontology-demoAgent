@@ -1,0 +1,11 @@
+SupplierId,Supplier_Name,Supplier_Tier,Supplier_Country,Supplier_Rating,Supplier_Certified,EquipmentId
+SUP-001,Darjeeling Premium Estate,1,India,4.7,true,EQP-009
+SUP-002,Assam Golden Gardens,1,India,4.5,true,EQP-010
+SUP-003,Ceylon Highland Plantation,1,Sri Lanka,4.8,true,EQP-011
+SUP-004,Hangzhou Green Tea Co.,1,China,4.6,true,EQP-012
+SUP-005,PackRight Solutions GmbH,2,Germany,4.3,true,EQP-013
+SUP-006,FlexiPack Industries,2,USA,4.1,true,EQP-014
+SUP-007,Nile Valley Botanicals,1,Egypt,4.4,true,EQP-015
+SUP-008,BergamotEssence Italia,2,Italy,4.9,true,EQP-013
+SUP-009,Kenyan Highland Tea Corp,1,Kenya,4.2,true,EQP-010
+SUP-010,StringCraft Ltd,2,UK,4.0,true,EQP-002

@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Golden Leaf Tea Co. - Tea Bag Manufacturing Ontology (ISA-95 / OPC UA)</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2e1a 0%, #163e2e 50%, #0f604a 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            background: linear-gradient(90deg, #2d6a4f 0%, #40916c 50%, #74c69d 100%);
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(45, 106, 79, 0.3);
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        header .standards {
+            font-size: 0.95rem;
+            opacity: 0.75;
+            margin-top: 5px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: linear-gradient(145deg, #1e3a2e 0%, #163e2e 100%);
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #74c69d;
+        }
+        
+        .metric-label {
+            font-size: 0.95rem;
+            color: #a0a0a0;
+            margin-top: 5px;
+        }
+        
+        .diagram-container {
+            background: #fff;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .diagram-title {
+            color: #1a2e1a;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+        
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        .legend-item.batch { border-left-color: #2d6a4f; }
+        .legend-item.segment { border-left-color: #f39c12; }
+        .legend-item.material { border-left-color: #3498db; }
+        .legend-item.supplier { border-left-color: #e74c3c; }
+        .legend-item.equipment { border-left-color: #9b59b6; }
+        .legend-item.order { border-left-color: #1abc9c; }
+        .legend-item.quality { border-left-color: #e67e22; }
+        .legend-item.shipment { border-left-color: #95a5a6; }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 15px;
+        }
+        
+        .legend-item.batch .legend-color { background: #2d6a4f; }
+        .legend-item.segment .legend-color { background: #f39c12; }
+        .legend-item.material .legend-color { background: #3498db; }
+        .legend-item.supplier .legend-color { background: #e74c3c; }
+        .legend-item.equipment .legend-color { background: #9b59b6; }
+        .legend-item.order .legend-color { background: #1abc9c; }
+        .legend-item.quality .legend-color { background: #e67e22; }
+        .legend-item.shipment .legend-color { background: #95a5a6; }
+        
+        .legend-text {
+            flex: 1;
+        }
+        
+        .legend-text strong {
+            display: block;
+            margin-bottom: 3px;
+        }
+        
+        .legend-text span {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+        }
+        
+        .timeseries-badge {
+            background: #2d6a4f;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+
+        .isa95-badge {
+            background: #8B4513;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+        
+        .process-hierarchy {
+            background: linear-gradient(145deg, #1e3a2e 0%, #163e2e 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .process-hierarchy h3 {
+            margin-bottom: 15px;
+            color: #74c69d;
+        }
+
+        .hierarchy-level {
+            display: flex;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .level-tag {
+            background: #2d6a4f;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.85rem;
+            min-width: 40px;
+            text-align: center;
+            margin-right: 15px;
+        }
+
+        .level-name {
+            flex: 1;
+            font-size: 0.95rem;
+        }
+
+        .level-mapping {
+            font-size: 0.8rem;
+            color: #74c69d;
+            font-style: italic;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🍵 Golden Leaf Tea Co.</h1>
+            <p>Tea Bag Manufacturing Ontology</p>
+            <p class="standards">ISA-95 (IEC 62264) | OPC UA Information Model</p>
+        </header>
+        
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-value">8</div>
+                <div class="metric-label">Entity Types</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">10</div>
+                <div class="metric-label">Relationships</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">2</div>
+                <div class="metric-label">Timeseries Entities</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">6</div>
+                <div class="metric-label">OPC UA Metrics</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-value">5</div>
+                <div class="metric-label">Max Traversal Hops</div>
+            </div>
+        </div>
+
+        <div class="process-hierarchy">
+            <h3>ISA-95 Process Hierarchy — Make & Quality</h3>
+            <div class="hierarchy-level">
+                <span class="level-tag">L0</span>
+                <span class="level-name">Supply Chain</span>
+                <span class="level-mapping">Shipment, Material, Supplier</span>
+            </div>
+            <div class="hierarchy-level">
+                <span class="level-tag">L1</span>
+                <span class="level-name">Make & Quality</span>
+                <span class="level-mapping">ProductBatch, ProductionOrder</span>
+            </div>
+            <div class="hierarchy-level">
+                <span class="level-tag">L2</span>
+                <span class="level-name">Blend Scheduling → Tea Blending → Packing Execution → Quality Management → Shop Floor Control → Materials Mgmt</span>
+                <span class="level-mapping">ProcessSegment, QualityTest, Equipment</span>
+            </div>
+            <div class="hierarchy-level">
+                <span class="level-tag">L3</span>
+                <span class="level-name">Blend Order Mgmt, Material Staging, Packing Line Order Mgmt, Production Confirmation, Material Quality, SFG/FG Quality</span>
+                <span class="level-mapping">Detailed operations within segments</span>
+            </div>
+        </div>
+        
+        <div class="diagram-container">
+            <h2 class="diagram-title">Entity Relationship Diagram</h2>
+            <div class="mermaid">
+erDiagram
+    ProductBatch ||--o{ ProcessSegment : "PRODUCED_IN"
+    ProcessSegment }o--o{ Material : "USES_MATERIAL"
+    Material }o--|| Supplier : "SUPPLIED_BY"
+    ProductBatch }o--|| Equipment : "MANUFACTURED_AT"
+    ProductionOrder ||--|| ProductBatch : "ORDERED_FOR"
+    QualityTest }o--|| ProcessSegment : "TESTED_IN"
+    Shipment }o--|| Equipment : "ORIGINATED_FROM"
+    Shipment }o--|| Equipment : "DELIVERED_TO"
+    Shipment }o--o{ Material : "SHIPS_MATERIAL"
+    Supplier }o--|| Equipment : "OPERATES_FROM"
+    
+    ProductBatch {
+        string BatchId PK
+        string Batch_Product
+        string Batch_BlendCode
+        int Batch_Quantity
+        string Batch_Status
+    }
+    
+    ProcessSegment {
+        string SegmentId PK
+        string Segment_Type
+        string Segment_Code
+        string Segment_Status
+        double Temperature_TS
+        double MoistureContent_TS
+        double CycleTime_TS
+    }
+    
+    Material {
+        string MaterialId PK
+        string Material_Name
+        string Material_PartNumber
+        string Material_Class
+        double Material_UnitCost
+    }
+    
+    Supplier {
+        string SupplierId PK
+        string Supplier_Name
+        int Supplier_Tier
+        string Supplier_Country
+        double Supplier_Rating
+    }
+    
+    Equipment {
+        string EquipmentId PK
+        string Equipment_Name
+        string Equipment_Level
+        string Equipment_Type
+        double EnergyConsumption_TS
+        double ProductionRate_TS
+    }
+    
+    ProductionOrder {
+        string OrderId PK
+        string Order_Number
+        int Order_Quantity
+        string Order_Priority
+        string Order_Status
+    }
+    
+    QualityTest {
+        string TestId PK
+        string Test_Type
+        string Test_Result
+        string Test_Description
+        string Test_Resolution
+    }
+    
+    Shipment {
+        string ShipmentId PK
+        string Shipment_TrackingNum
+        string Shipment_Status
+        string Shipment_Carrier
+    }
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item batch">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>ProductBatch <span class="isa95-badge">ISA-95 Material Lot</span></strong>
+                    <span>Finished tea bag batches (English Breakfast, Earl Grey, Green Tea, etc.)</span>
+                </div>
+            </div>
+            <div class="legend-item segment">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>ProcessSegment <span class="timeseries-badge">OPC UA TIMESERIES</span></strong>
+                    <span>Blending, Filling, Sealing, Packaging — ISA-95 L2 process steps</span>
+                </div>
+            </div>
+            <div class="legend-item material">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>Material <span class="isa95-badge">ISA-95 Material Def</span></strong>
+                    <span>Tea leaves, herbs, oils, filter paper, boxes — with Material Class</span>
+                </div>
+            </div>
+            <div class="legend-item supplier">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>Supplier</strong>
+                    <span>Tea estates (Darjeeling, Assam, Ceylon) &amp; packaging suppliers</span>
+                </div>
+            </div>
+            <div class="legend-item equipment">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>Equipment <span class="timeseries-badge">OPC UA TIMESERIES</span></strong>
+                    <span>ISA-95 hierarchy: Sites → Areas → WorkCenters</span>
+                </div>
+            </div>
+            <div class="legend-item order">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>ProductionOrder <span class="isa95-badge">ISA-95 Prod Schedule</span></strong>
+                    <span>Work orders from supply plan for tea bag production runs</span>
+                </div>
+            </div>
+            <div class="legend-item quality">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>QualityTest</strong>
+                    <span>Taste tests, weight checks, moisture analysis, contamination, audits</span>
+                </div>
+            </div>
+            <div class="legend-item shipment">
+                <div class="legend-color"></div>
+                <div class="legend-text">
+                    <strong>Shipment</strong>
+                    <span>Inbound raw materials &amp; outbound finished goods logistics</span>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Generated by Fabric Ontology Demo Agent | ISA-95 / OPC UA | February 2026</p>
+        </footer>
+    </div>
+    
+    <script>
+        mermaid.initialize({ 
+            startOnLoad: true,
+            theme: 'default',
+            er: {
+                diagramPadding: 20,
+                layoutDirection: 'TB',
+                minEntityWidth: 100,
+                minEntityHeight: 75,
+                entityPadding: 15
+            }
+        });
+    </script>
+</body>
+</html>

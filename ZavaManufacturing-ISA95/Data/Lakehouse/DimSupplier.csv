@@ -1,0 +1,11 @@
+SupplierId,Supplier_Name,Supplier_Tier,Supplier_Country,Supplier_Rating,Supplier_Certified,EquipmentId
+SUP-001,Toray Carbon Fibers,1,Japan,4.7,true,EQP-009
+SUP-002,NanoSilver Tech Korea,1,South Korea,4.5,true,EQP-010
+SUP-003,CopperTrace GmbH,1,Germany,4.8,true,EQP-011
+SUP-004,FR4-Global Inc,1,Taiwan,4.6,true,EQP-012
+SUP-005,PolyCoat Industries,2,USA,4.3,true,EQP-013
+SUP-006,FlexConnect Ltd,2,UK,4.1,true,EQP-014
+SUP-007,SensorPak GmbH,1,Germany,4.4,true,EQP-015
+SUP-008,CleanRoom Supplies BV,2,Netherlands,4.9,true,EQP-013
+SUP-009,PackSafe Industries,1,USA,4.2,true,EQP-010
+SUP-010,ShieldTech Corp,2,USA,4.0,true,EQP-002

@@ -988,6 +988,18 @@ class DemoOrchestrator:
                     command=create_cmd,
                 )
 
+                # Step 1b: Create CSV ingestion mapping so column order
+                # is handled correctly (CSV has Timestamp first, KQL has
+                # key column first).
+                mapping_name = f"{table_name}_csv"
+                mapping_cmd = table_config.to_csv_mapping_command(mapping_name)
+                logger.info(f"Creating CSV ingestion mapping: {mapping_name}")
+                self.eventhouse_client.execute_kql_management(
+                    eventhouse_id=self.state.eventhouse_id,
+                    database_name=self.state.kql_database_name,
+                    command=mapping_cmd,
+                )
+
                 # Step 2: Upload CSV to Lakehouse Files area for OneLake access
                 # KQL can ingest from OneLake paths
                 if self.state.lakehouse_id:
@@ -1022,6 +1034,7 @@ class DemoOrchestrator:
                         onelake_path=onelake_path,
                         file_format="csv",
                         ignore_first_record=True,  # Skip CSV header
+                        mapping_name=mapping_name,  # Use CSV mapping for correct column order
                     )
 
                     # Wait for async ingestion to complete (KQL ingestion is async)
@@ -1641,6 +1654,7 @@ class DemoOrchestrator:
                 database_name = kql_db.get("displayName", self.config.resources.eventhouse.name)
             except Exception:
                 database_name = self.config.resources.eventhouse.name
+            cluster_uri = self._get_eventhouse_cluster_uri()
             
             for entity_binding in yaml_config.eventhouse_entities:
                 entity_name = entity_binding.entity_name
@@ -1714,6 +1728,7 @@ class DemoOrchestrator:
                     timestamp_column=timestamp_col,
                     property_mappings=property_mappings,
                     binding_id=eventhouse_binding_id,  # New ID for entities with both binding types
+                    cluster_uri=cluster_uri,
                 )
                 eventhouse_binding_count += 1
                 logger.info(f"Added eventhouse binding: {entity_name} -> {entity_binding.table_name}")
@@ -1947,7 +1962,8 @@ class DemoOrchestrator:
                 duration_seconds=time.time() - start,
             )
         
-        entity_name_to_id, entity_id_to_properties, _, existing_entity_binding_ids, _ = \
+        entity_name_to_id, entity_id_to_properties, _, existing_entity_binding_ids, _, \
+            existing_nontimeseries_binding_ids, _ = \
             self._parse_ontology_mappings(ont_definition)
         
         self._report_progress("bind_static", "in_progress", 30)
@@ -1990,7 +2006,9 @@ class DemoOrchestrator:
                 skipped.append(entity_name)
                 continue
             
-            existing_binding_id = existing_entity_binding_ids.get(entity_id)
+            # Reuse existing NonTimeSeries binding ID to update in-place
+            # (Fabric updateDefinition merges; fresh UUIDs create duplicates)
+            existing_binding_id = existing_nontimeseries_binding_ids.get(entity_id)
             
             builder.add_lakehouse_binding(
                 entity_type_id=entity_id,
@@ -2034,6 +2052,7 @@ class DemoOrchestrator:
                 duration_seconds=time.time() - start,
             )
         
+        self.state.bindings_configured = True
         self._report_progress("bind_static", "completed", 100)
         
         return StepResult(
@@ -2095,7 +2114,8 @@ class DemoOrchestrator:
                 duration_seconds=time.time() - start,
             )
         
-        entity_name_to_id, entity_id_to_properties, _, existing_entity_binding_ids, _ = \
+        entity_name_to_id, entity_id_to_properties, _, existing_entity_binding_ids, _, \
+            _, _ = \
             self._parse_ontology_mappings(ont_definition)
         
         self._report_progress("bind_timeseries", "in_progress", 30)
@@ -2106,6 +2126,7 @@ class DemoOrchestrator:
             database_name = kql_db.get("displayName", self.config.resources.eventhouse.name)
         except Exception:
             database_name = self.config.resources.eventhouse.name
+        cluster_uri = self._get_eventhouse_cluster_uri()
         
         # Build bindings
         builder = OntologyBindingBuilder(
@@ -2128,6 +2149,12 @@ class DemoOrchestrator:
             entity_props = entity_id_to_properties.get(entity_id, {})
             property_mappings = {}
             
+            # Include the key column mapping (API requires all entity key properties to be mapped)
+            key_col = entity_binding.key_column
+            key_prop_id = entity_props.get(key_col)
+            if key_prop_id:
+                property_mappings[key_col] = key_prop_id
+            
             for pm in entity_binding.property_mappings:
                 prop_id = entity_props.get(pm.target_property)
                 if prop_id:
@@ -2145,7 +2172,10 @@ class DemoOrchestrator:
                     timestamp_col = table_config.timestamp_column
                     break
             
-            existing_binding_id = existing_entity_binding_ids.get(entity_id)
+            # For timeseries bindings, always generate fresh UUIDs.
+            # The builder's type-aware filter preserves existing static bindings,
+            # so we must not reuse their IDs. On re-run, old timeseries bindings
+            # are filtered out by type and new UUIDs are generated.
             
             builder.add_eventhouse_binding(
                 entity_type_id=entity_id,
@@ -2155,7 +2185,8 @@ class DemoOrchestrator:
                 key_column=entity_binding.key_column,
                 timestamp_column=timestamp_col,
                 property_mappings=property_mappings,
-                binding_id=existing_binding_id,
+                binding_id=None,  # Always fresh UUID
+                cluster_uri=cluster_uri,
             )
             
             binding_count += 1
@@ -2186,6 +2217,7 @@ class DemoOrchestrator:
                 duration_seconds=time.time() - start,
             )
         
+        self.state.bindings_configured = True
         self._report_progress("bind_timeseries", "completed", 100)
         
         return StepResult(
@@ -2247,7 +2279,8 @@ class DemoOrchestrator:
                 duration_seconds=time.time() - start,
             )
         
-        entity_name_to_id, entity_id_to_properties, relationship_name_to_id, _, existing_rel_ctx_ids = \
+        entity_name_to_id, entity_id_to_properties, relationship_name_to_id, _, existing_rel_ctx_ids, \
+            _, _ = \
             self._parse_ontology_mappings(ont_definition)
         
         self._report_progress("bind_relationships", "in_progress", 30)
@@ -2347,8 +2380,11 @@ class DemoOrchestrator:
         entity_name_to_id = {}
         entity_id_to_properties = {}
         relationship_name_to_id = {}
-        existing_entity_binding_ids = {}
+        existing_entity_binding_ids = {}  # entity_id -> binding_id (last one found, legacy)
         existing_rel_ctx_ids = {}
+        # NEW: track binding IDs per type for proper reuse
+        existing_nontimeseries_binding_ids = {}  # entity_id -> binding_id
+        existing_timeseries_binding_ids = {}  # entity_id -> [binding_id, ...]
         
         parts = ont_definition.get("definition", {}).get("parts", [])
         if not parts:
@@ -2379,6 +2415,12 @@ class DemoOrchestrator:
                         prop_id = prop.get("id", "")
                         if prop_name and prop_id:
                             props[prop_name] = prop_id
+                    # Also include timeseries properties
+                    for prop in payload.get("timeseriesProperties", []):
+                        prop_name = prop.get("name", "")
+                        prop_id = prop.get("id", "")
+                        if prop_name and prop_id:
+                            props[prop_name] = prop_id
                     entity_id_to_properties[entity_id] = props
             
             # Extract relationship type mappings
@@ -2388,14 +2430,22 @@ class DemoOrchestrator:
                 if rel_id and rel_name:
                     relationship_name_to_id[rel_name] = rel_id
             
-            # Extract existing binding IDs
+            # Extract existing binding IDs — track per type
             elif "/DataBindings/" in path:
                 parts_split = path.split("/")
                 if len(parts_split) >= 4:
                     entity_id = parts_split[1]
                     binding_file = parts_split[3]
                     binding_id = binding_file.replace(".json", "")
-                    existing_entity_binding_ids[entity_id] = binding_id
+                    existing_entity_binding_ids[entity_id] = binding_id  # legacy
+                    # Determine binding type from payload
+                    binding_type = payload.get("dataBindingConfiguration", {}).get("dataBindingType", "")
+                    if binding_type == "NonTimeSeries":
+                        existing_nontimeseries_binding_ids[entity_id] = binding_id
+                    elif binding_type == "TimeSeries":
+                        if entity_id not in existing_timeseries_binding_ids:
+                            existing_timeseries_binding_ids[entity_id] = []
+                        existing_timeseries_binding_ids[entity_id].append(binding_id)
             
             # Extract existing contextualization IDs
             elif "/Contextualizations/" in path:
@@ -2407,7 +2457,8 @@ class DemoOrchestrator:
                     existing_rel_ctx_ids[rel_id] = ctx_id
         
         return (entity_name_to_id, entity_id_to_properties, relationship_name_to_id,
-                existing_entity_binding_ids, existing_rel_ctx_ids)
+                existing_entity_binding_ids, existing_rel_ctx_ids,
+                existing_nontimeseries_binding_ids, existing_timeseries_binding_ids)
 
     # =========================================================================
     # SDK Bridge Helpers (Phase 3)
@@ -2688,7 +2739,13 @@ class DemoOrchestrator:
         self._report_progress("verify", "in_progress", 75)
 
         # --- 4. Verify Bindings ---
-        if self.state.bindings_configured:
+        bindings_ok = (
+            self.state.bindings_configured
+            or self._state_manager.is_step_completed("configure_bindings")
+            or self._state_manager.is_step_completed("bind_static")
+            or self._state_manager.is_step_completed("bind_timeseries")
+        )
+        if bindings_ok:
             checks_passed.append("✓ Data bindings configured")
         elif self.state.ontology_id:
             checks_warnings.append("⚠ Bindings not configured (ontology exists but bindings may need manual setup)")

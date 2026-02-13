@@ -1,0 +1,10 @@
+demo:
+  name: "ZavaManufacturing-ISA95"
+
+resources:
+  lakehouse:
+    name: "Zava_ISA95_Lakehouse"
+  eventhouse:
+    name: "Zava_ISA95_Telemetry"
+  ontology:
+    name: "Zava_ISA95_Ontology"

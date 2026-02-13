@@ -34,6 +34,9 @@ lakehouse:
         - property: Vehicle_CompletionDate
           column: Vehicle_CompletionDate
           type: datetime
+        - property: Vehicle_FacilityId
+          column: FacilityId
+          type: string
 
     - entity: Assembly
       sourceTable: DimAssembly
@@ -55,6 +58,9 @@ lakehouse:
         - property: Assembly_StartDate
           column: Assembly_StartDate
           type: datetime
+        - property: Assembly_VehicleId
+          column: VehicleId
+          type: string
 
     - entity: Component
       sourceTable: DimComponent
@@ -79,6 +85,9 @@ lakehouse:
         - property: Component_LeadTimeDays
           column: Component_LeadTimeDays
           type: int
+        - property: Component_SupplierId
+          column: SupplierId
+          type: string
 
     - entity: Supplier
       sourceTable: DimSupplier
@@ -103,6 +112,9 @@ lakehouse:
         - property: Supplier_Certified
           column: Supplier_Certified
           type: boolean
+        - property: Supplier_FacilityId
+          column: FacilityId
+          type: string
 
     - entity: Facility
       sourceTable: DimFacility
@@ -147,6 +159,9 @@ lakehouse:
           type: datetime
         - property: Order_Status
           column: Order_Status
+          type: string
+        - property: Order_VehicleId
+          column: VehicleId
           type: string
 
     - entity: QualityEvent
@@ -198,70 +213,70 @@ lakehouse:
           type: string
 
   relationships:
-    - relationship: ASSEMBLED_INTO
+    - relationship: assembledInto
       sourceEntity: Assembly
       targetEntity: Vehicle
       sourceTable: DimAssembly
       sourceKeyColumn: AssemblyId
       targetKeyColumn: VehicleId
 
-    - relationship: USES_COMPONENT
+    - relationship: usesComponent
       sourceEntity: Assembly
       targetEntity: Component
       sourceTable: EdgeAssemblyComponent
       sourceKeyColumn: AssemblyId
       targetKeyColumn: ComponentId
 
-    - relationship: SUPPLIED_BY
+    - relationship: suppliedBy
       sourceEntity: Component
       targetEntity: Supplier
       sourceTable: DimComponent
       sourceKeyColumn: ComponentId
       targetKeyColumn: SupplierId
 
-    - relationship: PRODUCED_AT
+    - relationship: producedAt
       sourceEntity: Vehicle
       targetEntity: Facility
       sourceTable: DimVehicle
       sourceKeyColumn: VehicleId
       targetKeyColumn: FacilityId
 
-    - relationship: ORDERED_FOR
+    - relationship: orderedFor
       sourceEntity: ProductionOrder
       targetEntity: Vehicle
       sourceTable: DimProductionOrder
       sourceKeyColumn: OrderId
       targetKeyColumn: VehicleId
 
-    - relationship: AFFECTS
+    - relationship: affects
       sourceEntity: QualityEvent
       targetEntity: Assembly
       sourceTable: FactQualityEvent
       sourceKeyColumn: EventId
       targetKeyColumn: AssemblyId
 
-    - relationship: ORIGINATED_FROM
+    - relationship: originatedFrom
       sourceEntity: Shipment
       targetEntity: Facility
       sourceTable: EdgeShipmentOrigin
       sourceKeyColumn: ShipmentId
       targetKeyColumn: FacilityId
 
-    - relationship: DELIVERED_TO
+    - relationship: deliveredTo
       sourceEntity: Shipment
       targetEntity: Facility
       sourceTable: EdgeShipmentDestination
       sourceKeyColumn: ShipmentId
       targetKeyColumn: FacilityId
 
-    - relationship: SHIPS_COMPONENT
+    - relationship: ships_component
       sourceEntity: Shipment
       targetEntity: Component
       sourceTable: EdgeShipmentComponent
       sourceKeyColumn: ShipmentId
       targetKeyColumn: ComponentId
 
-    - relationship: OPERATES_FROM
+    - relationship: operatesFrom
       sourceEntity: Supplier
       targetEntity: Facility
       sourceTable: DimSupplier

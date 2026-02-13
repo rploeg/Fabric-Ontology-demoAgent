@@ -1,0 +1,26 @@
+MaterialId,Material_Name,Material_PartNumber,Material_Class,Material_UnitCost,Material_LeadTimeDays,SupplierId
+MAT-001,Graphite Fiber Tow,GFT-001,RawMaterial,45.0,21,SUP-001
+MAT-002,Silver Nanowire Solution,SNW-002,RawMaterial,12.0,14,SUP-002
+MAT-003,Copper Trace Ink,CTI-003,RawMaterial,28.0,18,SUP-003
+MAT-004,FR-4 Substrate Sheet,FR4-004,RawMaterial,22.0,25,SUP-004
+MAT-005,Conductive Polymer Coating,CPC-005,RawMaterial,35.0,20,SUP-007
+MAT-006,Carbon Nanotube Dispersion,CNT-006,RawMaterial,120.0,15,SUP-008
+MAT-007,Piezoelectric PVDF Film,PVD-007,RawMaterial,10.0,16,SUP-009
+MAT-008,Thermoplastic PU Film,TPU-008,RawMaterial,18.0,19,SUP-001
+MAT-009,Elastane Blend Yarn,EBY-009,RawMaterial,85.0,12,SUP-007
+MAT-010,Nylon Base Yarn,NBY-010,RawMaterial,65.0,14,SUP-007
+MAT-011,Sensor Module Type-A,SMA-011,Component,0.02,7,SUP-005
+MAT-012,Flex PCB Connector,FPC-012,Component,0.01,5,SUP-010
+MAT-013,Micro Solder Paste,MSP-013,Component,0.005,5,SUP-010
+MAT-014,Conductive Adhesive Tape,CAT-014,Component,0.03,10,SUP-005
+MAT-015,Moisture Barrier Film,MBF-015,PackagingMaterial,0.04,8,SUP-005
+MAT-016,Anti-Static Bag Single,ASB-016,PackagingMaterial,0.15,7,SUP-006
+MAT-017,Anti-Static Bag Bulk,ABB-017,PackagingMaterial,0.25,7,SUP-006
+MAT-018,Outer Shipping Carton,OSC-018,PackagingMaterial,0.35,7,SUP-006
+MAT-019,ESD Shielding Wrap,ESW-019,PackagingMaterial,0.02,6,SUP-006
+MAT-020,Adhesive Product Labels,APL-020,PackagingMaterial,0.01,5,SUP-005
+MAT-021,Pallet Wrap Film,PWF-021,PackagingMaterial,0.5,5,SUP-006
+MAT-022,Desiccant Sachets,DSC-022,PackagingMaterial,0.08,10,SUP-005
+MAT-023,Nitrogen Purge Gas,NPG-023,PackagingMaterial,2.0,3,SUP-005
+MAT-024,Calibration Certificate Card,CCC-024,PackagingMaterial,0.12,8,SUP-006
+MAT-025,Tamper-Evident Seal,TES-025,PackagingMaterial,0.05,5,SUP-005

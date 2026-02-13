@@ -1,0 +1,549 @@
+@prefix : <http://example.com/zava-manufacturing-isa95#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix isa95: <http://www.isa.org/isa-95#> .
+@prefix opcua: <http://opcfoundation.org/UA/#> .
+
+# =============================================================================
+# Ontology Declaration
+# =============================================================================
+
+<http://example.com/zava-manufacturing-isa95> a owl:Ontology ;
+    rdfs:label "Zava Inc. - Smart Textile Manufacturing (ISA-95 / OPC UA)" ;
+    rdfs:comment "Ontology for smart textile (smart mesh) manufacturing based on ISA-95 equipment hierarchy and OPC UA information model. Models the Make & Quality process from coating development through weaving execution to quality management for ZavaCore smart fiber products." .
+
+# =============================================================================
+# Entity Classes  (ISA-95 aligned)
+# =============================================================================
+
+:ProductBatch a owl:Class ;
+    rdfs:label "ProductBatch" ;
+    rdfs:comment "Key: BatchId (string). ISA-95 Material Lot / Product Batch. A production batch of finished smart mesh units (e.g. 10000 units of ZavaCore Field Standard)." .
+
+:ProcessSegment a owl:Class ;
+    rdfs:label "ProcessSegment" ;
+    rdfs:comment "Key: SegmentId (string). ISA-95 Process Segment. A discrete manufacturing step: Coating, Weaving, SensorEmbed, or Packaging. Maps to L2 process areas Conductive Coating and Weave Line Execution." .
+
+:Material a owl:Class ;
+    rdfs:label "Material" ;
+    rdfs:comment "Key: MaterialId (string). ISA-95 Material Definition. Raw materials (graphite fiber, silver nanowire, copper trace ink), components (sensor modules, flex PCB), and packaging materials (anti-static bags, ESD shielding)." .
+
+:Supplier a owl:Class ;
+    rdfs:label "Supplier" ;
+    rdfs:comment "Key: SupplierId (string). External material provider — advanced materials suppliers, sensor component manufacturers, and packaging suppliers." .
+
+:Equipment a owl:Class ;
+    rdfs:label "Equipment" ;
+    rdfs:comment "Key: EquipmentId (string). ISA-95 Equipment hierarchy (Site, Area, WorkCenter, WorkUnit). Includes innovation centers, weave halls, QA labs, warehouses, supplier sites, and individual machines (FiberWeaver, SensorPlacer, ConductivityTester, Laminator, etc.)." .
+
+:ProductionOrder a owl:Class ;
+    rdfs:label "ProductionOrder" ;
+    rdfs:comment "Key: OrderId (string). ISA-95 Production Schedule. Work orders for smart mesh production runs, derived from supply plan." .
+
+:QualityTest a owl:Class ;
+    rdfs:label "QualityTest" ;
+    rdfs:comment "Key: TestId (string). ISA-95 Quality Test Operations. Covers conductivity tests, tensile strength, mesh gauge checks, contamination tests, visual inspections, and QMS audits." .
+
+:Shipment a owl:Class ;
+    rdfs:label "Shipment" ;
+    rdfs:comment "Key: ShipmentId (string). Logistics movement — inbound raw materials/components and outbound finished goods." .
+
+# =============================================================================
+# ProductBatch Properties
+# =============================================================================
+
+:BatchId a owl:DatatypeProperty ;
+    rdfs:label "BatchId" ;
+    rdfs:domain :ProductBatch ;
+    rdfs:range xsd:string .
+
+:Batch_Product a owl:DatatypeProperty ;
+    rdfs:label "Batch_Product" ;
+    rdfs:comment "Smart mesh product name (e.g. ZavaCore Field Standard, ZavaCore Systems Pro)" ;
+    rdfs:domain :ProductBatch ;
+    rdfs:range xsd:string .
+
+:Batch_MeshSpec a owl:DatatypeProperty ;
+    rdfs:label "Batch_MeshSpec" ;
+    rdfs:comment "Mesh specification code from master data (ISA-95 Product Definition)" ;
+    rdfs:domain :ProductBatch ;
+    rdfs:range xsd:string .
+
+:Batch_Quantity a owl:DatatypeProperty ;
+    rdfs:label "Batch_Quantity" ;
+    rdfs:comment "Number of smart mesh units in this batch" ;
+    rdfs:domain :ProductBatch ;
+    rdfs:range xsd:integer .
+
+:Batch_Status a owl:DatatypeProperty ;
+    rdfs:label "Batch_Status" ;
+    rdfs:comment "Production status (Planned, InProgress, Complete, Shipped)" ;
+    rdfs:domain :ProductBatch ;
+    rdfs:range xsd:string .
+
+:Batch_CompletionDate a owl:DatatypeProperty ;
+    rdfs:label "Batch_CompletionDate" ;
+    rdfs:domain :ProductBatch ;
+    rdfs:range xsd:dateTime .
+
+:Batch_EquipmentId a owl:DatatypeProperty ;
+    rdfs:label "Batch_EquipmentId" ;
+    rdfs:comment "FK to Equipment (production site) where batch is manufactured" ;
+    rdfs:domain :ProductBatch ;
+    rdfs:range xsd:string .
+
+# =============================================================================
+# ProcessSegment Properties  (ISA-95 Process Segment)
+# =============================================================================
+
+:SegmentId a owl:DatatypeProperty ;
+    rdfs:label "SegmentId" ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range xsd:string .
+
+:Segment_Type a owl:DatatypeProperty ;
+    rdfs:label "Segment_Type" ;
+    rdfs:comment "ISA-95 L2 process: Coating (Conductive Coating), Weaving (Weave Line Execution), SensorEmbed (Sensor Integration), Packaging (Packaging)" ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range xsd:string .
+
+:Segment_Code a owl:DatatypeProperty ;
+    rdfs:label "Segment_Code" ;
+    rdfs:comment "Process segment reference code from routing" ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range xsd:string .
+
+:Segment_Status a owl:DatatypeProperty ;
+    rdfs:label "Segment_Status" ;
+    rdfs:comment "Status (Pending, InProgress, Complete, QCPassed)" ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range xsd:string .
+
+:Segment_StartDate a owl:DatatypeProperty ;
+    rdfs:label "Segment_StartDate" ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range xsd:dateTime .
+
+:Segment_BatchId a owl:DatatypeProperty ;
+    rdfs:label "Segment_BatchId" ;
+    rdfs:comment "FK to ProductBatch this segment belongs to" ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range xsd:string .
+
+# -- OPC UA Timeseries Properties (ProcessSegment) --
+# These map to OPC UA PLC tags published via OPC UA PubSub
+
+:Temperature a owl:DatatypeProperty ;
+    rdfs:label "Temperature" ;
+    rdfs:comment "Process temperature in Celsius (timeseries). OPC UA NodeId: ns=2;s=ProcessSegment.Temperature" ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range xsd:double .
+
+:MoistureContent a owl:DatatypeProperty ;
+    rdfs:label "MoistureContent" ;
+    rdfs:comment "Ambient moisture content percentage in cleanroom (timeseries). OPC UA NodeId: ns=2;s=ProcessSegment.MoistureContent" ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range xsd:double .
+
+:CycleTime a owl:DatatypeProperty ;
+    rdfs:label "CycleTime" ;
+    rdfs:comment "Cycle time in seconds (timeseries). OPC UA NodeId: ns=2;s=ProcessSegment.CycleTime" ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range xsd:double .
+
+# =============================================================================
+# Material Properties  (ISA-95 Material Definition)
+# =============================================================================
+
+:MaterialId a owl:DatatypeProperty ;
+    rdfs:label "MaterialId" ;
+    rdfs:domain :Material ;
+    rdfs:range xsd:string .
+
+:Material_Name a owl:DatatypeProperty ;
+    rdfs:label "Material_Name" ;
+    rdfs:domain :Material ;
+    rdfs:range xsd:string .
+
+:Material_PartNumber a owl:DatatypeProperty ;
+    rdfs:label "Material_PartNumber" ;
+    rdfs:comment "ISA-95 Material ID / Part number" ;
+    rdfs:domain :Material ;
+    rdfs:range xsd:string .
+
+:Material_Class a owl:DatatypeProperty ;
+    rdfs:label "Material_Class" ;
+    rdfs:comment "ISA-95 material class: RawMaterial, Component, PackagingMaterial" ;
+    rdfs:domain :Material ;
+    rdfs:range xsd:string .
+
+:Material_UnitCost a owl:DatatypeProperty ;
+    rdfs:label "Material_UnitCost" ;
+    rdfs:comment "Cost per unit (kg for raw materials, per piece for components/packaging)" ;
+    rdfs:domain :Material ;
+    rdfs:range xsd:double .
+
+:Material_LeadTimeDays a owl:DatatypeProperty ;
+    rdfs:label "Material_LeadTimeDays" ;
+    rdfs:comment "Supplier lead time in days" ;
+    rdfs:domain :Material ;
+    rdfs:range xsd:integer .
+
+:Material_SupplierId a owl:DatatypeProperty ;
+    rdfs:label "Material_SupplierId" ;
+    rdfs:comment "FK to Supplier providing this material" ;
+    rdfs:domain :Material ;
+    rdfs:range xsd:string .
+
+# =============================================================================
+# Supplier Properties
+# =============================================================================
+
+:SupplierId a owl:DatatypeProperty ;
+    rdfs:label "SupplierId" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:string .
+
+:Supplier_Name a owl:DatatypeProperty ;
+    rdfs:label "Supplier_Name" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:string .
+
+:Supplier_Tier a owl:DatatypeProperty ;
+    rdfs:label "Supplier_Tier" ;
+    rdfs:comment "Tier level: 1 = direct (advanced materials), 2 = indirect (components/packaging)" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:integer .
+
+:Supplier_Country a owl:DatatypeProperty ;
+    rdfs:label "Supplier_Country" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:string .
+
+:Supplier_Rating a owl:DatatypeProperty ;
+    rdfs:label "Supplier_Rating" ;
+    rdfs:comment "Quality rating 0-5" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:double .
+
+:Supplier_Certified a owl:DatatypeProperty ;
+    rdfs:label "Supplier_Certified" ;
+    rdfs:comment "ISO 9001 / IPC-A-600 certification status" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:boolean .
+
+:Supplier_EquipmentId a owl:DatatypeProperty ;
+    rdfs:label "Supplier_EquipmentId" ;
+    rdfs:comment "FK to Equipment where supplier operates from" ;
+    rdfs:domain :Supplier ;
+    rdfs:range xsd:string .
+
+# =============================================================================
+# Equipment Properties  (ISA-95 Equipment Hierarchy)
+# =============================================================================
+
+:EquipmentId a owl:DatatypeProperty ;
+    rdfs:label "EquipmentId" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:string .
+
+:Equipment_Name a owl:DatatypeProperty ;
+    rdfs:label "Equipment_Name" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:string .
+
+:Equipment_Level a owl:DatatypeProperty ;
+    rdfs:label "Equipment_Level" ;
+    rdfs:comment "ISA-95 equipment hierarchy level: Site, Area, WorkCenter, WorkUnit" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:string .
+
+:Equipment_Type a owl:DatatypeProperty ;
+    rdfs:label "Equipment_Type" ;
+    rdfs:comment "Function: CoatingDev, Production, Weaving, Laminating, Transport, QualityControl, Distribution, Warehouse, Packing, Supplier" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:string .
+
+:Equipment_Location a owl:DatatypeProperty ;
+    rdfs:label "Equipment_Location" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:string .
+
+:Equipment_Capacity a owl:DatatypeProperty ;
+    rdfs:label "Equipment_Capacity" ;
+    rdfs:comment "Annual capacity (kg for coating, units for weaving, units for warehouse)" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:integer .
+
+# -- OPC UA Timeseries Properties (Equipment) --
+
+:EnergyConsumption a owl:DatatypeProperty ;
+    rdfs:label "EnergyConsumption" ;
+    rdfs:comment "Energy usage in kWh (timeseries). OPC UA NodeId: ns=2;s=Equipment.EnergyConsumption" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:double .
+
+:Humidity a owl:DatatypeProperty ;
+    rdfs:label "Humidity" ;
+    rdfs:comment "Relative humidity % in cleanroom (timeseries). OPC UA NodeId: ns=2;s=Equipment.Humidity" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:double .
+
+:ProductionRate a owl:DatatypeProperty ;
+    rdfs:label "ProductionRate" ;
+    rdfs:comment "Production rate in units per hour (timeseries). OPC UA NodeId: ns=2;s=Equipment.ProductionRate" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:double .
+
+# -- Machine State Timeseries Properties (Equipment - WorkUnit level) --
+# These map to MES/SCADA machine state logs published via OPC UA PubSub
+
+:MachineState a owl:DatatypeProperty ;
+    rdfs:label "MachineState" ;
+    rdfs:comment "Machine operating state: Running, Stopped, Blocked, Waiting, Idle (timeseries). OPC UA NodeId: ns=2;s=Equipment.MachineState" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:string .
+
+:ErrorCode a owl:DatatypeProperty ;
+    rdfs:label "ErrorCode" ;
+    rdfs:comment "Machine error/alarm code from PLC (timeseries). OPC UA NodeId: ns=2;s=Equipment.ErrorCode" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:string .
+
+:DurationSec a owl:DatatypeProperty ;
+    rdfs:label "DurationSec" ;
+    rdfs:comment "Duration of the machine state in seconds (timeseries). OPC UA NodeId: ns=2;s=Equipment.DurationSec" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:double .
+
+# -- Production Counter / OEE Timeseries Properties (Equipment - WorkUnit level) --
+# These map to production counter tags from weave line PLCs
+
+:UnitCount a owl:DatatypeProperty ;
+    rdfs:label "UnitCount" ;
+    rdfs:comment "Cumulative unit count from shift start (timeseries). OPC UA NodeId: ns=2;s=Equipment.UnitCount" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:integer .
+
+:UnitCountDelta a owl:DatatypeProperty ;
+    rdfs:label "UnitCountDelta" ;
+    rdfs:comment "Incremental unit count since last reading (timeseries). OPC UA NodeId: ns=2;s=Equipment.UnitCountDelta" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:integer .
+
+:FiberProducedGram a owl:DatatypeProperty ;
+    rdfs:label "FiberProducedGram" ;
+    rdfs:comment "Fiber produced in grams since last reading (timeseries). OPC UA NodeId: ns=2;s=Equipment.FiberProducedGram" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:double .
+
+:UnitsRejected a owl:DatatypeProperty ;
+    rdfs:label "UnitsRejected" ;
+    rdfs:comment "Number of units rejected since last reading (timeseries). OPC UA NodeId: ns=2;s=Equipment.UnitsRejected" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:integer .
+
+:OEE a owl:DatatypeProperty ;
+    rdfs:label "OEE" ;
+    rdfs:comment "Overall Equipment Effectiveness percentage (timeseries). OPC UA NodeId: ns=2;s=Equipment.OEE" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:double .
+
+:VOT a owl:DatatypeProperty ;
+    rdfs:label "VOT" ;
+    rdfs:comment "Valuable Operating Time in seconds (timeseries). OPC UA NodeId: ns=2;s=Equipment.VOT" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:double .
+
+:LoadingTime a owl:DatatypeProperty ;
+    rdfs:label "LoadingTime" ;
+    rdfs:comment "Loading Time in seconds — scheduled production time minus planned stops (timeseries). OPC UA NodeId: ns=2;s=Equipment.LoadingTime" ;
+    rdfs:domain :Equipment ;
+    rdfs:range xsd:double .
+
+# =============================================================================
+# ProductionOrder Properties  (ISA-95 Production Schedule)
+# =============================================================================
+
+:OrderId a owl:DatatypeProperty ;
+    rdfs:label "OrderId" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:string .
+
+:Order_Number a owl:DatatypeProperty ;
+    rdfs:label "Order_Number" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:string .
+
+:Order_Quantity a owl:DatatypeProperty ;
+    rdfs:label "Order_Quantity" ;
+    rdfs:comment "Ordered quantity of smart mesh units" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:integer .
+
+:Order_Priority a owl:DatatypeProperty ;
+    rdfs:label "Order_Priority" ;
+    rdfs:comment "Priority (Normal, High, Rush)" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:string .
+
+:Order_DueDate a owl:DatatypeProperty ;
+    rdfs:label "Order_DueDate" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:dateTime .
+
+:Order_Status a owl:DatatypeProperty ;
+    rdfs:label "Order_Status" ;
+    rdfs:comment "Status (Planned, InProgress, Complete)" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:string .
+
+:Order_BatchId a owl:DatatypeProperty ;
+    rdfs:label "Order_BatchId" ;
+    rdfs:comment "FK to ProductBatch" ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range xsd:string .
+
+# =============================================================================
+# QualityTest Properties  (ISA-95 Quality Test Operations)
+# =============================================================================
+
+:TestId a owl:DatatypeProperty ;
+    rdfs:label "TestId" ;
+    rdfs:domain :QualityTest ;
+    rdfs:range xsd:string .
+
+:Test_Type a owl:DatatypeProperty ;
+    rdfs:label "Test_Type" ;
+    rdfs:comment "Type: ConductivityTest, TensileStrength, MeshGaugeCheck, ContaminationTest, Audit, VisualInspection" ;
+    rdfs:domain :QualityTest ;
+    rdfs:range xsd:string .
+
+:Test_Result a owl:DatatypeProperty ;
+    rdfs:label "Test_Result" ;
+    rdfs:comment "Result: Pass, Fail, ConditionalPass" ;
+    rdfs:domain :QualityTest ;
+    rdfs:range xsd:string .
+
+:Test_Description a owl:DatatypeProperty ;
+    rdfs:label "Test_Description" ;
+    rdfs:domain :QualityTest ;
+    rdfs:range xsd:string .
+
+:Test_Timestamp a owl:DatatypeProperty ;
+    rdfs:label "Test_Timestamp" ;
+    rdfs:domain :QualityTest ;
+    rdfs:range xsd:dateTime .
+
+:Test_Resolution a owl:DatatypeProperty ;
+    rdfs:label "Test_Resolution" ;
+    rdfs:comment "Resolution outcome" ;
+    rdfs:domain :QualityTest ;
+    rdfs:range xsd:string .
+
+:Test_SegmentId a owl:DatatypeProperty ;
+    rdfs:label "Test_SegmentId" ;
+    rdfs:comment "FK to ProcessSegment being tested" ;
+    rdfs:domain :QualityTest ;
+    rdfs:range xsd:string .
+
+# =============================================================================
+# Shipment Properties
+# =============================================================================
+
+:ShipmentId a owl:DatatypeProperty ;
+    rdfs:label "ShipmentId" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:string .
+
+:Shipment_TrackingNum a owl:DatatypeProperty ;
+    rdfs:label "Shipment_TrackingNum" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:string .
+
+:Shipment_Status a owl:DatatypeProperty ;
+    rdfs:label "Shipment_Status" ;
+    rdfs:comment "Status (Pending, InTransit, Delivered, Customs)" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:string .
+
+:Shipment_DepartureDate a owl:DatatypeProperty ;
+    rdfs:label "Shipment_DepartureDate" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:dateTime .
+
+:Shipment_ArrivalDate a owl:DatatypeProperty ;
+    rdfs:label "Shipment_ArrivalDate" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:dateTime .
+
+:Shipment_Carrier a owl:DatatypeProperty ;
+    rdfs:label "Shipment_Carrier" ;
+    rdfs:domain :Shipment ;
+    rdfs:range xsd:string .
+
+# =============================================================================
+# Object Properties (Relationships)
+# =============================================================================
+
+:PRODUCED_IN a owl:ObjectProperty ;
+    rdfs:label "PRODUCED_IN" ;
+    rdfs:comment "ProcessSegment → ProductBatch (Many-to-One). A process segment produces into a product batch." ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range :ProductBatch .
+
+:USES_MATERIAL a owl:ObjectProperty ;
+    rdfs:label "USES_MATERIAL" ;
+    rdfs:comment "ProcessSegment → Material (Many-to-Many). A process segment consumes materials." ;
+    rdfs:domain :ProcessSegment ;
+    rdfs:range :Material .
+
+:SUPPLIED_BY a owl:ObjectProperty ;
+    rdfs:label "SUPPLIED_BY" ;
+    rdfs:comment "Material → Supplier (Many-to-One). A material is provided by a supplier." ;
+    rdfs:domain :Material ;
+    rdfs:range :Supplier .
+
+:MANUFACTURED_AT a owl:ObjectProperty ;
+    rdfs:label "MANUFACTURED_AT" ;
+    rdfs:comment "ProductBatch → Equipment (Many-to-One). A batch is manufactured at a site." ;
+    rdfs:domain :ProductBatch ;
+    rdfs:range :Equipment .
+
+:ORDERED_FOR a owl:ObjectProperty ;
+    rdfs:label "ORDERED_FOR" ;
+    rdfs:comment "ProductionOrder → ProductBatch (One-to-One). A production order is for a specific batch." ;
+    rdfs:domain :ProductionOrder ;
+    rdfs:range :ProductBatch .
+
+:TESTED_IN a owl:ObjectProperty ;
+    rdfs:label "TESTED_IN" ;
+    rdfs:comment "QualityTest → ProcessSegment (Many-to-One). A quality test is performed on a process segment." ;
+    rdfs:domain :QualityTest ;
+    rdfs:range :ProcessSegment .
+
+:ORIGINATED_FROM a owl:ObjectProperty ;
+    rdfs:label "ORIGINATED_FROM" ;
+    rdfs:comment "Shipment → Equipment (Many-to-One). A shipment departs from an equipment/site." ;
+    rdfs:domain :Shipment ;
+    rdfs:range :Equipment .
+
+:DELIVERED_TO a owl:ObjectProperty ;
+    rdfs:label "DELIVERED_TO" ;
+    rdfs:comment "Shipment → Equipment (Many-to-One). A shipment arrives at an equipment/site." ;
+    rdfs:domain :Shipment ;
+    rdfs:range :Equipment .
+
+:SHIPS_MATERIAL a owl:ObjectProperty ;
+    rdfs:label "SHIPS_MATERIAL" ;
+    rdfs:comment "Shipment → Material (Many-to-Many). A shipment carries materials." ;
+    rdfs:domain :Shipment ;
+    rdfs:range :Material .
+
+:OPERATES_FROM a owl:ObjectProperty ;
+    rdfs:label "OPERATES_FROM" ;
+    rdfs:comment "Supplier → Equipment (Many-to-One). A supplier operates from a site." ;
+    rdfs:domain :Supplier ;
+    rdfs:range :Equipment .

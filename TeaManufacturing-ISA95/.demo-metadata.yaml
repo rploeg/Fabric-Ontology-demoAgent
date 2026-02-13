@@ -1,0 +1,121 @@
+_generator:
+  spec_name: fabric-ontology-demo-v2
+  spec_version: "3.3"
+  generated_at: "2026-01-15T12:00:00Z"
+
+metadata:
+  name: "TeaManufacturing-ISA95"
+  version: "1.0"
+
+demo:
+  company: "Golden Leaf Tea Co."
+  entity_count: 8
+  relationship_count: 10
+  has_timeseries: true
+
+ontology:
+  file: Ontology/tea-manufacturing.ttl
+  namespace: "http://example.com/tea-manufacturing-isa95#"
+  entities:
+    - name: ProductBatch
+      key: BatchId
+      keyType: string
+      hasTimeseries: false
+    - name: ProcessSegment
+      key: SegmentId
+      keyType: string
+      hasTimeseries: true
+    - name: Material
+      key: MaterialId
+      keyType: string
+      hasTimeseries: false
+    - name: Supplier
+      key: SupplierId
+      keyType: string
+      hasTimeseries: false
+    - name: Equipment
+      key: EquipmentId
+      keyType: string
+      hasTimeseries: true
+    - name: ProductionOrder
+      key: OrderId
+      keyType: string
+      hasTimeseries: false
+    - name: QualityTest
+      key: TestId
+      keyType: string
+      hasTimeseries: false
+    - name: Shipment
+      key: ShipmentId
+      keyType: string
+      hasTimeseries: false
+
+data:
+  lakehouse:
+    folder: Data/Lakehouse
+    tables:
+      - name: DimProductBatch
+        file: DimProductBatch.csv
+        rowCount: 20
+      - name: DimProcessSegment
+        file: DimProcessSegment.csv
+        rowCount: 30
+      - name: DimMaterial
+        file: DimMaterial.csv
+        rowCount: 25
+      - name: DimSupplier
+        file: DimSupplier.csv
+        rowCount: 10
+      - name: DimEquipment
+        file: DimEquipment.csv
+        rowCount: 160
+      - name: DimProductionOrder
+        file: DimProductionOrder.csv
+        rowCount: 20
+      - name: FactQualityTest
+        file: FactQualityTest.csv
+        rowCount: 30
+      - name: FactShipment
+        file: FactShipment.csv
+        rowCount: 25
+      - name: EdgeSegmentMaterial
+        file: EdgeSegmentMaterial.csv
+        rowCount: 95
+      - name: EdgeShipmentMaterial
+        file: EdgeShipmentMaterial.csv
+        rowCount: 58
+      - name: EdgeShipmentOrigin
+        file: EdgeShipmentOrigin.csv
+        rowCount: 25
+      - name: EdgeShipmentDestination
+        file: EdgeShipmentDestination.csv
+        rowCount: 25
+  eventhouse:
+    folder: Data/Eventhouse
+    database: TeaManufacturingDB
+    tables:
+      - name: ProcessSegmentTelemetry
+        file: ProcessSegmentTelemetry.csv
+        rowCount: 260640
+      - name: EquipmentTelemetry
+        file: EquipmentTelemetry.csv
+        rowCount: 130320
+      - name: MachineStateTelemetry
+        file: MachineStateTelemetry.csv
+        rowCount: 3275601
+      - name: ProductionCounterTelemetry
+        file: ProductionCounterTelemetry.csv
+        rowCount: 6540075
+
+bindings:
+  file: Bindings/bindings.yaml
+
+constraints_applied:
+  - "All property names ≤26 characters"
+  - "No decimal types (using double)"
+  - "Entity keys are string type only"
+  - "Forward slashes in all file paths"
+  - "ISO 8601 datetime format"
+  - "No NULL values in key columns"
+  - "ISA-95 Equipment Hierarchy: Site > Area > WorkCenter > WorkUnit"
+  - "Timeline: 2025-11-01 to 2026-05-01"

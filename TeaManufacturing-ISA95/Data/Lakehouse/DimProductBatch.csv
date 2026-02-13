@@ -1,0 +1,21 @@
+BatchId,Batch_Product,Batch_BlendCode,Batch_Quantity,Batch_Status,Batch_CompletionDate,EquipmentId
+BTC-001,English Breakfast,EB-STD-01,10000,Complete,2025-11-15T14:30:00,EQP-002
+BTC-002,English Breakfast,EB-STD-01,10000,Complete,2025-11-16T09:45:00,EQP-002
+BTC-003,Earl Grey,EG-PRE-01,8000,Complete,2025-11-17T16:20:00,EQP-002
+BTC-004,Earl Grey,EG-PRE-01,8000,Complete,2025-11-18T11:00:00,EQP-002
+BTC-005,Green Tea,GT-PUR-01,5000,Complete,2025-11-19T15:30:00,EQP-002
+BTC-006,Green Tea,GT-PUR-01,5000,Complete,2025-11-20T10:15:00,EQP-002
+BTC-007,Chamomile Herbal,CH-HRB-01,6000,Complete,2025-11-21T13:45:00,EQP-002
+BTC-008,Chamomile Herbal,CH-HRB-01,6000,Complete,2025-11-22T09:00:00,EQP-002
+BTC-009,Darjeeling First Flush,DF-PRE-01,3000,Complete,2025-11-23T16:00:00,EQP-002
+BTC-010,Darjeeling First Flush,DF-PRE-01,3000,Complete,2025-11-24T11:30:00,EQP-002
+BTC-011,English Breakfast,EB-STD-01,10000,InProgress,,EQP-002
+BTC-012,Earl Grey,EG-PRE-01,8000,InProgress,,EQP-002
+BTC-013,Green Tea,GT-PUR-01,5000,InProgress,,EQP-002
+BTC-014,Chamomile Herbal,CH-HRB-01,6000,Planned,,EQP-002
+BTC-015,English Breakfast,EB-STD-01,15000,Planned,,EQP-002
+BTC-016,Kenyan Bold,KB-STD-01,7000,Complete,2025-11-25T14:00:00,EQP-002
+BTC-017,Nilgiri Frost,NF-PRE-01,4000,Complete,2025-11-26T10:00:00,EQP-002
+BTC-018,Sencha Green,SG-PUR-01,3000,InProgress,,EQP-002
+BTC-019,Earl Grey,EG-PRE-01,12000,Planned,,EQP-002
+BTC-020,English Breakfast,EB-STD-01,20000,Planned,,EQP-002

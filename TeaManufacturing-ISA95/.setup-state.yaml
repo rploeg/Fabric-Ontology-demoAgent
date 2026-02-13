@@ -1,0 +1,228 @@
+schema_version: '1.0'
+setup_id: 70c302a3-522c-4467-aa8c-c99949670611
+demo_name: TeaManufacturing-ISA95
+workspace_id: 4d4dab11-9b44-4af4-b866-158e57acbbe7
+started_at: '2026-02-12T15:31:26.898316+00:00'
+status: completed
+steps:
+  validate:
+    status: completed
+    started_at: '2026-02-12T15:29:28.009826+00:00'
+    completed_at: '2026-02-12T15:29:28.016708+00:00'
+  create_lakehouse:
+    status: completed
+    artifact_id: cc807888-f503-4a51-a9ca-a38da2f27bdf
+    artifact_name: TeaManufacturing_ISA95_Lakehouse
+    started_at: '2026-02-12T15:31:26.902138+00:00'
+    completed_at: '2026-02-12T15:31:35.321835+00:00'
+    error_message: 'Internal error CapacityNotActive.Capacity 0E81D24B-C945-4CB6-9E2C-B30C3609D136
+      is not active | Details: {''request_id'': ''''}'
+  upload_files:
+    status: completed
+    started_at: '2026-02-12T15:31:35.341865+00:00'
+    completed_at: '2026-02-12T15:31:41.519954+00:00'
+    details:
+      uploaded:
+      - DimProductionOrder.csv
+      - EdgeShipmentOrigin.csv
+      - DimProductBatch.csv
+      - DimMaterial.csv
+      - DimProcessSegment.csv
+      - FactQualityTest.csv
+      - EdgeSegmentMaterial.csv
+      - EdgeShipmentDestination.csv
+      - DimSupplier.csv
+      - DimEquipment.csv
+      - EdgeShipmentMaterial.csv
+      - FactShipment.csv
+      skipped: []
+  load_tables:
+    status: completed
+    started_at: '2026-02-12T15:31:41.542789+00:00'
+    completed_at: '2026-02-12T15:35:09.988526+00:00'
+    details:
+      loaded:
+      - DimProductionOrder
+      - EdgeShipmentOrigin
+      - DimProductBatch
+      - DimMaterial
+      - DimProcessSegment
+      - FactQualityTest
+      - EdgeSegmentMaterial
+      - EdgeShipmentDestination
+      - DimSupplier
+      - DimEquipment
+      - EdgeShipmentMaterial
+      - FactShipment
+      skipped: []
+  create_eventhouse:
+    status: completed
+    artifact_id: 79005f4a-8411-483b-8a35-7f6d5eec38e3
+    artifact_name: TeaManufacturing_ISA95_Telemetry
+    started_at: '2026-02-12T15:35:10.014255+00:00'
+    completed_at: '2026-02-12T15:35:13.862272+00:00'
+  ingest_data:
+    status: completed
+    started_at: '2026-02-12T15:35:13.889825+00:00'
+    completed_at: '2026-02-12T15:35:59.978016+00:00'
+    details:
+      ingested_tables:
+      - ProcessSegmentTelemetry
+      - EquipmentTelemetry
+      - MachineStateTelemetry
+      - ProductionCounterTelemetry
+  create_ontology:
+    status: completed
+    artifact_id: 7245e83c-3541-42ca-a905-005c29ef05e1
+    artifact_name: TeaManufacturing_ISA95_Ontology
+    started_at: '2026-02-12T15:36:00.012511+00:00'
+    completed_at: '2026-02-12T15:37:27.716622+00:00'
+    details:
+      entity_count: 8
+      relationship_count: 10
+      ttl_file: /Users/remco/repo/Fabric-Ontology-demoAgent/TeaManufacturing-ISA95/ontology/tea-manufacturing.ttl
+  configure_bindings:
+    status: failed
+    started_at: '2026-02-12T15:46:35.550839+00:00'
+    completed_at: '2026-02-12T15:47:24.717954+00:00'
+    error_message: 'Failed to upload bindings: Operation failed: TimeSeries property
+      ''Temperature'' is already used in another mapping. Each TimeSeries property
+      can only be used in one mapping. (Parameter ''mappings'')'
+    details:
+      lakehouse_bindings: 8
+      eventhouse_bindings: 4
+      relationship_contextualizations: 0
+      validation_errors: []
+  verify:
+    status: completed
+    started_at: '2026-02-12T23:06:35.035650+00:00'
+    completed_at: '2026-02-12T23:07:03.467201+00:00'
+    error_message: 'Verification: 8 passed, 1 failed, 0 warnings'
+    details:
+      passed:
+      - '✓ Lakehouse exists: TeaManufacturing_ISA95_Lakehouse'
+      - ✓ Lakehouse has all 12 expected tables
+      - '✓ Eventhouse exists: TeaManufacturing_ISA95_Telemetry'
+      - '✓ KQL Database exists: TeaManufacturing_ISA95_Telemetry'
+      - ✓ Eventhouse has all 4 expected tables
+      - ✓ All eventhouse tables have data
+      - '✓ Ontology exists: TeaManufacturing_ISA95_Ontology'
+      - ✓ Ontology has 0 entities, 0 relationships, 0 properties
+      - ✓ Data bindings configured
+      failed: []
+      warnings: []
+      verification:
+        lakehouse:
+          id: cc807888-f503-4a51-a9ca-a38da2f27bdf
+          name: TeaManufacturing_ISA95_Lakehouse
+          expected_tables:
+          - EdgeShipmentDestination
+          - DimProcessSegment
+          - EdgeSegmentMaterial
+          - DimProductBatch
+          - EdgeShipmentOrigin
+          - DimSupplier
+          - FactQualityTest
+          - DimProductionOrder
+          - EdgeShipmentMaterial
+          - DimMaterial
+          - DimEquipment
+          - FactShipment
+          existing_tables:
+          - EdgeShipmentDestination
+          - DimProcessSegment
+          - EdgeSegmentMaterial
+          - DimProductBatch
+          - EdgeShipmentOrigin
+          - DimSupplier
+          - FactQualityTest
+          - DimProductionOrder
+          - EdgeShipmentMaterial
+          - DimMaterial
+          - DimEquipment
+          - FactShipment
+          missing_tables: []
+        eventhouse:
+          id: 79005f4a-8411-483b-8a35-7f6d5eec38e3
+          name: TeaManufacturing_ISA95_Telemetry
+          kql_database_id: 0d499cfa-a970-4335-8e88-9b0933792b99
+          kql_database_name: TeaManufacturing_ISA95_Telemetry
+          expected_tables:
+          - EquipmentTelemetry
+          - ProcessSegmentTelemetry
+          - ProductionCounterTelemetry
+          - MachineStateTelemetry
+          existing_tables:
+          - 0
+          - 1
+          - '{"Visualization":null,"Title":null,"XColumn":null,"Series":null,"YColumns":null,"AnomalyColumns":null,"XTitle":null,"YTitle":null,"XAxis":null,"YAxis":null,"Legend":null,"YSplit":null,"Accumulate":false,"IsQuerySorted":false,"Kind":null,"Ymin":"NaN","Ymax":"NaN","Xmin":null,"Xmax":null}'
+          - ProductionCounterTelemetry
+          - 2
+          - EquipmentTelemetry
+          - ProcessSegmentTelemetry
+          - MachineStateTelemetry
+          - '2026-02-12T23:06:40.3943062Z'
+          missing_tables: []
+          table_row_counts: {}
+        ontology:
+          id: 7245e83c-3541-42ca-a905-005c29ef05e1
+          name: TeaManufacturing_ISA95_Ontology
+          entity_count: 0
+          relationship_count: 0
+          property_count: 0
+  refresh_graph:
+    status: completed
+    started_at: '2026-02-12T23:00:02.246533+00:00'
+    completed_at: '2026-02-12T23:00:06.091897+00:00'
+    details:
+      ontology_id: 7245e83c-3541-42ca-a905-005c29ef05e1
+      ontology_name: TeaManufacturing_ISA95_Ontology
+      expected_graph_name: TeaManufacturing_ISA95_Ontology_graph_7245e83c354142caa905005c29ef05e1
+      action: manual_refresh_required
+      instructions:
+      - 1. Open the Fabric workspace in your browser
+      - '2. Locate the graph item: ''TeaManufacturing_ISA95_Ontology_graph_7245e83c354142caa905005c29ef05e1'''
+      - 3. Click '...' to expand the options menu
+      - 4. Select 'Schedule'
+      - 5. Click 'Refresh now' to sync the data
+  bind_relationships:
+    status: completed
+    started_at: '2026-02-12T15:48:49.673910+00:00'
+    completed_at: '2026-02-12T15:49:36.569090+00:00'
+    details:
+      binding_count: 10
+      skipped: []
+  bind_static:
+    status: failed
+    started_at: '2026-02-13T00:36:46.808636+00:00'
+    completed_at: '2026-02-13T00:36:51.879544+00:00'
+    error_message: 'Failed to get ontology definition: The requested resource could
+      not be found | Details: {''request_id'': ''''}'
+    details:
+      binding_count: 8
+      skipped: []
+  bind_timeseries:
+    status: completed
+    started_at: '2026-02-12T23:04:08.632761+00:00'
+    completed_at: '2026-02-12T23:04:55.739974+00:00'
+    error_message: 'Failed to upload timeseries bindings: There are multiple parts
+      with same path in the item definition. | HTTP 409 | Code: DuplicateDefinitionParts'
+    details:
+      skip_reason: 'No valid timeseries bindings configured (skipped: ProcessSegment,
+        Equipment, Equipment, Equipment)'
+      binding_count: 4
+      skipped: []
+completed_at: '2026-02-12T15:38:58.397376+00:00'
+resources:
+  lakehouse:
+    id: cc807888-f503-4a51-a9ca-a38da2f27bdf
+    name: TeaManufacturing_ISA95_Lakehouse
+  eventhouse:
+    id: 79005f4a-8411-483b-8a35-7f6d5eec38e3
+    name: TeaManufacturing_ISA95_Telemetry
+  kql_database:
+    id: 0d499cfa-a970-4335-8e88-9b0933792b99
+    name: TeaManufacturing_ISA95_Telemetry
+  ontology:
+    id: 7245e83c-3541-42ca-a905-005c29ef05e1
+    name: TeaManufacturing_ISA95_Ontology

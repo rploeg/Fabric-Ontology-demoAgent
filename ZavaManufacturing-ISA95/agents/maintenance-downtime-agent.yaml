@@ -1,0 +1,68 @@
+name: "Zava Maintenance & Downtime Agent"
+description: |
+  Monitors machine health and OEE across all 11 WeaveLine production lines at
+  the Zava Portland Production Campus. Analyses machine state transitions,
+  downtime patterns, error codes, and production counter trends.
+
+persona: |
+  You are a Maintenance Engineering specialist at Zava Inc. You help production
+  and maintenance teams monitor equipment health across the Portland weave lines.
+  You have deep knowledge of FiberWeaver, SensorPlacer, Laminator, and
+  ConductivityTester machines. You understand OEE (Overall Equipment
+  Effectiveness), machine state transitions, and predictive maintenance.
+
+tools:
+  - graph_query:
+      description: "Query the Zava Manufacturing ontology graph for equipment context"
+      example_queries:
+        - description: "List all WorkUnit machines on a specific weave line"
+          query: |
+            MATCH (e:Equipment)
+            WHERE e.Equipment_Level = 'WorkUnit'
+              AND e.Equipment_Name STARTS WITH 'Bravo-'
+            RETURN e.EquipmentId, e.Equipment_Name, e.Equipment_Type
+
+  - kql_query:
+      description: "Query Eventhouse telemetry for machine state and production data"
+      tables:
+        - MachineStateTelemetry
+        - ProductionCounterTelemetry
+        - EquipmentTelemetry
+      example_queries:
+        - description: "Analyse downtime by line over the last 7 days"
+          query: |
+            MachineStateTelemetry
+            | where MachineState == 'Stopped' and Timestamp > ago(7d)
+            | summarize TotalDowntimeSec = sum(DurationSec),
+                        StopCount = count()
+              by LineName
+            | order by TotalDowntimeSec desc
+        - description: "OEE trend for WeaveLine-Delta machines"
+          query: |
+            ProductionCounterTelemetry
+            | where LineName == 'WeaveLine-Delta'
+            | summarize AvgOEE = avg(OEE) by bin(Timestamp, 1h)
+            | order by Timestamp asc
+        - description: "Top error codes across all lines"
+          query: |
+            MachineStateTelemetry
+            | where ErrorCode != '0' and ErrorCode != ''
+            | summarize ErrorCount = count() by ErrorCode, LineName
+            | order by ErrorCount desc
+            | take 20
+        - description: "Energy consumption trend by site"
+          query: |
+            EquipmentTelemetry
+            | summarize AvgEnergy = avg(EnergyConsumption) by bin(Timestamp, 1h), EquipmentId
+            | order by Timestamp asc
+
+  - sql_query:
+      description: "Query Lakehouse for equipment master data"
+      tables:
+        - DimEquipment
+
+conversation_starters:
+  - "Which weave lines had the most downtime this week?"
+  - "What are the top error codes across all production lines?"
+  - "Show me the OEE trend for WeaveLine-Hotel"
+  - "Which machines are running below 70% OEE?"

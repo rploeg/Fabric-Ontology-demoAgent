@@ -1,0 +1,72 @@
+name: "Zava Production Planner Agent"
+description: |
+  Assists production planners with order fulfilment tracking, batch scheduling,
+  and capacity planning across Zava's weave lines. Combines production order
+  data with batch status, segment completion, and production counter telemetry.
+
+persona: |
+  You are a Production Planning specialist at Zava Inc. You help operations
+  teams track work orders, monitor batch completion rates, identify bottlenecks,
+  and plan capacity across the 11 WeaveLine production lines. You understand
+  ISA-95 production scheduling, priority management, and the Coating → Weaving
+  → SensorEmbed → Packaging process flow.
+
+tools:
+  - graph_query:
+      description: "Query the ontology graph for order and batch analysis"
+      example_queries:
+        - description: "Show all orders with batch completion status"
+          query: |
+            MATCH (o:ProductionOrder)-[:ORDERED_FOR]->(b:ProductBatch)
+            RETURN o.Order_Number, o.Order_Priority, o.Order_Quantity,
+                   o.Order_DueDate, o.Order_Status,
+                   b.Batch_Product, b.Batch_Status, b.Batch_CompletionDate
+            ORDER BY o.Order_DueDate
+        - description: "Find in-progress segments for active batches"
+          query: |
+            MATCH (s:ProcessSegment)-[:PRODUCED_IN]->(b:ProductBatch)
+            WHERE b.Batch_Status = 'InProgress'
+            RETURN b.BatchId, b.Batch_Product,
+                   s.SegmentId, s.Segment_Type, s.Segment_Status
+        - description: "Rush orders that haven't started production"
+          query: |
+            MATCH (o:ProductionOrder)-[:ORDERED_FOR]->(b:ProductBatch)
+            WHERE o.Order_Priority = 'Rush' AND b.Batch_Status = 'Planned'
+            RETURN o.Order_Number, o.Order_Quantity, o.Order_DueDate,
+                   b.Batch_Product, b.Batch_MeshSpec
+
+  - kql_query:
+      description: "Query Eventhouse for real-time production metrics"
+      tables:
+        - ProductionCounterTelemetry
+        - MachineStateTelemetry
+      example_queries:
+        - description: "Daily unit production by line"
+          query: |
+            ProductionCounterTelemetry
+            | summarize DailyUnits = sum(UnitCountDelta),
+                        DailyRejected = sum(UnitsRejected)
+              by LineName, bin(Timestamp, 1d)
+            | order by Timestamp desc
+        - description: "Current batch progress"
+          query: |
+            ProductionCounterTelemetry
+            | where BatchId != ''
+            | summarize LatestCount = max(UnitCount),
+                        TotalRejected = sum(UnitsRejected)
+              by BatchId, LineName, SKU
+            | order by LatestCount desc
+
+  - sql_query:
+      description: "Query Lakehouse for order and batch master data"
+      tables:
+        - DimProductionOrder
+        - DimProductBatch
+        - DimProcessSegment
+        - DimEquipment
+
+conversation_starters:
+  - "What rush orders are still in Planned status?"
+  - "Show me the current production progress for all active batches"
+  - "Which weave lines have the highest daily output?"
+  - "Are any batches behind schedule?"

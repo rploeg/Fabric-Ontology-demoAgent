@@ -1,0 +1,26 @@
+MaterialId,Material_Name,Material_PartNumber,Material_Class,Material_UnitCost,Material_LeadTimeDays,SupplierId
+MAT-001,Darjeeling FTGFOP1 Leaves,TEA-DAR-001,RawMaterial,45.00,21,SUP-001
+MAT-002,Assam CTC Black Tea,TEA-ASM-002,RawMaterial,12.00,14,SUP-002
+MAT-003,Ceylon Orange Pekoe,TEA-CEY-003,RawMaterial,28.00,18,SUP-003
+MAT-004,Chinese Gunpowder Green,TEA-GRN-004,RawMaterial,22.00,25,SUP-004
+MAT-005,Egyptian Chamomile Flowers,HRB-CHM-005,RawMaterial,35.00,20,SUP-007
+MAT-006,Bergamot Essential Oil,FLV-BRG-006,RawMaterial,120.00,15,SUP-008
+MAT-007,Kenyan CTC Bold Tea,TEA-KEN-007,RawMaterial,10.00,16,SUP-009
+MAT-008,Nilgiri Highland Tea,TEA-NIL-008,RawMaterial,18.00,19,SUP-001
+MAT-009,Cornflower Petals,HRB-CRN-009,RawMaterial,85.00,12,SUP-007
+MAT-010,Lavender Buds,HRB-LAV-010,RawMaterial,65.00,14,SUP-007
+MAT-011,Heat-Seal Filter Paper,PKG-FLT-011,PackagingMaterial,0.02,7,SUP-005
+MAT-012,Cotton Tag String,PKG-STR-012,PackagingMaterial,0.01,5,SUP-010
+MAT-013,Metal Staples,PKG-STP-013,PackagingMaterial,0.005,5,SUP-010
+MAT-014,Printed Paper Tags,PKG-TAG-014,PackagingMaterial,0.03,10,SUP-005
+MAT-015,Inner Foil Envelope,PKG-FOL-015,PackagingMaterial,0.04,8,SUP-005
+MAT-016,Cardboard Box 20-pack,PKG-BX2-016,PackagingMaterial,0.15,7,SUP-006
+MAT-017,Cardboard Box 50-pack,PKG-BX5-017,PackagingMaterial,0.25,7,SUP-006
+MAT-018,Outer Shipping Carton,PKG-CTN-018,PackagingMaterial,0.35,7,SUP-006
+MAT-019,Cellophane Overwrap,PKG-CEL-019,PackagingMaterial,0.02,6,SUP-006
+MAT-020,Adhesive Product Labels,PKG-LBL-020,PackagingMaterial,0.01,5,SUP-005
+MAT-021,Pallet Wrap Film,PKG-PLT-021,PackagingMaterial,0.50,5,SUP-006
+MAT-022,Desiccant Sachets,PKG-DES-022,PackagingMaterial,0.08,10,SUP-005
+MAT-023,Nitrogen Flush Gas,PKG-N2G-023,PackagingMaterial,2.00,3,SUP-005
+MAT-024,Printed Carton Sleeve,PKG-SLV-024,PackagingMaterial,0.12,8,SUP-006
+MAT-025,Tamper-Evident Seal,PKG-TES-025,PackagingMaterial,0.05,5,SUP-005

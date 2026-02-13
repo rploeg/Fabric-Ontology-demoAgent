@@ -1,0 +1,31 @@
+TestId,Test_Type,Test_Result,Test_Description,Test_Timestamp,Test_Resolution,SegmentId
+TST-001,TasteTest,Pass,Routine taste panel for English Breakfast blend,2025-11-10T10:00:00,Approved,SEG-001
+TST-002,MoistureAnalysis,Pass,Moisture content within spec after blending,2025-11-10T11:30:00,Approved,SEG-001
+TST-003,WeightCheck,Pass,Tea bag weight 2.5g within tolerance,2025-11-12T08:00:00,Approved,SEG-002
+TST-004,VisualInspection,Pass,Seal integrity check passed,2025-11-13T10:00:00,Approved,SEG-003
+TST-005,TasteTest,Pass,Routine taste panel for English Breakfast,2025-11-11T10:00:00,Approved,SEG-005
+TST-006,WeightCheck,Fail,Tea bag underweight - 2.1g detected,2025-11-13T08:30:00,Line recalibrated,SEG-006
+TST-007,TasteTest,Pass,Earl Grey flavour profile approved,2025-11-12T10:00:00,Approved,SEG-009
+TST-008,MoistureAnalysis,Pass,Bergamot oil moisture integration OK,2025-11-12T11:00:00,Approved,SEG-009
+TST-009,ContaminationTest,Pass,No foreign matter detected,2025-11-14T09:00:00,Approved,SEG-010
+TST-010,TasteTest,Fail,Off-taste detected in Earl Grey blend - stale bergamot,2025-11-13T10:00:00,Batch reworked with fresh oil,SEG-013
+TST-011,WeightCheck,Pass,Weight within tolerance 2.5g +/- 0.1g,2025-11-15T08:00:00,Approved,SEG-014
+TST-012,VisualInspection,Pass,Tag alignment and string attachment OK,2025-11-16T10:00:00,Approved,SEG-015
+TST-013,TasteTest,Pass,Green tea aroma and taste approved,2025-11-14T10:00:00,Approved,SEG-017
+TST-014,MoistureAnalysis,ConditionalPass,Moisture at upper limit 6.8% - monitor next batch,2025-11-14T11:30:00,Conditional release,SEG-017
+TST-015,WeightCheck,Pass,Weight check passed,2025-11-16T08:00:00,Approved,SEG-018
+TST-016,ContaminationTest,Pass,Metal detection and sieve check clear,2025-11-17T09:00:00,Approved,SEG-019
+TST-017,TasteTest,Pass,Green tea batch 2 approved,2025-11-15T10:00:00,Approved,SEG-021
+TST-018,WeightCheck,Pass,Weight check passed,2025-11-17T08:00:00,Approved,SEG-022
+TST-019,TasteTest,Pass,Chamomile infusion colour and aroma OK,2025-11-16T10:00:00,Approved,SEG-025
+TST-020,MoistureAnalysis,Fail,Moisture too high at 8.2% - drying required,2025-11-16T11:30:00,Additional drying cycle applied,SEG-025
+TST-021,WeightCheck,Pass,Weight 1.8g within chamomile spec,2025-11-18T08:00:00,Approved,SEG-026
+TST-022,VisualInspection,Fail,Seal defect on 3% of bags - heat bar misaligned,2025-11-19T10:00:00,Heat bar realigned and bags resealed,SEG-027
+TST-023,ContaminationTest,Pass,No allergen cross-contamination detected,2025-11-18T09:00:00,Approved,SEG-026
+TST-024,Audit,Pass,QMS audit - line cleanliness and HACCP compliance,2025-11-20T14:00:00,Certified,SEG-028
+TST-025,TasteTest,Pass,Routine taste panel - English Breakfast (in progress),2025-11-25T10:00:00,Approved,SEG-029
+TST-026,MoistureAnalysis,Pass,Blend moisture at 5.2%,2025-11-25T11:00:00,Approved,SEG-029
+TST-027,TasteTest,ConditionalPass,Earl Grey blend - bergamot slightly under-dosed,2025-11-26T10:00:00,Additional oil added,SEG-030
+TST-028,VisualInspection,Pass,Packaging print quality check passed,2025-11-14T15:00:00,Approved,SEG-004
+TST-029,Audit,Pass,Annual supplier raw material traceability audit,2025-11-22T10:00:00,Certified,SEG-008
+TST-030,WeightCheck,Pass,Final carton weight verification,2025-11-20T12:00:00,Approved,SEG-028

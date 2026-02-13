@@ -1,0 +1,404 @@
+_schema_version: "1.0"
+
+metadata:
+  name: "ZavaManufacturing-ISA95"
+  version: "1.0"
+  description: "Smart textile manufacturing demo based on ISA-95/OPC UA for Zava Inc. Models Make & Quality processes from conductive coating through weave line execution to smart mesh quality management."
+  company: "Zava Inc."
+  domain: "Smart Textile Manufacturing (ISA-95)"
+  created: "2026-02-11"
+
+lakehouse:
+  name: "ZavaManufacturing_Lakehouse"
+  entities:
+    - entity: ProductBatch
+      sourceTable: DimProductBatch
+      keyColumn: BatchId
+      file: Data/Lakehouse/DimProductBatch.csv
+      properties:
+        - property: BatchId
+          column: BatchId
+          type: string
+        - property: Batch_Product
+          column: Batch_Product
+          type: string
+        - property: Batch_MeshSpec
+          column: Batch_MeshSpec
+          type: string
+        - property: Batch_Quantity
+          column: Batch_Quantity
+          type: int
+        - property: Batch_Status
+          column: Batch_Status
+          type: string
+        - property: Batch_CompletionDate
+          column: Batch_CompletionDate
+          type: datetime
+        - property: Batch_EquipmentId
+          column: EquipmentId
+          type: string
+
+    - entity: ProcessSegment
+      sourceTable: DimProcessSegment
+      keyColumn: SegmentId
+      file: Data/Lakehouse/DimProcessSegment.csv
+      properties:
+        - property: SegmentId
+          column: SegmentId
+          type: string
+        - property: Segment_Type
+          column: Segment_Type
+          type: string
+        - property: Segment_Code
+          column: Segment_Code
+          type: string
+        - property: Segment_Status
+          column: Segment_Status
+          type: string
+        - property: Segment_StartDate
+          column: Segment_StartDate
+          type: datetime
+        - property: Segment_BatchId
+          column: BatchId
+          type: string
+
+    - entity: Material
+      sourceTable: DimMaterial
+      keyColumn: MaterialId
+      file: Data/Lakehouse/DimMaterial.csv
+      properties:
+        - property: MaterialId
+          column: MaterialId
+          type: string
+        - property: Material_Name
+          column: Material_Name
+          type: string
+        - property: Material_PartNumber
+          column: Material_PartNumber
+          type: string
+        - property: Material_Class
+          column: Material_Class
+          type: string
+        - property: Material_UnitCost
+          column: Material_UnitCost
+          type: double
+        - property: Material_LeadTimeDays
+          column: Material_LeadTimeDays
+          type: int
+        - property: Material_SupplierId
+          column: SupplierId
+          type: string
+
+    - entity: Supplier
+      sourceTable: DimSupplier
+      keyColumn: SupplierId
+      file: Data/Lakehouse/DimSupplier.csv
+      properties:
+        - property: SupplierId
+          column: SupplierId
+          type: string
+        - property: Supplier_Name
+          column: Supplier_Name
+          type: string
+        - property: Supplier_Tier
+          column: Supplier_Tier
+          type: int
+        - property: Supplier_Country
+          column: Supplier_Country
+          type: string
+        - property: Supplier_Rating
+          column: Supplier_Rating
+          type: double
+        - property: Supplier_Certified
+          column: Supplier_Certified
+          type: boolean
+        - property: Supplier_EquipmentId
+          column: EquipmentId
+          type: string
+
+    - entity: Equipment
+      sourceTable: DimEquipment
+      keyColumn: EquipmentId
+      file: Data/Lakehouse/DimEquipment.csv
+      properties:
+        - property: EquipmentId
+          column: EquipmentId
+          type: string
+        - property: Equipment_Name
+          column: Equipment_Name
+          type: string
+        - property: Equipment_Level
+          column: Equipment_Level
+          type: string
+        - property: Equipment_Type
+          column: Equipment_Type
+          type: string
+        - property: Equipment_Location
+          column: Equipment_Location
+          type: string
+        - property: Equipment_Capacity
+          column: Equipment_Capacity
+          type: int
+
+    - entity: ProductionOrder
+      sourceTable: DimProductionOrder
+      keyColumn: OrderId
+      file: Data/Lakehouse/DimProductionOrder.csv
+      properties:
+        - property: OrderId
+          column: OrderId
+          type: string
+        - property: Order_Number
+          column: Order_Number
+          type: string
+        - property: Order_Quantity
+          column: Order_Quantity
+          type: int
+        - property: Order_Priority
+          column: Order_Priority
+          type: string
+        - property: Order_DueDate
+          column: Order_DueDate
+          type: datetime
+        - property: Order_Status
+          column: Order_Status
+          type: string
+        - property: Order_BatchId
+          column: BatchId
+          type: string
+
+    - entity: QualityTest
+      sourceTable: FactQualityTest
+      keyColumn: TestId
+      file: Data/Lakehouse/FactQualityTest.csv
+      properties:
+        - property: TestId
+          column: TestId
+          type: string
+        - property: Test_Type
+          column: Test_Type
+          type: string
+        - property: Test_Result
+          column: Test_Result
+          type: string
+        - property: Test_Description
+          column: Test_Description
+          type: string
+        - property: Test_Timestamp
+          column: Test_Timestamp
+          type: datetime
+        - property: Test_Resolution
+          column: Test_Resolution
+          type: string
+        - property: Test_SegmentId
+          column: SegmentId
+          type: string
+
+    - entity: Shipment
+      sourceTable: FactShipment
+      keyColumn: ShipmentId
+      file: Data/Lakehouse/FactShipment.csv
+      properties:
+        - property: ShipmentId
+          column: ShipmentId
+          type: string
+        - property: Shipment_TrackingNum
+          column: Shipment_TrackingNum
+          type: string
+        - property: Shipment_Status
+          column: Shipment_Status
+          type: string
+        - property: Shipment_DepartureDate
+          column: Shipment_DepartureDate
+          type: datetime
+        - property: Shipment_ArrivalDate
+          column: Shipment_ArrivalDate
+          type: datetime
+        - property: Shipment_Carrier
+          column: Shipment_Carrier
+          type: string
+
+  relationships:
+    - relationship: PRODUCED_IN
+      sourceEntity: ProcessSegment
+      targetEntity: ProductBatch
+      sourceTable: DimProcessSegment
+      sourceKeyColumn: SegmentId
+      targetKeyColumn: BatchId
+
+    - relationship: USES_MATERIAL
+      sourceEntity: ProcessSegment
+      targetEntity: Material
+      sourceTable: EdgeSegmentMaterial
+      sourceKeyColumn: SegmentId
+      targetKeyColumn: MaterialId
+
+    - relationship: SUPPLIED_BY
+      sourceEntity: Material
+      targetEntity: Supplier
+      sourceTable: DimMaterial
+      sourceKeyColumn: MaterialId
+      targetKeyColumn: SupplierId
+
+    - relationship: MANUFACTURED_AT
+      sourceEntity: ProductBatch
+      targetEntity: Equipment
+      sourceTable: DimProductBatch
+      sourceKeyColumn: BatchId
+      targetKeyColumn: EquipmentId
+
+    - relationship: ORDERED_FOR
+      sourceEntity: ProductionOrder
+      targetEntity: ProductBatch
+      sourceTable: DimProductionOrder
+      sourceKeyColumn: OrderId
+      targetKeyColumn: BatchId
+
+    - relationship: TESTED_IN
+      sourceEntity: QualityTest
+      targetEntity: ProcessSegment
+      sourceTable: FactQualityTest
+      sourceKeyColumn: TestId
+      targetKeyColumn: SegmentId
+
+    - relationship: ORIGINATED_FROM
+      sourceEntity: Shipment
+      targetEntity: Equipment
+      sourceTable: EdgeShipmentOrigin
+      sourceKeyColumn: ShipmentId
+      targetKeyColumn: EquipmentId
+
+    - relationship: DELIVERED_TO
+      sourceEntity: Shipment
+      targetEntity: Equipment
+      sourceTable: EdgeShipmentDestination
+      sourceKeyColumn: ShipmentId
+      targetKeyColumn: EquipmentId
+
+    - relationship: SHIPS_MATERIAL
+      sourceEntity: Shipment
+      targetEntity: Material
+      sourceTable: EdgeShipmentMaterial
+      sourceKeyColumn: ShipmentId
+      targetKeyColumn: MaterialId
+
+    - relationship: OPERATES_FROM
+      sourceEntity: Supplier
+      targetEntity: Equipment
+      sourceTable: DimSupplier
+      sourceKeyColumn: SupplierId
+      targetKeyColumn: EquipmentId
+
+eventhouse:
+  name: "Zava_ISA95_Telemetry"
+  database: "ZavaManufacturingDB"
+  timelineStart: "2025-11-01"
+  timelineEnd: "2026-05-01"
+  entities:
+    - entity: ProcessSegment
+      sourceTable: ProcessSegmentTelemetry
+      keyColumn: SegmentId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/ProcessSegmentTelemetry.csv
+      rowCount: 260640
+      properties:
+        - property: Temperature
+          column: Temperature
+          type: double
+        - property: MoistureContent
+          column: MoistureContent
+          type: double
+        - property: CycleTime
+          column: CycleTime
+          type: double
+
+    - entity: Equipment
+      sourceTable: EquipmentTelemetry
+      keyColumn: EquipmentId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/EquipmentTelemetry.csv
+      rowCount: 130320
+      properties:
+        - property: EnergyConsumption
+          column: EnergyConsumption
+          type: double
+        - property: Humidity
+          column: Humidity
+          type: double
+        - property: ProductionRate
+          column: ProductionRate
+          type: double
+
+    - entity: Equipment
+      sourceTable: MachineStateTelemetry
+      keyColumn: EquipmentId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/MachineStateTelemetry.csv
+      rowCount: 3275601
+      description: "Machine state transitions (Running/Stopped/Blocked/Waiting/Idle) for WorkUnit-level machines across 11 weave lines. Derived from real factory data."
+      properties:
+        - property: MachineState
+          column: MachineState
+          type: string
+        - property: ErrorCode
+          column: ErrorCode
+          type: string
+        - property: DurationSec
+          column: DurationSec
+          type: double
+      additionalColumns:
+        - column: LineName
+          type: string
+          description: "Weave line name (e.g. WeaveLine-Alpha)"
+        - column: Shift
+          type: string
+          description: "Day or Night shift"
+        - column: BatchId
+          type: string
+          description: "FK to ProductBatch"
+
+    - entity: Equipment
+      sourceTable: ProductionCounterTelemetry
+      keyColumn: EquipmentId
+      timestampColumn: Timestamp
+      file: Data/Eventhouse/ProductionCounterTelemetry.csv
+      rowCount: 6540075
+      description: "Production counters and OEE metrics per ~30s interval for WorkUnit-level machines. Derived from real factory data."
+      properties:
+        - property: UnitCount
+          column: UnitCount
+          type: int
+        - property: UnitCountDelta
+          column: UnitCountDelta
+          type: int
+        - property: FiberProducedGram
+          column: FiberProducedGram
+          type: double
+        - property: UnitsRejected
+          column: UnitsRejected
+          type: int
+        - property: OEE
+          column: OEE
+          type: double
+        - property: VOT
+          column: VOT
+          type: double
+        - property: LoadingTime
+          column: LoadingTime
+          type: double
+      additionalColumns:
+        - column: LineName
+          type: string
+          description: "Weave line name"
+        - column: SKU
+          type: string
+          description: "Product being manufactured"
+        - column: Shift
+          type: string
+          description: "Day or Night shift"
+        - column: FiberRejectedGram
+          type: double
+          description: "Fiber wasted in grams"
+        - column: BatchId
+          type: string
+          description: "FK to ProductBatch"

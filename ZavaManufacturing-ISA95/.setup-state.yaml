@@ -1,0 +1,221 @@
+schema_version: '1.0'
+setup_id: 1ba55e7d-4251-46f8-b8dc-213b6f043546
+demo_name: ZavaManufacturing-ISA95
+workspace_id: e823a276-9275-4023-878d-f6349375a86c
+started_at: '2026-02-13T00:20:00.168595+00:00'
+status: completed
+steps:
+  validate:
+    status: completed
+    started_at: '2026-02-12T23:17:13.628629+00:00'
+    completed_at: '2026-02-12T23:17:13.634102+00:00'
+  create_lakehouse:
+    status: completed
+    artifact_id: 1627ebfa-f872-4e5e-97a3-18831531e754
+    artifact_name: Zava_ISA95_Lakehouse
+    started_at: '2026-02-12T23:17:13.644025+00:00'
+    completed_at: '2026-02-12T23:17:46.595840+00:00'
+  upload_files:
+    status: completed
+    started_at: '2026-02-12T23:17:46.609286+00:00'
+    completed_at: '2026-02-12T23:17:52.548419+00:00'
+    details:
+      uploaded:
+      - DimProductionOrder.csv
+      - EdgeShipmentOrigin.csv
+      - DimProductBatch.csv
+      - DimMaterial.csv
+      - DimProcessSegment.csv
+      - FactQualityTest.csv
+      - EdgeSegmentMaterial.csv
+      - EdgeShipmentDestination.csv
+      - DimSupplier.csv
+      - DimEquipment.csv
+      - EdgeShipmentMaterial.csv
+      - FactShipment.csv
+      skipped: []
+  load_tables:
+    status: completed
+    started_at: '2026-02-12T23:17:52.569594+00:00'
+    completed_at: '2026-02-12T23:21:20.724295+00:00'
+    details:
+      loaded:
+      - DimProductionOrder
+      - EdgeShipmentOrigin
+      - DimProductBatch
+      - DimMaterial
+      - DimProcessSegment
+      - FactQualityTest
+      - EdgeSegmentMaterial
+      - EdgeShipmentDestination
+      - DimSupplier
+      - DimEquipment
+      - EdgeShipmentMaterial
+      - FactShipment
+      skipped: []
+  create_eventhouse:
+    status: completed
+    artifact_id: 61cfca72-d117-43c8-9716-3417b90d7f06
+    artifact_name: Zava_ISA95_Telemetry
+    started_at: '2026-02-13T00:20:00.180104+00:00'
+    completed_at: '2026-02-13T00:20:12.096988+00:00'
+    error_message: 'Requested ''Zava_ISA95_Telemetry'' is not available yet and is
+      expected to become available in the upcoming minutes. | HTTP 400 | Code: ItemDisplayNameNotAvailableYet'
+  ingest_data:
+    status: completed
+    started_at: '2026-02-13T00:20:12.132808+00:00'
+    completed_at: '2026-02-13T00:20:44.523070+00:00'
+    details:
+      ingested_tables:
+      - ProcessSegmentTelemetry
+      - EquipmentTelemetry
+      - MachineStateTelemetry
+      - ProductionCounterTelemetry
+  create_ontology:
+    status: completed
+    artifact_id: 862a88f9-30dc-4377-94d8-041fc1f53c8c
+    artifact_name: Zava_ISA95_Ontology
+    started_at: '2026-02-13T00:20:44.563474+00:00'
+    completed_at: '2026-02-13T00:21:50.131499+00:00'
+    details:
+      entity_count: 8
+      relationship_count: 10
+      ttl_file: /Users/remco/repo/Fabric-Ontology-demoAgent/ZavaManufacturing-ISA95/ontology/zava-manufacturing.ttl
+  configure_bindings:
+    status: completed
+    started_at: '2026-02-13T00:21:50.182977+00:00'
+    completed_at: '2026-02-13T00:25:50.946800+00:00'
+    details:
+      lakehouse_bindings: 8
+      eventhouse_bindings: 4
+      relationship_contextualizations: 10
+      validation_errors:
+      - 'Validation failed: HTTPSConnectionPool(host=''wabi-west-us3-a-primary-redirect.analysis.windows.net'',
+        port=443): Read timed out. (read timeout=60)'
+  verify:
+    status: completed
+    started_at: '2026-02-13T00:27:04.374842+00:00'
+    completed_at: '2026-02-13T00:27:32.557638+00:00'
+    error_message: 'Verification: 7 passed, 1 failed, 0 warnings'
+    details:
+      passed:
+      - '✓ Lakehouse exists: Zava_ISA95_Lakehouse'
+      - ✓ Lakehouse has all 12 expected tables
+      - '✓ Eventhouse exists: Zava_ISA95_Telemetry'
+      - '✓ KQL Database exists: Zava_ISA95_Telemetry'
+      - ✓ Eventhouse has all 4 expected tables
+      - ✓ All eventhouse tables have data
+      - '✓ Ontology exists: Zava_ISA95_Ontology'
+      - ✓ Ontology has 0 entities, 0 relationships, 0 properties
+      - ✓ Data bindings configured
+      failed: []
+      warnings: []
+      verification:
+        lakehouse:
+          id: 1627ebfa-f872-4e5e-97a3-18831531e754
+          name: Zava_ISA95_Lakehouse
+          expected_tables:
+          - EdgeShipmentMaterial
+          - DimProductionOrder
+          - DimMaterial
+          - FactQualityTest
+          - DimSupplier
+          - EdgeShipmentDestination
+          - DimEquipment
+          - DimProductBatch
+          - EdgeSegmentMaterial
+          - EdgeShipmentOrigin
+          - FactShipment
+          - DimProcessSegment
+          existing_tables:
+          - EdgeShipmentMaterial
+          - DimProductionOrder
+          - DimMaterial
+          - FactQualityTest
+          - DimSupplier
+          - EdgeShipmentDestination
+          - DimEquipment
+          - DimProductBatch
+          - EdgeSegmentMaterial
+          - EdgeShipmentOrigin
+          - FactShipment
+          - DimProcessSegment
+          missing_tables: []
+        eventhouse:
+          id: 61cfca72-d117-43c8-9716-3417b90d7f06
+          name: Zava_ISA95_Telemetry
+          kql_database_id: 41bb237e-6a54-4363-9efd-8edcaf8673b2
+          kql_database_name: Zava_ISA95_Telemetry
+          expected_tables:
+          - EquipmentTelemetry
+          - ProcessSegmentTelemetry
+          - ProductionCounterTelemetry
+          - MachineStateTelemetry
+          existing_tables:
+          - 0
+          - 1
+          - '2026-02-13T00:27:10.0109321Z'
+          - 2
+          - EquipmentTelemetry
+          - MachineStateTelemetry
+          - ProcessSegmentTelemetry
+          - ProductionCounterTelemetry
+          - '{"Visualization":null,"Title":null,"XColumn":null,"Series":null,"YColumns":null,"AnomalyColumns":null,"XTitle":null,"YTitle":null,"XAxis":null,"YAxis":null,"Legend":null,"YSplit":null,"Accumulate":false,"IsQuerySorted":false,"Kind":null,"Ymin":"NaN","Ymax":"NaN","Xmin":null,"Xmax":null}'
+          missing_tables: []
+          table_row_counts:
+            EquipmentTelemetry: 130320
+            ProcessSegmentTelemetry: 260640
+            ProductionCounterTelemetry: 50000
+            MachineStateTelemetry: 75000
+        ontology:
+          id: 862a88f9-30dc-4377-94d8-041fc1f53c8c
+          name: Zava_ISA95_Ontology
+          entity_count: 0
+          relationship_count: 0
+          property_count: 0
+  refresh_graph:
+    status: completed
+    started_at: '2026-02-13T00:26:32.962072+00:00'
+    completed_at: '2026-02-13T00:26:33.205599+00:00'
+    details:
+      ontology_id: 862a88f9-30dc-4377-94d8-041fc1f53c8c
+      ontology_name: Zava_ISA95_Ontology
+      expected_graph_name: Zava_ISA95_Ontology_graph_862a88f930dc437794d8041fc1f53c8c
+      action: manual_refresh_required
+      instructions:
+      - 1. Open the Fabric workspace in your browser
+      - '2. Locate the graph item: ''Zava_ISA95_Ontology_graph_862a88f930dc437794d8041fc1f53c8c'''
+      - 3. Click '...' to expand the options menu
+      - 4. Select 'Schedule'
+      - 5. Click 'Refresh now' to sync the data
+  bind_static:
+    status: completed
+    started_at: '2026-02-13T05:03:52.046341+00:00'
+    completed_at: '2026-02-13T05:04:40.748256+00:00'
+    error_message: 'Failed to upload static bindings: Operation failed: Only one static
+      (NonTimeSeries) mapping is allowed per entity type. Found 2 static mappings.
+      (Parameter ''mappings'')'
+    details:
+      binding_count: 8
+      skipped: []
+  bind_timeseries:
+    status: failed
+    started_at: '2026-02-13T05:19:21.684013+00:00'
+    completed_at: '2026-02-13T05:20:15.887056+00:00'
+    error_message: 'Failed to upload timeseries bindings: Operation failed: TimeSeries
+      property ''Temperature'' is already used in another mapping. Each TimeSeries
+      property can only be used in one mapping. (Parameter ''mappings'')'
+completed_at: '2026-02-13T00:26:33.243386+00:00'
+resources:
+  lakehouse:
+    id: 1627ebfa-f872-4e5e-97a3-18831531e754
+    name: Zava_ISA95_Lakehouse
+  eventhouse:
+    id: 61cfca72-d117-43c8-9716-3417b90d7f06
+    name: Zava_ISA95_Telemetry
+  kql_database:
+    id: 41bb237e-6a54-4363-9efd-8edcaf8673b2
+    name: Zava_ISA95_Telemetry
+  ontology:
+    id: 862a88f9-30dc-4377-94d8-041fc1f53c8c
+    name: Zava_ISA95_Ontology

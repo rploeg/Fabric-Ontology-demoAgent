@@ -91,6 +91,7 @@ class DataBinding:
     key_column: str
     timestamp_column: Optional[str] = None  # Required for TimeSeries
     database_name: Optional[str] = None  # Required for Kusto
+    cluster_uri: Optional[str] = None  # Required for Kusto in current API
     property_bindings: List[PropertyBinding] = field(default_factory=list)
 
     @staticmethod
@@ -130,6 +131,8 @@ class DataBinding:
 
         if self.source_type == SourceType.KUSTO_TABLE and self.database_name:
             config["sourceTableProperties"]["databaseName"] = self.database_name
+        if self.source_type == SourceType.KUSTO_TABLE and self.cluster_uri:
+            config["sourceTableProperties"]["clusterUri"] = self.cluster_uri
 
         return {
             "id": self.binding_id,
@@ -348,6 +351,7 @@ class OntologyBindingBuilder:
         timestamp_column: str,
         property_mappings: Dict[str, str],
         binding_id: Optional[str] = None,
+        cluster_uri: Optional[str] = None,
     ) -> "OntologyBindingBuilder":
         """
         Add an Eventhouse (TimeSeries) binding for an entity.
@@ -361,6 +365,7 @@ class OntologyBindingBuilder:
             timestamp_column: Column containing timestamps
             property_mappings: Map of source_column -> target_property_id
             binding_id: Optional specific binding ID
+            cluster_uri: Eventhouse cluster URI for query execution
 
         Returns:
             Self for chaining
@@ -373,6 +378,7 @@ class OntologyBindingBuilder:
             workspace_id=self.workspace_id,
             item_id=eventhouse_id,
             database_name=database_name,
+            cluster_uri=cluster_uri,
             table_name=table_name,
             key_column=key_column,
             timestamp_column=timestamp_column,
@@ -651,19 +657,60 @@ class OntologyBindingBuilder:
                 path = p.get("path", "")
                 logger.debug(f"Existing part: {path}")
             
-            # Filter out old binding and contextualization parts (we'll add new ones)
+            # Determine which entity IDs and relationship IDs have new bindings/contextualizations
+            rebound_entity_ids = set(self._bindings.keys())
+            rebound_rel_ids = set(self._contextualizations.keys())
+            
+            # Determine which binding TYPES are being added per entity
+            # so we only filter out bindings of the matching type
+            rebound_entity_binding_types: Dict[str, set] = {}
+            for eid, bindings_list in self._bindings.items():
+                types = set()
+                for b in bindings_list:
+                    types.add(b.binding_type.value)  # "NonTimeSeries" or "TimeSeries"
+                rebound_entity_binding_types[eid] = types
+            
+            # Filter out old binding and contextualization parts only for entities/relationships
+            # that are being re-bound AND only for matching binding types.
+            # This preserves static bindings when only timeseries are being updated, and vice versa.
             # Also update entity definitions to add entityIdParts if missing
             for p in existing_parts:
                 path = p.get("path", "")
-                # Skip old binding and contextualization parts
+                # Only filter out binding parts for entities being re-bound with the same binding type
                 if "/DataBindings/" in path:
-                    filtered_out_bindings += 1
-                    logger.info(f"Filtering out old binding part: {path}")
-                    continue
+                    # Extract entity ID from path like "EntityTypes/1000000000004/DataBindings/..."
+                    path_segments = path.split("/")
+                    entity_id_in_path = path_segments[1] if len(path_segments) >= 3 else ""
+                    if entity_id_in_path in rebound_entity_ids:
+                        # Check if the existing binding's type matches what we're adding
+                        should_filter = False
+                        new_types = rebound_entity_binding_types.get(entity_id_in_path, set())
+                        try:
+                            existing_payload = json.loads(
+                                base64.b64decode(p.get("payload", "")).decode("utf-8")
+                            )
+                            existing_type = existing_payload.get("dataBindingConfiguration", {}).get("dataBindingType", "")
+                            if existing_type in new_types:
+                                should_filter = True  # Same type - replace it
+                            else:
+                                should_filter = False  # Different type - keep it
+                        except Exception:
+                            should_filter = True  # Can't decode, safer to replace
+                        
+                        if should_filter:
+                            filtered_out_bindings += 1
+                            logger.info(f"Filtering out old binding part ({existing_type}): {path}")
+                            continue
+                        else:
+                            logger.debug(f"Keeping existing binding (type={existing_type}, not in {new_types}): {path}")
+                    # Keep bindings for entities that are NOT being re-bound
                 if "/Contextualizations/" in path:
-                    filtered_out_contextualizations += 1
-                    logger.info(f"Filtering out old contextualization part: {path}")
-                    continue
+                    path_segments = path.split("/")
+                    rel_id_in_path = path_segments[1] if len(path_segments) >= 3 else ""
+                    if rel_id_in_path in rebound_rel_ids:
+                        filtered_out_contextualizations += 1
+                        logger.info(f"Filtering out old contextualization part: {path}")
+                        continue
                 # Track if definition.json exists
                 if path == "definition.json":
                     has_definition_json = True
@@ -841,6 +888,7 @@ def build_binding_from_parsed(
             workspace_id=workspace_id,
             item_id=lakehouse_id,
             table_name=parsed_binding.get("table_name", ""),
+            cluster_uri=parsed_binding.get("cluster_uri"),
             key_column=parsed_binding.get("key_column", ""),
             property_bindings=[
                 PropertyBinding(

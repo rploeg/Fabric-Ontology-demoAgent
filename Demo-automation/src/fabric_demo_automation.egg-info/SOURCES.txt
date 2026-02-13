@@ -7,6 +7,11 @@ src/demo_automation/orchestrator.py
 src/demo_automation/sdk_adapter.py
 src/demo_automation/state_manager.py
 src/demo_automation/validator.py
+src/demo_automation/agent/__init__.py
+src/demo_automation/agent/graph_agent.py
+src/demo_automation/agent/graph_query_agent.py
+src/demo_automation/agent/ontology_agent.py
+src/demo_automation/agent/sql_agent.py
 src/demo_automation/binding/__init__.py
 src/demo_automation/binding/binding_builder.py
 src/demo_automation/binding/binding_parser.py
@@ -35,5 +40,4 @@ tests/test_relationship_bindings.py
 tests/test_sdk_adapter.py
 tests/test_sdk_binding_bridge.py
 tests/test_sdk_converter.py
-tests/test_ttl_bytes_handling.py
 tests/test_validator.py
