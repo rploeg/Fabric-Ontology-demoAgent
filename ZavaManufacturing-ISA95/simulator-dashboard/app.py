@@ -35,6 +35,10 @@ _responses: List[Dict[str, Any]] = []
 _responses_lock = threading.Lock()
 MAX_RESPONSES = 200
 
+# Separate store for latest simulator state (survives telemetry flood)
+_latest_state: Dict[str, Any] = {}
+_latest_state_lock = threading.Lock()
+
 
 def _on_connect(client, userdata, flags, rc, properties):
     if not rc.is_failure:
@@ -59,6 +63,13 @@ def _on_message(client, userdata, msg):
         _responses.insert(0, entry)
         while len(_responses) > MAX_RESPONSES:
             _responses.pop()
+
+    # Persist latest status / list-anomalies for the overview panel
+    if msg.topic == STATUS_TOPIC and isinstance(payload, dict):
+        action = payload.get("action")
+        if action in ("status", "list-anomalies"):
+            with _latest_state_lock:
+                _latest_state[action] = payload
 
 
 def init_mqtt(broker: str, port: int, username: str, password: str):
@@ -109,6 +120,13 @@ async def clear_responses():
     with _responses_lock:
         _responses.clear()
     return {"status": "ok"}
+
+
+@app.get("/api/overview")
+async def get_overview():
+    """Return latest cached status + anomalies for the overview panel."""
+    with _latest_state_lock:
+        return dict(_latest_state)
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -187,6 +205,28 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
   .status-dot.on { background: var(--green); }
   .status-dot.off { background: var(--red); }
+
+  /* Overview panel */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .overview-grid { grid-template-columns: 1fr; } }
+  .overview-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    border-radius: 8px; font-size: 13px; background: var(--bg); }
+  .overview-item .name { flex: 1; }
+  .overview-item .meta { font-size: 11px; color: var(--muted); }
+  .overview-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .overview-badge.enabled { background: rgba(34,197,94,0.15); color: var(--green); }
+  .overview-badge.disabled { background: rgba(239,68,68,0.15); color: var(--red); }
+  .overview-badge.active { background: rgba(245,158,11,0.15); color: var(--orange); }
+  .overview-section { margin-bottom: 16px; }
+  .overview-section h3 { font-size: 12px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .overview-section h3 .count { font-size: 11px; color: var(--accent); font-weight: 400; }
+  .overview-master { display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+    border-radius: 8px; background: var(--bg); margin-bottom: 12px; font-size: 13px; }
+  .overview-master .label { flex: 1; font-weight: 500; }
+  .refresh-btn { background: none; border: 1px solid var(--border); color: var(--muted);
+    cursor: pointer; padding: 4px 10px; border-radius: 6px; font-size: 11px; }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
 
   /* Log panel */
   .log-panel { max-height: 600px; overflow-y: auto; }
@@ -339,13 +379,35 @@ HTML_PAGE = r"""<!DOCTYPE html>
 
   <!-- RIGHT: Response Log -->
   <div>
-    <!-- Stream Status Table -->
-    <div class="card" id="stream-status-card" style="margin-bottom:16px; display:none">
-      <h2>Stream Status</h2>
-      <table class="stream-table">
-        <thead><tr><th>Stream</th><th>Status</th><th>Interval</th><th>Actions</th></tr></thead>
-        <tbody id="stream-status-body"></tbody>
-      </table>
+    <!-- Simulator Overview -->
+    <div class="card" id="overview-card" style="margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+        <h2 style="margin:0">Simulator Overview</h2>
+        <div style="display:flex; gap:8px; align-items:center">
+          <span id="overview-uptime" style="font-size:11px; color:var(--muted)"></span>
+          <button class="refresh-btn" onclick="refreshOverview()">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Streams -->
+      <div class="overview-section">
+        <h3>Streams <span class="count" id="stream-count"></span></h3>
+        <div id="stream-overview" class="overview-grid">
+          <div style="font-size:12px; color:var(--muted)">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Anomaly Scenarios -->
+      <div class="overview-section" style="margin-bottom:0">
+        <h3>Anomaly Scenarios <span class="count" id="anomaly-count"></span></h3>
+        <div id="anomaly-master" class="overview-master">
+          <span class="label">Anomaly Engine</span>
+          <span id="anomaly-engine-badge" class="overview-badge disabled">—</span>
+        </div>
+        <div id="anomaly-overview" class="overview-grid">
+          <div style="font-size:12px; color:var(--muted)">Loading...</div>
+        </div>
+      </div>
     </div>
 
     <!-- Messages -->
@@ -443,29 +505,80 @@ function updatePreview(cmd) {
   document.getElementById('cmd-preview').textContent = JSON.stringify(cmd, null, 2);
 }
 
-// ---- Stream status table ----
-function updateStreamTable(data) {
-  const card = document.getElementById('stream-status-card');
-  const body = document.getElementById('stream-status-body');
+// ---- Overview panel ----
+let _lastStreamData = null;
+let _lastAnomalyData = null;
+
+function updateStreamOverview(data) {
   if (!data.streams) return;
-  card.style.display = '';
-  let html = '';
-  for (const [slug, info] of Object.entries(data.streams)) {
-    const dot = info.enabled ? 'on' : 'off';
-    const label = info.enabled ? 'Enabled' : 'Disabled';
-    const interval = info.intervalSec != null ? info.intervalSec + 's' : '—';
-    html += `<tr>
-      <td><span class="status-dot ${dot}"></span>${slug}</td>
-      <td>${label}</td>
-      <td>${interval}</td>
-      <td>
-        <button class="btn-sm ${info.enabled ? 'btn-red' : 'btn-green'}"
-          onclick="sendCommand({action:'${info.enabled ? 'disable' : 'enable'}',stream:'${slug}'})"
-          style="padding:3px 8px;font-size:11px">${info.enabled ? 'Disable' : 'Enable'}</button>
-      </td>
-    </tr>`;
+  _lastStreamData = data;
+  const el = document.getElementById('stream-overview');
+  const entries = Object.entries(data.streams);
+  const enabledCount = entries.filter(([,v]) => v.enabled).length;
+  document.getElementById('stream-count').textContent = `${enabledCount}/${entries.length} active`;
+
+  if (data.uptime_sec != null) {
+    const m = Math.floor(data.uptime_sec / 60);
+    const s = data.uptime_sec % 60;
+    document.getElementById('overview-uptime').textContent =
+      `uptime ${m}m ${s}s | ${data.messages_published ?? '?'} msgs | ${data.msg_per_sec ?? '?'} msg/s`;
   }
-  body.innerHTML = html;
+
+  el.innerHTML = entries.map(([slug, info]) => {
+    const badge = info.enabled ? 'enabled' : 'disabled';
+    const label = info.enabled ? 'ON' : 'OFF';
+    const interval = info.intervalSec != null ? info.intervalSec + 's' : '';
+    return `<div class="overview-item">
+      <span class="status-dot ${info.enabled ? 'on' : 'off'}"></span>
+      <span class="name">${slug}</span>
+      <span class="meta">${interval}</span>
+      <span class="overview-badge ${badge}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function updateAnomalyOverview(data) {
+  if (!data.scenarios) return;
+  _lastAnomalyData = data;
+  const el = document.getElementById('anomaly-overview');
+  const engineBadge = document.getElementById('anomaly-engine-badge');
+
+  // Engine master toggle
+  if (data.anomalies_enabled) {
+    engineBadge.className = 'overview-badge enabled';
+    engineBadge.textContent = `ON — every ${data.interval_min ?? '?'} min`;
+  } else {
+    engineBadge.className = 'overview-badge disabled';
+    engineBadge.textContent = 'OFF';
+  }
+
+  const enabledCount = data.scenarios.filter(s => s.enabled).length;
+  document.getElementById('anomaly-count').textContent = `${enabledCount}/${data.scenarios.length} enabled`;
+
+  el.innerHTML = data.scenarios.map(s => {
+    const badge = s.enabled ? 'enabled' : 'disabled';
+    const label = s.enabled ? 'ON' : 'OFF';
+    const dur = s.durationSec ? s.durationSec + 's' : 'instant';
+    return `<div class="overview-item" title="${escHtml(s.description || '')}">
+      <span class="status-dot ${s.enabled ? 'on' : 'off'}"></span>
+      <span class="name">${s.name}</span>
+      <span class="meta">${dur}</span>
+      <span class="overview-badge ${badge}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function refreshOverview() {
+  sendCommand({ action: 'status' });
+  sendCommand({ action: 'list-anomalies' });
+}
+
+async function fetchOverview() {
+  try {
+    const data = await api('GET', '/api/overview');
+    if (data['status']) updateStreamOverview(data['status']);
+    if (data['list-anomalies']) updateAnomalyOverview(data['list-anomalies']);
+  } catch(e) { /* ignore */ }
 }
 
 // ---- Log rendering ----
@@ -489,9 +602,11 @@ function renderLog() {
 
   document.getElementById('msg-count').textContent = `${messages.length} messages (showing ${shown.length})`;
 
-  // Auto-update stream table from status responses
+  // Auto-update overview panels from status/anomaly responses
   const lastStatus = messages.find(m => m.topic === 'zava/simulator/status' && m.payload.action === 'status');
-  if (lastStatus) updateStreamTable(lastStatus.payload);
+  if (lastStatus) updateStreamOverview(lastStatus.payload);
+  const lastAnomalies = messages.find(m => m.topic === 'zava/simulator/status' && m.payload.action === 'list-anomalies');
+  if (lastAnomalies) updateAnomalyOverview(lastAnomalies.payload);
 }
 
 function escHtml(s) {
@@ -506,6 +621,10 @@ async function poll() {
     messages = data;
     renderLog();
   } catch (e) { /* ignore transient errors */ }
+}
+
+async function pollOverview() {
+  try { await fetchOverview(); } catch(e) {}
 }
 
 function togglePause() {
@@ -549,10 +668,15 @@ document.getElementById('config-path').addEventListener('change', e => {
 
 // ---- Init ----
 pollInterval = setInterval(poll, 1000);
+setInterval(pollOverview, 3000);
 poll();
 
-// Auto-fetch status on load
-setTimeout(() => sendQuick('status'), 500);
+// Auto-fetch status + anomalies on load
+setTimeout(() => {
+  sendQuick('status');
+  sendQuick('list-anomalies');
+  setTimeout(fetchOverview, 1500);
+}, 500);
 </script>
 </body>
 </html>
@@ -564,7 +688,7 @@ setTimeout(() => sendQuick('status'), 500);
 
 def main():
     parser = argparse.ArgumentParser(description="Zava Simulator Dashboard")
-    parser.add_argument("--broker", default="localhost", help="MQTT broker host")
+    parser.add_argument("--broker", default="127.0.0.1", help="MQTT broker host")
     parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port")
     parser.add_argument("--username", default="mqtt", help="MQTT username")
     parser.add_argument("--password", default="mqtt", help="MQTT password")

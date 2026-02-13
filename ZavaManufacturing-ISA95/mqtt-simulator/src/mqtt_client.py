@@ -156,6 +156,10 @@ class MqttClient:
             logger.error("Connection refused: %s", rc)
         else:
             logger.info("Connected to MQTT broker %s:%s", self._cfg.broker, self._cfg.port)
+            # Resubscribe all registered topics (handles initial delay + reconnect)
+            for topic, _cb in self._subscriptions.items():
+                client.subscribe(topic, qos=1)
+                logger.info("Re-subscribed to %s on connect", topic)
             if self._loop:
                 self._loop.call_soon_threadsafe(self._connected.set)
 
