@@ -24,13 +24,32 @@ class SafetyIncidentStream(BaseStream):
     def is_enabled(self) -> bool:
         return self._scfg.enabled
 
+    # Override support (anomaly injection — burst mode)
+    _burst_count: int | None = None
+    _min_override: int | None = None
+    _max_override: int | None = None
+
+    def apply_overrides(self, overrides: dict) -> None:
+        self._burst_count = overrides.get("burstCount")
+        self._min_override = overrides.get("minIntervalSec")
+        self._max_override = overrides.get("maxIntervalSec")
+
+    def clear_overrides(self) -> None:
+        self._burst_count = None
+        self._min_override = None
+        self._max_override = None
+
     async def run(self) -> None:
         logger.info("SafetyIncidentStream started — %d cameras, interval %d–%ds",
                      len(self._scfg.cameras), self._scfg.min_interval_sec, self._scfg.max_interval_sec)
 
         while True:
-            wait = random.randint(self._scfg.min_interval_sec, self._scfg.max_interval_sec)
-            await asyncio.sleep(wait)
+            min_iv = self._min_override if self._min_override is not None else self._scfg.min_interval_sec
+            max_iv = self._max_override if self._max_override is not None else self._scfg.max_interval_sec
+            burst = self._burst_count or 1
+            for _ in range(burst):
+                wait = random.randint(min_iv, max(min_iv, max_iv))
+                await asyncio.sleep(wait)
 
             if not self._scfg.cameras or not self._scfg.incident_types:
                 continue

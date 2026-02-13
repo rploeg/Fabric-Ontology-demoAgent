@@ -23,6 +23,18 @@ class EquipmentTelemetryStream(BaseStream):
     def is_enabled(self) -> bool:
         return self._scfg.enabled
 
+    # Override support (anomaly injection)
+    _energy_override: list | None = None
+    _humidity_override: list | None = None
+
+    def apply_overrides(self, overrides: dict) -> None:
+        self._energy_override = overrides.get("energyRange")
+        self._humidity_override = overrides.get("humidityRange")
+
+    def clear_overrides(self) -> None:
+        self._energy_override = None
+        self._humidity_override = None
+
     async def run(self) -> None:
         interval = self._scfg.interval_sec
         logger.info("EquipmentTelemetry started — %d equipment, every %ds", len(self._scfg.equipment), interval)
@@ -35,11 +47,14 @@ class EquipmentTelemetryStream(BaseStream):
                 else:
                     prod_rate = float(eq.production_rate)
 
+                e_range = self._energy_override or eq.energy_range
+                h_range = self._humidity_override or eq.humidity_range
+
                 payload = {
                     "Timestamp": utcnow(),
                     "EquipmentId": eq.id,
-                    "EnergyConsumption": rand_float(eq.energy_range[0], eq.energy_range[1]),
-                    "Humidity": rand_float(eq.humidity_range[0], eq.humidity_range[1]),
+                    "EnergyConsumption": rand_float(e_range[0], e_range[1]),
+                    "Humidity": rand_float(h_range[0], h_range[1]),
                     "ProductionRate": prod_rate,
                 }
 

@@ -149,23 +149,39 @@ Publish JSON to **`zava/simulator/command`** and receive responses on **`zava/si
 ```
 
 ```json
-{"action": "trigger-anomaly", "scenario": "mass_machine_stop"}
+{"action": "trigger-anomaly", "scenario": "machine_cascade_failure"}
 ```
 
 ```json
-{"action": "trigger-anomaly", "scenario": "vibration_surge"}
+{"action": "trigger-anomaly", "scenario": "bearing_failure_imminent"}
 ```
 
 ```json
-{"action": "trigger-anomaly", "scenario": "material_variance"}
+{"action": "trigger-anomaly", "scenario": "material_overconsumption"}
 ```
 
 ```json
-{"action": "trigger-anomaly", "scenario": "quality_defect_wave"}
+{"action": "trigger-anomaly", "scenario": "vision_defect_surge"}
 ```
 
 ```json
-{"action": "trigger-anomaly", "scenario": "shipment_delay_cascade"}
+{"action": "trigger-anomaly", "scenario": "shipment_critical_delay"}
+```
+
+```json
+{"action": "trigger-anomaly", "scenario": "energy_spike"}
+```
+
+```json
+{"action": "trigger-anomaly", "scenario": "cascading_line_failure"}
+```
+
+```json
+{"action": "trigger-anomaly", "scenario": "safety_zone_breach"}
+```
+
+```json
+{"action": "trigger-anomaly", "scenario": "quality_model_degradation"}
 ```
 
 ---
@@ -235,8 +251,12 @@ Publish JSON to **`zava/simulator/command`** and receive responses on **`zava/si
 |----------|--------------|----------|
 | `temperature_spike` | process-segment | 120s |
 | `oee_drop` | production-counter | 300s |
-| `mass_machine_stop` | machine-state | 180s |
-| `vibration_surge` | predictive-maintenance | 240s |
-| `material_variance` | material-consumption | 150s |
-| `quality_defect_wave` | quality-vision | 200s |
-| `shipment_delay_cascade` | supply-chain | 600s |
+| `machine_cascade_failure` | machine-state | 180s |
+| `bearing_failure_imminent` | predictive-maintenance | 600s |
+| `material_overconsumption` | material-consumption | 300s |
+| `vision_defect_surge` | quality-vision | 240s |
+| `shipment_critical_delay` | supply-chain | instant |
+| `energy_spike` | equipment | 180s |
+| `cascading_line_failure` | machine-state | 300s |
+| `safety_zone_breach` | safety-incident | 120s |
+| `quality_model_degradation` | quality-vision | 300s |

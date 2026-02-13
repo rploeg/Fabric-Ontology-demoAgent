@@ -31,14 +31,17 @@ class QualityVisionStream(BaseStream):
     # Override support
     _pass_override: float | None = None
     _marginal_override: float | None = None
+    _confidence_override: list | None = None
 
     def apply_overrides(self, overrides: dict) -> None:
         self._pass_override = overrides.get("passRate")
         self._marginal_override = overrides.get("marginalRate")
+        self._confidence_override = overrides.get("confidenceRange")
 
     def clear_overrides(self) -> None:
         self._pass_override = None
         self._marginal_override = None
+        self._confidence_override = None
 
     async def run(self) -> None:
         scfg = self._scfg
@@ -81,8 +84,9 @@ class QualityVisionStream(BaseStream):
                         "h": random.randint(10, 60),
                     }
 
+                conf_range = self._confidence_override or scfg.confidence_range
                 confidence = rand_float(
-                    scfg.confidence_range[0], scfg.confidence_range[1], 2
+                    conf_range[0], conf_range[1], 2
                 )
 
                 image_ref = scfg.image_ref_template.format(

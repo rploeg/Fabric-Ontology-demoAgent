@@ -288,11 +288,15 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <select id="anomaly-select">
           <option value="temperature_spike">temperature_spike (120s)</option>
           <option value="oee_drop">oee_drop (300s)</option>
-          <option value="mass_machine_stop">mass_machine_stop (180s)</option>
-          <option value="vibration_surge">vibration_surge (240s)</option>
-          <option value="material_variance">material_variance (150s)</option>
-          <option value="quality_defect_wave">quality_defect_wave (200s)</option>
-          <option value="shipment_delay_cascade">shipment_delay_cascade (600s)</option>
+          <option value="machine_cascade_failure">machine_cascade_failure (180s)</option>
+          <option value="bearing_failure_imminent">bearing_failure_imminent (600s)</option>
+          <option value="material_overconsumption">material_overconsumption (300s)</option>
+          <option value="vision_defect_surge">vision_defect_surge (240s)</option>
+          <option value="shipment_critical_delay">shipment_critical_delay (instant)</option>
+          <option value="energy_spike">energy_spike (180s)</option>
+          <option value="cascading_line_failure">cascading_line_failure (300s)</option>
+          <option value="safety_zone_breach">safety_zone_breach (120s)</option>
+          <option value="quality_model_degradation">quality_model_degradation (300s)</option>
         </select>
       </div>
       <button class="btn-primary btn-red" onclick="triggerAnomaly()">Trigger Anomaly</button>

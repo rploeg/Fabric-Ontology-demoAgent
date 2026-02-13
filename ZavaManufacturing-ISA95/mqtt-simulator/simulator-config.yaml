@@ -518,6 +518,53 @@ anomalies:
         delayDays: 5
         riskLevel: "Critical"
 
+    - name: "energy_spike"
+      enabled: true
+      description: "Sudden power draw surge across site equipment — brownout risk"
+      topic: "zava/anomalies/equipment"
+      stream: "equipmentTelemetry"
+      durationSec: 180
+      overrides:
+        energyRange: [800, 1200]
+        humidityRange: [55, 70]
+
+    - name: "cascading_line_failure"
+      enabled: true
+      description: "Blocked machine cascades to upstream/downstream — full line stops"
+      topic: "zava/anomalies/machine-state"
+      stream: "machineStateTelemetry"
+      durationSec: 300
+      overrides:
+        probabilities:
+          Stopped: 0.60
+          Blocked: 0.25
+          Running: 0.05
+          Waiting: 0.05
+          Idle: 0.05
+        errorProbability: 0.55
+
+    - name: "safety_zone_breach"
+      enabled: true
+      description: "Cluster of safety incidents in one zone — possible evacuation"
+      topic: "zava/anomalies/safety-incident"
+      stream: "safetyIncidentEvents"
+      durationSec: 120
+      overrides:
+        burstCount: 5
+        minIntervalSec: 3
+        maxIntervalSec: 10
+
+    - name: "quality_model_degradation"
+      enabled: true
+      description: "Vision AI confidence drops — model drift detected"
+      topic: "zava/anomalies/quality-vision"
+      stream: "qualityVisionEvents"
+      durationSec: 300
+      overrides:
+        confidenceRange: [0.35, 0.60]
+        passRate: 0.65
+        marginalRate: 0.15
+
 # === Logging & Observability ===
 logging:
   level: "INFO"

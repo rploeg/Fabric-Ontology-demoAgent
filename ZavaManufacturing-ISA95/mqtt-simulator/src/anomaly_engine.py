@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 # Maps scenario.stream → config attribute name → stream class
 _STREAM_ATTR_MAP: Dict[str, str] = {
+    "equipmentTelemetry": "equipment",
     "processSegmentTelemetry": "process-segment",
     "productionCounterTelemetry": "production-counter",
     "machineStateTelemetry": "machine-state",
@@ -23,6 +24,7 @@ _STREAM_ATTR_MAP: Dict[str, str] = {
     "materialConsumptionEvents": "material-consumption",
     "qualityVisionEvents": "quality-vision",
     "supplyChainAlerts": "supply-chain",
+    "safetyIncidentEvents": "safety-incident",
 }
 
 
