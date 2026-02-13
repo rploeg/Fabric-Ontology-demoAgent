@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: zava-simulator
+  namespace: zava-simulator
+  labels:
+    app.kubernetes.io/name: zava-simulator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zava-simulator
+  template:
+    metadata:
+      labels:
+        app: zava-simulator
+    spec:
+      serviceAccountName: zava-simulator
+      containers:
+        - name: simulator
+          image: zava-simulator:latest    # Replace with your ACR image
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--config"
+            - "/etc/simulator/simulator-config.yaml"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/simulator
+              readOnly: true
+            # SAT token projection for Azure IoT Operations MQTT auth
+            - name: mqtt-token
+              mountPath: /var/run/secrets/tokens
+              readOnly: true
+      volumes:
+        - name: config-volume
+          configMap:
+            name: zava-simulator-config
+        - name: mqtt-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: mqtt-client-token
+                  audience: "aio-internal"
+                  expirationSeconds: 3600
+      restartPolicy: Always

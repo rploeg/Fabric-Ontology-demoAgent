@@ -1,0 +1,526 @@
+# =============================================================================
+# Zava MQTT Simulator — Default Configuration
+# =============================================================================
+# Mount this file as a Kubernetes ConfigMap at /etc/simulator/simulator-config.yaml
+# or place it alongside the entrypoint as simulator-config.yaml.
+
+# === MQTT Connection ===
+mqtt:
+  broker: "host.docker.internal"       # use "aio-broker.azure-iot-operations.svc.cluster.local" for AKS
+  port: 1883
+  useTls: false
+  authMethod: "usernamePassword"       # use "serviceAccountToken" for AKS
+  username: "mqtt"
+  password: "mqtt"
+  clientId: "zava-simulator"
+  keepAlive: 60
+  reconnectDelaySec: 5
+  qos: 1
+
+# === Topic Configuration ===
+topicPrefix: "zava/telemetry"
+topicMode: "uns"   # "flat" = single topic per stream | "uns" = ISA-95 hierarchical UNS
+
+# UNS (Unified Namespace) settings — only used when topicMode=uns
+uns:
+  enterprise: "zava"
+  hierarchy:
+    sites:
+      EQP-001:
+        slug: "redmond-innovation"
+        areas:
+          EQP-004: "coating-dev-lab"
+          EQP-007: "qa-testing-lab"
+      EQP-002:
+        slug: "portland-production"
+        areas:
+          EQP-005:
+            slug: "weave-hall-a"
+            lines:
+              WeaveLine-Alpha: "weaveline-alpha"
+              WeaveLine-Bravo: "weaveline-bravo"
+              WeaveLine-Charlie: "weaveline-charlie"
+              WeaveLine-Delta: "weaveline-delta"
+              WeaveLine-Echo: "weaveline-echo"
+          EQP-006:
+            slug: "weave-hall-b"
+            lines:
+              WeaveLine-Foxtrot: "weaveline-foxtrot"
+              WeaveLine-Golf: "weaveline-golf"
+              WeaveLine-Hotel: "weaveline-hotel"
+              WeaveLine-India: "weaveline-india"
+              WeaveLine-Juliet: "weaveline-juliet"
+              WeaveLine-Kilo: "weaveline-kilo"
+      EQP-003:
+        slug: "distribution-hub"
+        areas:
+          EQP-008: "finished-goods-warehouse"
+  categories:
+    telemetry: ["equipment", "machine-state", "process-segment", "production-counter", "predictive-maintenance"]
+    events: ["safety-incident", "quality-vision", "material-consumption", "supply-chain"]
+    state: ["digital-twin"]
+
+# === Simulation Behaviour ===
+simulation:
+  tickIntervalSec: 1
+  timeMode: "realtime"
+  accelerationFactor: 10
+  shifts:
+    dayStart: "06:00"
+    nightStart: "18:00"
+  activeBatches:
+    - batchId: "BTC-011"
+      product: "ZavaCore Field Standard"
+      sku: "ZC Field Standard"
+    - batchId: "BTC-012"
+      product: "ZavaCore Field Slim"
+      sku: "ZC Field Slim"
+    - batchId: "BTC-013"
+      product: "ZavaCore Systems Pro"
+      sku: "ZC Systems Pro"
+
+# === Stream: Equipment Telemetry (site-level) ===
+equipmentTelemetry:
+  enabled: true
+  topic: "zava/telemetry/equipment"
+  intervalSec: 30
+  equipment:
+    - id: "EQP-001"
+      name: "Zava Redmond Innovation Center"
+      energyRange: [200, 500]
+      humidityRange: [35, 45]
+      productionRate: 0
+    - id: "EQP-002"
+      name: "Zava Portland Production Campus"
+      energyRange: [800, 2500]
+      humidityRange: [30, 50]
+      productionRate: [10000, 15000]
+    - id: "EQP-003"
+      name: "Zava Distribution Hub"
+      energyRange: [150, 400]
+      humidityRange: [35, 45]
+      productionRate: 0
+
+# === Stream: Machine State Telemetry (WorkUnit-level) ===
+machineStateTelemetry:
+  enabled: true
+  topic: "zava/telemetry/machine-state"
+  lines:
+    - name: "WeaveLine-Alpha"
+      machinesPerLine: 12
+      equipmentIdStart: 16
+    - name: "WeaveLine-Bravo"
+      machinesPerLine: 12
+      equipmentIdStart: 28
+    - name: "WeaveLine-Charlie"
+      machinesPerLine: 14
+      equipmentIdStart: 40
+  autoDiscover: true
+  totalMachines: 134
+  stateTransition:
+    minDwellSec: 5
+    maxDwellSec: 300
+    probabilities:
+      Running: 0.70
+      Stopped: 0.10
+      Blocked: 0.05
+      Waiting: 0.10
+      Idle: 0.05
+    errorProbability: 0.02
+    errorCodes: ["E101", "E202", "E303", "E404"]
+
+# === Stream: Process Segment Telemetry ===
+processSegmentTelemetry:
+  enabled: true
+  topic: "zava/telemetry/process-segment"
+  intervalSec: 30
+  segments:
+    - id: "SEG-029"
+      type: "Coating"
+      temperatureRange: [80, 95]
+      moistureRange: [3.0, 5.0]
+      cycleTimeRange: [100, 120]
+    - id: "SEG-030"
+      type: "Coating"
+      temperatureRange: [80, 95]
+      moistureRange: [3.0, 5.0]
+      cycleTimeRange: [100, 120]
+  autoGenerate:
+    enabled: false
+    count: 5
+    types: ["Coating", "Weaving", "SensorEmbed", "Packaging"]
+
+# === Stream: Production Counter Telemetry ===
+productionCounterTelemetry:
+  enabled: true
+  topic: "zava/telemetry/production-counter"
+  intervalSec: 30
+  unitCountIncrementRange: [0, 25]
+  fiberProducedGramRange: [0, 100]
+  rejectRate: 0.02
+  oeeRange: [0.75, 0.95]
+  votRange: [0, 1800]
+  loadingTimeBase: 20000
+
+# === Stream: Safety Incident Events (camera-detected) ===
+safetyIncidentEvents:
+  enabled: true
+  topic: "zava/telemetry/safety-incident"
+  minIntervalSec: 60
+  maxIntervalSec: 1800
+  cameras:
+    - id: "CAM-WH-A-01"
+      zone: "Weave Hall A"
+      equipmentId: "EQP-005"
+    - id: "CAM-WH-A-02"
+      zone: "Weave Hall A"
+      equipmentId: "EQP-005"
+    - id: "CAM-WH-A-03"
+      zone: "Weave Hall A"
+      equipmentId: "EQP-005"
+    - id: "CAM-WH-B-01"
+      zone: "Weave Hall B"
+      equipmentId: "EQP-006"
+    - id: "CAM-WH-B-02"
+      zone: "Weave Hall B"
+      equipmentId: "EQP-006"
+    - id: "CAM-QA-01"
+      zone: "QA & Testing Laboratory"
+      equipmentId: "EQP-007"
+    - id: "CAM-WH-FG-01"
+      zone: "Finished Goods Warehouse"
+      equipmentId: "EQP-008"
+    - id: "CAM-COAT-01"
+      zone: "Coating Development Lab"
+      equipmentId: "EQP-004"
+  incidentTypes:
+    - type: "ppe_violation"
+      severity: "Warning"
+      weight: 0.30
+      descriptions:
+        - "Worker detected without safety goggles near {zone}"
+        - "Hard hat not detected on personnel in {zone}"
+        - "Missing high-visibility vest detected in {zone}"
+    - type: "unauthorized_zone_entry"
+      severity: "Warning"
+      weight: 0.15
+      descriptions:
+        - "Unauthorized badge detected entering restricted area in {zone}"
+        - "Unregistered person detected in controlled zone {zone}"
+    - type: "spill_detected"
+      severity: "Warning"
+      weight: 0.12
+      descriptions:
+        - "Liquid spill detected on floor near equipment in {zone}"
+        - "Chemical spill detected — cleanup required in {zone}"
+    - type: "blocked_exit"
+      severity: "Critical"
+      weight: 0.08
+      descriptions:
+        - "Emergency exit blocked by pallets in {zone}"
+        - "Fire exit obstructed in {zone}"
+    - type: "forklift_near_miss"
+      severity: "Critical"
+      weight: 0.10
+      descriptions:
+        - "Forklift near-miss with pedestrian detected in {zone}"
+        - "Forklift speed violation in pedestrian area {zone}"
+    - type: "fire_smoke_detected"
+      severity: "Critical"
+      weight: 0.05
+      descriptions:
+        - "Smoke detected by visual analytics in {zone}"
+        - "Thermal anomaly with visible haze in {zone}"
+    - type: "fallen_object"
+      severity: "Warning"
+      weight: 0.10
+      descriptions:
+        - "Object fallen from racking detected in {zone}"
+        - "Unsecured load detected on upper shelf in {zone}"
+    - type: "person_down"
+      severity: "Critical"
+      weight: 0.10
+      descriptions:
+        - "Person motionless on floor detected in {zone}"
+        - "Possible injury — person down in {zone}"
+  confidenceRange: [0.75, 0.99]
+  imageRefTemplate: "blob://safety-captures/{year}/{month}/{day}/{cameraId}_{timestamp}.jpg"
+
+# === Stream: Predictive Maintenance Signals ===
+predictiveMaintenanceSignals:
+  enabled: true
+  topic: "zava/telemetry/predictive-maintenance"
+  intervalSec: 10
+  machines: "auto"
+  vibrationRange: [0.5, 4.0]
+  bearingTempRange: [40, 75]
+  acousticDBRange: [65, 90]
+  motorCurrentRange: [10, 20]
+  spindleSpeedRange: [2800, 3600]
+  degradation:
+    enabled: true
+    degradationRatePerHour: 0.002
+    criticalThreshold: 0.40
+    warningThreshold: 0.60
+    resetOnMaintenance: true
+    machinesWithDegradation: 5
+
+# === Stream: Digital Twin State Sync ===
+digitalTwinStateSync:
+  enabled: true
+  topic: "zava/telemetry/digital-twin"
+  heartbeatIntervalSec: 60
+  retainMessages: true
+  statuses:
+    - "Producing"
+    - "ProducingAtRate"
+    - "Idle"
+    - "Setup"
+    - "Maintenance"
+    - "Changeover"
+    - "Blocked"
+    - "ScheduledDowntime"
+    - "UnscheduledDowntime"
+  transitionProbabilities:
+    Producing: 0.60
+    Idle: 0.10
+    Setup: 0.08
+    Maintenance: 0.05
+    Changeover: 0.07
+    Blocked: 0.04
+    ScheduledDowntime: 0.03
+    UnscheduledDowntime: 0.02
+    ProducingAtRate: 0.01
+  recipes:
+    - sku: "ZC Field Standard"
+      recipeId: "RCP-FS-001"
+      targetSpeedPct: 85
+    - sku: "ZC Field Slim"
+      recipeId: "RCP-SL-001"
+      targetSpeedPct: 80
+    - sku: "ZC Systems Pro"
+      recipeId: "RCP-SP-001"
+      targetSpeedPct: 75
+
+# === Stream: Material Consumption Events ===
+materialConsumptionEvents:
+  enabled: true
+  topic: "zava/telemetry/material-consumption"
+  minIntervalSec: 30
+  maxIntervalSec: 120
+  materials:
+    Coating:
+      - materialId: "MAT-002"
+        expectedPerBatch: 15.0
+      - materialId: "MAT-003"
+        expectedPerBatch: 8.0
+      - materialId: "MAT-005"
+        expectedPerBatch: 10.0
+    Weaving:
+      - materialId: "MAT-011"
+        expectedPerBatch: 5.0
+      - materialId: "MAT-022"
+        expectedPerBatch: 2.0
+    SensorEmbed:
+      - materialId: "MAT-012"
+        expectedPerBatch: 3.0
+      - materialId: "MAT-013"
+        expectedPerBatch: 1.5
+      - materialId: "MAT-014"
+        expectedPerBatch: 2.5
+    Packaging:
+      - materialId: "MAT-015"
+        expectedPerBatch: 4.0
+      - materialId: "MAT-016"
+        expectedPerBatch: 6.0
+  variancePctRange: [-20, 10]
+
+# === Stream: Quality Inspection Image Events ===
+qualityVisionEvents:
+  enabled: true
+  topic: "zava/telemetry/quality-vision"
+  intervalSec: 10
+  passRate: 0.92
+  marginalRate: 0.03
+  stations:
+    - id: "VISC-WL-A-01"
+      lineName: "WeaveLine-Alpha"
+      equipmentId: "EQP-020"
+    - id: "VISC-WL-B-01"
+      lineName: "WeaveLine-Bravo"
+      equipmentId: "EQP-034"
+    - id: "VISC-WL-C-01"
+      lineName: "WeaveLine-Charlie"
+      equipmentId: "EQP-048"
+    - id: "VISC-WL-D-01"
+      lineName: "WeaveLine-Delta"
+      equipmentId: "EQP-054"
+    - id: "VISC-WL-E-01"
+      lineName: "WeaveLine-Echo"
+      equipmentId: "EQP-066"
+    - id: "VISC-WL-F-01"
+      lineName: "WeaveLine-Foxtrot"
+      equipmentId: "EQP-072"
+    - id: "VISC-WL-G-01"
+      lineName: "WeaveLine-Golf"
+      equipmentId: "EQP-083"
+    - id: "VISC-WL-H-01"
+      lineName: "WeaveLine-Hotel"
+      equipmentId: "EQP-088"
+    - id: "VISC-WL-I-01"
+      lineName: "WeaveLine-India"
+      equipmentId: "EQP-100"
+    - id: "VISC-WL-J-01"
+      lineName: "WeaveLine-Juliet"
+      equipmentId: "EQP-112"
+    - id: "VISC-WL-K-01"
+      lineName: "WeaveLine-Kilo"
+      equipmentId: "EQP-124"
+  defectTypes:
+    - type: "fiber_tear"
+      weight: 0.25
+    - type: "coating_gap"
+      weight: 0.20
+    - type: "sensor_misalignment"
+      weight: 0.15
+    - type: "delamination"
+      weight: 0.10
+    - type: "contamination"
+      weight: 0.10
+    - type: "mesh_distortion"
+      weight: 0.08
+    - type: "solder_bridge"
+      weight: 0.07
+    - type: "label_skew"
+      weight: 0.05
+  confidenceRange: [0.70, 0.99]
+  modelVersion: "yolov8-zava-defect-v3.2"
+  imageRefTemplate: "blob://quality-vision/{year}/{month}/{day}/{stationId}_{timestamp}.jpg"
+
+# === Stream: Supply Chain Inbound Alerts ===
+supplyChainAlerts:
+  enabled: true
+  topic: "zava/telemetry/supply-chain"
+  minIntervalSec: 300
+  maxIntervalSec: 3600
+  activeShipments:
+    - shipmentId: "SHP-011"
+      trackingNum: "TRK-2025-5011"
+      carrier: "EuroAir Cargo"
+      originEquipmentId: "EQP-011"
+      destEquipmentId: "EQP-001"
+      materialIds: ["MAT-003"]
+      initialStatus: "InTransit"
+    - shipmentId: "SHP-012"
+      trackingNum: "TRK-2025-5012"
+      carrier: "TaiwanCargo Express"
+      originEquipmentId: "EQP-012"
+      destEquipmentId: "EQP-001"
+      materialIds: ["MAT-004"]
+      initialStatus: "InTransit"
+    - shipmentId: "SHP-014"
+      trackingNum: "TRK-2025-5014"
+      carrier: "TransAtlantic Freight"
+      originEquipmentId: "EQP-014"
+      destEquipmentId: "EQP-002"
+      materialIds: ["MAT-016", "MAT-017", "MAT-018", "MAT-019"]
+      initialStatus: "Pending"
+  statusFlow: ["Booked", "PickedUp", "InTransit", "CustomsHold", "OutForDelivery", "Delivered"]
+  delayProbability: 0.15
+  exceptionProbability: 0.03
+  delayReasons:
+    - "Port congestion"
+    - "Customs inspection"
+    - "Weather delay"
+    - "Carrier equipment failure"
+    - "Documentation missing"
+    - "Capacity shortage"
+  impactedBatchLookup: true
+
+# === Anomaly Injection ===
+anomalies:
+  enabled: true
+  defaultTopic: "zava/anomalies"
+  scenarioIntervalMin: 15
+  scenarios:
+    - name: "temperature_spike"
+      enabled: true
+      description: "Coating temperature exceeds safe range"
+      topic: "zava/anomalies/process-segment"
+      stream: "processSegmentTelemetry"
+      durationSec: 120
+      overrides:
+        temperatureRange: [105, 130]
+
+    - name: "oee_drop"
+      enabled: true
+      description: "OEE drops on a line due to machine issues"
+      topic: "zava/anomalies/production-counter"
+      stream: "productionCounterTelemetry"
+      durationSec: 300
+      overrides:
+        oeeRange: [0.30, 0.50]
+        rejectRate: 0.15
+
+    - name: "machine_cascade_failure"
+      enabled: true
+      description: "Multiple machines on one line go to Stopped/Blocked"
+      topic: "zava/anomalies/machine-state"
+      stream: "machineStateTelemetry"
+      durationSec: 180
+      overrides:
+        probabilities:
+          Stopped: 0.50
+          Blocked: 0.30
+          Running: 0.10
+          Waiting: 0.05
+          Idle: 0.05
+        errorProbability: 0.40
+
+    - name: "bearing_failure_imminent"
+      enabled: true
+      description: "Rapid bearing degradation — health score drops to critical"
+      topic: "zava/anomalies/predictive-maintenance"
+      stream: "predictiveMaintenanceSignals"
+      durationSec: 600
+      overrides:
+        vibrationRange: [6.0, 12.0]
+        bearingTempRange: [90, 120]
+        healthScoreOverride: 0.20
+
+    - name: "material_overconsumption"
+      enabled: true
+      description: "A segment consumes 30%+ more material than BOM expected"
+      topic: "zava/anomalies/material-consumption"
+      stream: "materialConsumptionEvents"
+      durationSec: 300
+      overrides:
+        variancePctRange: [25, 50]
+
+    - name: "vision_defect_surge"
+      enabled: true
+      description: "Sudden spike in defect rate on a line (quality crisis)"
+      topic: "zava/anomalies/quality-vision"
+      stream: "qualityVisionEvents"
+      durationSec: 240
+      overrides:
+        passRate: 0.55
+        marginalRate: 0.15
+
+    - name: "shipment_critical_delay"
+      enabled: true
+      description: "Key shipment delayed with high downstream impact"
+      topic: "zava/anomalies/supply-chain"
+      stream: "supplyChainAlerts"
+      durationSec: 0
+      overrides:
+        forceStatus: "Delayed"
+        delayDays: 5
+        riskLevel: "Critical"
+
+# === Logging & Observability ===
+logging:
+  level: "INFO"
+  format: "json"
+  publishMetrics: true
+  metricsIntervalSec: 60

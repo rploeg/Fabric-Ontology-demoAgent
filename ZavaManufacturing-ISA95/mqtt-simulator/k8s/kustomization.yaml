@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: zava-simulator
+
+resources:
+  - namespace.yaml
+  - service-account.yaml
+  - configmap.yaml
+  - deployment.yaml
+
+commonLabels:
+  app.kubernetes.io/part-of: zava-manufacturing
+  app.kubernetes.io/managed-by: kustomize

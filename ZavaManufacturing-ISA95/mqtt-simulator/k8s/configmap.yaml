@@ -1,0 +1,41 @@
+# ConfigMap — mounts simulator-config.yaml into the pod.
+#
+# To update at runtime:
+#   kubectl create configmap zava-simulator-config \
+#     --from-file=simulator-config.yaml=../../simulator-config.yaml \
+#     -n zava-simulator --dry-run=client -o yaml | kubectl apply -f -
+#   kubectl rollout restart deployment/zava-simulator -n zava-simulator
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: zava-simulator-config
+  namespace: zava-simulator
+  labels:
+    app.kubernetes.io/name: zava-simulator
+data:
+  simulator-config.yaml: |
+    # Minimal inline config — override by replacing the ConfigMap data.
+    # See the full simulator-config.yaml in the repo for all options.
+    mqtt:
+      broker: "aio-broker.azure-iot-operations.svc.cluster.local"
+      port: 1883
+      useTls: false
+      authMethod: "serviceAccountToken"
+      clientId: "zava-simulator"
+      qos: 1
+    topicMode: "uns"
+    simulation:
+      tickIntervalSec: 1
+      timeMode: "realtime"
+      activeBatches:
+        - batchId: "BTC-011"
+          product: "ZavaCore Field Standard"
+          sku: "ZC Field Standard"
+        - batchId: "BTC-012"
+          product: "ZavaCore Field Slim"
+          sku: "ZC Field Slim"
+    logging:
+      level: "INFO"
+      format: "json"
+      publishMetrics: true
+      metricsIntervalSec: 60
