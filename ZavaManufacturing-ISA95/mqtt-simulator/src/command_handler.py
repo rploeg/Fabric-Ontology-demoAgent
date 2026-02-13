@@ -267,16 +267,39 @@ class CommandHandler:
             return self._err(f"Unknown stream: {slug!r}", cmd)
 
         scfg = getattr(self._cfg, attr)
-        if not hasattr(scfg, "interval_sec"):
+
+        # Resolve the correct interval field name for this stream
+        if hasattr(scfg, "interval_sec"):
+            field = "interval_sec"
+        elif hasattr(scfg, "heartbeat_interval_sec"):
+            field = "heartbeat_interval_sec"
+        elif hasattr(scfg, "min_interval_sec"):
+            # Event-based streams (safety-incident, material-consumption, supply-chain)
+            old_min = scfg.min_interval_sec
+            old_max = scfg.max_interval_sec
+            scfg.min_interval_sec = int(interval)
+            scfg.max_interval_sec = max(int(interval), scfg.max_interval_sec)
+            logger.info("Stream %s interval changed: %d–%ds → %d–%ds",
+                        slug, old_min, old_max, scfg.min_interval_sec, scfg.max_interval_sec)
+            return {
+                "Timestamp": utcnow(), "status": "ok", "action": "set-interval",
+                "stream": slug,
+                "old_min_interval_sec": old_min, "old_max_interval_sec": old_max,
+                "new_min_interval_sec": scfg.min_interval_sec,
+                "new_max_interval_sec": scfg.max_interval_sec,
+                "note": "Takes effect at next publish cycle",
+            }
+        else:
             return self._err(f"Stream {slug!r} does not have an interval setting", cmd)
 
-        old = scfg.interval_sec
-        scfg.interval_sec = int(interval)
-        logger.info("Stream %s interval changed: %ds → %ds", slug, old, scfg.interval_sec)
+        old = getattr(scfg, field)
+        setattr(scfg, field, int(interval))
+        new = getattr(scfg, field)
+        logger.info("Stream %s %s changed: %ds → %ds", slug, field, old, new)
 
         return {
             "Timestamp": utcnow(), "status": "ok", "action": "set-interval",
-            "stream": slug, "old_interval_sec": old, "new_interval_sec": scfg.interval_sec,
+            "stream": slug, "old_interval_sec": old, "new_interval_sec": new,
             "note": "Takes effect at next publish cycle",
         }
 
