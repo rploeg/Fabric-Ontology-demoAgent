@@ -1,4 +1,4 @@
-"""Zava Simulator Dashboard — FastAPI micro-app for sending MQTT commands.
+"""Zava Manufacturing Simulator Dashboard — FastAPI micro-app for sending MQTT commands.
 
 Run:
     pip install -r requirements.txt
@@ -92,7 +92,7 @@ def init_mqtt(broker: str, port: int, username: str, password: str):
 # FastAPI
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="Zava Simulator Dashboard")
+app = FastAPI(title="Zava Manufacturing Simulator Dashboard")
 
 
 @app.post("/api/command")
@@ -269,7 +269,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
 <body>
 
 <div class="header">
-  <h1>Zava Simulator Dashboard</h1>
+  <h1>Zava Manufacturing Simulator Dashboard</h1>
   <span id="conn-badge" class="badge">Connected</span>
   <span style="flex:1"></span>
   <span id="msg-rate" style="font-size:12px; color:var(--muted)"></span>
@@ -687,7 +687,7 @@ setTimeout(() => {
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Zava Simulator Dashboard")
+    parser = argparse.ArgumentParser(description="Zava Manufacturing Simulator Dashboard")
     parser.add_argument("--broker", default="127.0.0.1", help="MQTT broker host")
     parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port")
     parser.add_argument("--username", default="mqtt", help="MQTT username")
