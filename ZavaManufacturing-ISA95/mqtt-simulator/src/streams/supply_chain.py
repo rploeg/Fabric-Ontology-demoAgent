@@ -33,8 +33,8 @@ class ShipmentRuntime:
 class SupplyChainStream(BaseStream):
     stream_slug = "supply-chain"
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
-        super().__init__(cfg, client)
+    def __init__(self, cfg: SimulatorConfig, client: MqttClient, **kwargs) -> None:
+        super().__init__(cfg, client, **kwargs)
         self._scfg = cfg.supply_chain_alerts
         self._shipments: List[ShipmentRuntime] = []
 
@@ -135,8 +135,14 @@ class SupplyChainStream(BaseStream):
             else:
                 risk = "Low"
 
-            # Impacted batches (simplified lookup)
-            impacted = batch_ids[:2] if new_status in ("Delayed", "Exception") and batch_ids else []
+            # B3: Impacted batches via Shipment → Material → Segment → Batch traversal
+            if new_status in ("Delayed", "Exception") and ship.material_ids and scfg.impacted_batch_lookup:
+                impacted = self.registry.batches_for_materials(ship.material_ids)
+                if not impacted:
+                    # Fallback if no consumption recorded yet
+                    impacted = batch_ids[:2] if batch_ids else []
+            else:
+                impacted = []
 
             payload = {
                 "Timestamp": utcnow(),

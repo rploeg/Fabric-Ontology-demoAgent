@@ -30,8 +30,8 @@ class CounterState:
 class ProductionCounterTelemetryStream(BaseStream):
     stream_slug = "production-counter"
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
-        super().__init__(cfg, client)
+    def __init__(self, cfg: SimulatorConfig, client: MqttClient, **kwargs) -> None:
+        super().__init__(cfg, client, **kwargs)
         self._scfg = cfg.production_counter_telemetry
         self._counters: List[CounterState] = []
 

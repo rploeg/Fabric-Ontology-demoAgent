@@ -33,8 +33,8 @@ class MachineRuntime:
 class MachineStateTelemetryStream(BaseStream):
     stream_slug = "machine-state"
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
-        super().__init__(cfg, client)
+    def __init__(self, cfg: SimulatorConfig, client: MqttClient, **kwargs) -> None:
+        super().__init__(cfg, client, **kwargs)
         self._scfg = cfg.machine_state_telemetry
         self._machines: List[MachineRuntime] = []
 
@@ -144,6 +144,15 @@ class MachineStateTelemetryStream(BaseStream):
                         "DurationSec": m.duration_sec,
                         "BatchId": batch_id,
                     }
+
+                    # Publish state to shared registry for cross-stream correlation
+                    self.registry.update_machine_state(
+                        eqp_id=m.eqp_id,
+                        state=m.state,
+                        error_code=m.error_code,
+                        line_name=m.line_name,
+                        batch_id=batch_id,
+                    )
 
                     await self.publish(
                         payload,

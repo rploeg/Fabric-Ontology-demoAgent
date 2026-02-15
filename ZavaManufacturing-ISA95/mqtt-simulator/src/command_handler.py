@@ -45,6 +45,7 @@ _SLUG_TO_ATTR: Dict[str, str] = {
     "material-consumption": "material_consumption_events",
     "quality-vision": "quality_vision_events",
     "supply-chain": "supply_chain_alerts",
+    "batch-lifecycle": "batch_lifecycle",
 }
 
 

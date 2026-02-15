@@ -29,8 +29,8 @@ class TwinState:
 class DigitalTwinStream(BaseStream):
     stream_slug = "digital-twin"
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
-        super().__init__(cfg, client)
+    def __init__(self, cfg: SimulatorConfig, client: MqttClient, **kwargs) -> None:
+        super().__init__(cfg, client, **kwargs)
         self._scfg = cfg.digital_twin_state_sync
         self._twins: List[TwinState] = []
 
@@ -86,11 +86,30 @@ class DigitalTwinStream(BaseStream):
 
         while True:
             for tw in self._twins:
-                # Random state transition (low probability per tick)
-                if random.random() < 0.08:
-                    tw.status = weighted_choice(states, weights)
-                    tw.sub_status = _sub_statuses.get(tw.status, "Unknown")
-                    tw.last_change = utcnow()
+                # Mirror state from machine-state stream via registry (B2: cross-stream correlation)
+                reg_state = self.registry.get_machine_state(tw.eqp_id)
+                if reg_state is not None:
+                    machine_state = reg_state.state
+                    # Map machine-state names to ISA-95 digital-twin statuses
+                    _state_map = {
+                        "Running": "Producing",
+                        "Stopped": "UnscheduledDowntime",
+                        "Blocked": "Blocked",
+                        "Waiting": "Idle",
+                        "Idle": "Idle",
+                        "Maintenance": "Maintenance",
+                    }
+                    new_status = _state_map.get(machine_state, machine_state)
+                    if new_status != tw.status:
+                        tw.status = new_status
+                        tw.sub_status = _sub_statuses.get(tw.status, "Unknown")
+                        tw.last_change = utcnow()
+                else:
+                    # No machine-state data yet — use random transitions as before
+                    if random.random() < 0.08:
+                        tw.status = weighted_choice(states, weights)
+                        tw.sub_status = _sub_statuses.get(tw.status, "Unknown")
+                        tw.last_change = utcnow()
 
                 batch = random.choice(batches) if batches else None
                 sku = batch.sku if batch else "ZC Field Standard"

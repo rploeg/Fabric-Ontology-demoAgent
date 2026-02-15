@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class SafetyIncidentStream(BaseStream):
     stream_slug = "safety-incident"
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
-        super().__init__(cfg, client)
+    def __init__(self, cfg: SimulatorConfig, client: MqttClient, **kwargs) -> None:
+        super().__init__(cfg, client, **kwargs)
         self._scfg = cfg.safety_incident_events
 
     def is_enabled(self) -> bool:

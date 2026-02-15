@@ -25,6 +25,7 @@ _STREAM_ATTR_MAP: Dict[str, str] = {
     "qualityVisionEvents": "quality-vision",
     "supplyChainAlerts": "supply-chain",
     "safetyIncidentEvents": "safety-incident",
+    "batchLifecycle": "batch-lifecycle",
 }
 
 

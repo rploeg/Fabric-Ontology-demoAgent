@@ -57,6 +57,7 @@ class UnsCategoryConfig(BaseModel):
     events: List[str] = [
         "safety-incident", "quality-vision",
         "material-consumption", "supply-chain",
+        "batch-lifecycle",
     ]
     state: List[str] = ["digital-twin"]
 
@@ -393,6 +394,50 @@ class SupplyChainConfig(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Stream: Batch Lifecycle
+# ---------------------------------------------------------------------------
+
+class BatchLifecycleConfig(BaseModel):
+    enabled: bool = False
+    topic: str = "zava/events/batch-lifecycle"
+    interval_sec: int = Field(30, alias="intervalSec")
+    max_concurrent_batches: int = Field(3, alias="maxConcurrentBatches")
+    model_config = {"populate_by_name": True}
+
+
+# ---------------------------------------------------------------------------
+# Multi-Site Support
+# ---------------------------------------------------------------------------
+
+class SiteProfile(BaseModel):
+    """Describes an additional site to simulate alongside the default one.
+
+    The simulator clones its streams for each extra site, applying the
+    offsets/overrides so that equipment IDs, line names, batch IDs, and
+    UNS topics are unique per site.
+    """
+    site_id: str = Field(..., alias="siteId")
+    uns_slug: str = Field(..., alias="unsSlug")
+    equipment_id_offset: int = Field(200, alias="equipmentIdOffset")
+    batch_prefix: str = Field("BTC-S", alias="batchPrefix")
+    line_suffix: str = Field("-S", alias="lineSuffix")
+    scale: float = 1.0
+    enabled_streams: List[str] = Field(
+        default_factory=list, alias="enabledStreams",
+    )
+    uns_areas: Dict[str, Any] = Field(
+        default_factory=dict, alias="unsAreas",
+    )
+    model_config = {"populate_by_name": True}
+
+
+class MultiSiteConfig(BaseModel):
+    enabled: bool = False
+    sites: List[SiteProfile] = Field(default_factory=list)
+    model_config = {"populate_by_name": True}
+
+
+# ---------------------------------------------------------------------------
 # Anomaly Engine
 # ---------------------------------------------------------------------------
 
@@ -467,6 +512,13 @@ class SimulatorConfig(BaseModel):
     )
     supply_chain_alerts: SupplyChainConfig = Field(
         default_factory=SupplyChainConfig, alias="supplyChainAlerts"
+    )
+    batch_lifecycle: BatchLifecycleConfig = Field(
+        default_factory=BatchLifecycleConfig, alias="batchLifecycle"
+    )
+
+    multi_site: MultiSiteConfig = Field(
+        default_factory=MultiSiteConfig, alias="multiSite"
     )
 
     anomalies: AnomalyConfig = Field(default_factory=AnomalyConfig)

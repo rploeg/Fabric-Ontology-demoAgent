@@ -57,7 +57,7 @@ uns:
           EQP-008: "finished-goods-warehouse"
   categories:
     telemetry: ["equipment", "machine-state", "process-segment", "production-counter", "predictive-maintenance"]
-    events: ["safety-incident", "quality-vision", "material-consumption", "supply-chain"]
+    events: ["safety-incident", "quality-vision", "material-consumption", "supply-chain", "batch-lifecycle"]
     state: ["digital-twin"]
 
 # === Simulation Behaviour ===
@@ -437,6 +437,13 @@ supplyChainAlerts:
     - "Capacity shortage"
   impactedBatchLookup: true
 
+# === Stream: Batch Lifecycle (ISA-95 coordinated batch events) ===
+batchLifecycle:
+  enabled: true
+  topic: "zava/events/batch-lifecycle"
+  intervalSec: 30
+  maxConcurrentBatches: 3
+
 # === Anomaly Injection ===
 anomalies:
   enabled: true
@@ -571,3 +578,25 @@ logging:
   format: "json"
   publishMetrics: true
   metricsIntervalSec: 60
+
+# === Multi-Site Support ===
+# When enabled, the simulator clones its streams for each additional site.
+# Equipment IDs are offset, line names are suffixed, and UNS topics route
+# to separate site branches so a single simulator binary simulates multiple
+# factory sites simultaneously.
+multiSite:
+  enabled: false
+  sites:
+    - siteId: "tokyo-production"
+      unsSlug: "tokyo-production"
+      equipmentIdOffset: 200
+      batchPrefix: "BTC-T"
+      lineSuffix: "-TY"
+      scale: 0.5
+      # enabledStreams: []   # empty = all streams; specify to limit
+    - siteId: "berlin-production"
+      unsSlug: "berlin-production"
+      equipmentIdOffset: 400
+      batchPrefix: "BTC-B"
+      lineSuffix: "-BE"
+      scale: 0.75

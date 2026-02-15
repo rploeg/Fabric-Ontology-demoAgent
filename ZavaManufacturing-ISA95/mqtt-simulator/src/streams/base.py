@@ -9,6 +9,7 @@ from typing import Any, Dict
 
 from ..config import SimulatorConfig
 from ..mqtt_client import MqttClient
+from ..state_registry import StateRegistry
 from ..utils import resolve_uns_topic
 
 logger = logging.getLogger(__name__)
@@ -23,9 +24,16 @@ class BaseStream(ABC):
     - ``run()``        — the main asyncio publishing loop
     """
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
+    def __init__(
+        self,
+        cfg: SimulatorConfig,
+        client: MqttClient,
+        *,
+        registry: StateRegistry | None = None,
+    ) -> None:
         self.cfg = cfg
         self.client = client
+        self.registry: StateRegistry = registry or StateRegistry()
 
     # ------------------------------------------------------------------
     # Subclass interface
@@ -146,6 +154,7 @@ class BaseStream(ABC):
             "material-consumption": "material_consumption_events",
             "quality-vision": "quality_vision_events",
             "supply-chain": "supply_chain_alerts",
+            "batch-lifecycle": "batch_lifecycle",
         }
         attr = mapping.get(self.stream_slug)
         if attr:

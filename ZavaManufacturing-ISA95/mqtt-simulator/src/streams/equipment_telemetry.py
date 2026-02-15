@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 class EquipmentTelemetryStream(BaseStream):
     stream_slug = "equipment"
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
-        super().__init__(cfg, client)
+    def __init__(self, cfg: SimulatorConfig, client: MqttClient, **kwargs) -> None:
+        super().__init__(cfg, client, **kwargs)
         self._scfg = cfg.equipment_telemetry
 
     def is_enabled(self) -> bool:

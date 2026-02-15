@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class ProcessSegmentTelemetryStream(BaseStream):
     stream_slug = "process-segment"
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
-        super().__init__(cfg, client)
+    def __init__(self, cfg: SimulatorConfig, client: MqttClient, **kwargs) -> None:
+        super().__init__(cfg, client, **kwargs)
         self._scfg = cfg.process_segment_telemetry
         self._segments: list[dict] = []
 

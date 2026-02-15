@@ -239,7 +239,34 @@ def _slug(val: str) -> str:
 
 
 def _eqp_in_area(equipment_id_val: str, area_eqp: str) -> bool:
-    """Heuristic: check if equipment_id is 'near' the area equipment."""
-    # In the Zava model, area equipment like EQP-004 hosts cameras like CAM-COAT-01
-    # This is a rough association — in production this would be a proper lookup
-    return False
+    """Check if *equipment_id_val* logically belongs to the area represented by *area_eqp*.
+
+    Handles two cases:
+    1. Direct area-level equipment IDs (e.g. cameras assigned with ``equipmentId: EQP-005``).
+    2. Machine-range heuristic: area EQP-005 (weave-hall-a) owns lines Alpha–Echo
+       whose machines start at EQP-016.  If an equipment ID's numeric part falls
+       within a known area range we accept it.
+    """
+    # Direct match (camera.equipmentId == area equipment)
+    if equipment_id_val == area_eqp:
+        return True
+
+    # Area → machine EQP-ID ranges (derived from the UNS hierarchy + line map)
+    _AREA_EQP_RANGES: Dict[str, tuple[int, int]] = {
+        "EQP-004": (4, 4),      # Coating Dev Lab — area-only equipment
+        "EQP-005": (16, 77),    # Weave Hall A — lines Alpha through Echo
+        "EQP-006": (78, 149),   # Weave Hall B — lines Foxtrot through Kilo
+        "EQP-007": (7, 7),      # QA Testing Lab
+        "EQP-008": (8, 8),      # Finished Goods Warehouse
+    }
+
+    rng = _AREA_EQP_RANGES.get(area_eqp)
+    if not rng:
+        return False
+
+    # Parse numeric suffix from equipment_id_val (e.g. "EQP-042" → 42)
+    try:
+        num = int(equipment_id_val.split("-")[-1])
+        return rng[0] <= num <= rng[1]
+    except (ValueError, IndexError):
+        return False

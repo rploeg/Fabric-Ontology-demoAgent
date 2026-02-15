@@ -28,8 +28,8 @@ class MaterialTracker:
 class MaterialConsumptionStream(BaseStream):
     stream_slug = "material-consumption"
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
-        super().__init__(cfg, client)
+    def __init__(self, cfg: SimulatorConfig, client: MqttClient, **kwargs) -> None:
+        super().__init__(cfg, client, **kwargs)
         self._scfg = cfg.material_consumption_events
         self._trackers: Dict[str, MaterialTracker] = {}
 
@@ -101,5 +101,12 @@ class MaterialConsumptionStream(BaseStream):
                 "VariancePct": round(cum_pct, 1),
                 "LotNumber": random_lot_number(entry.material_id),
             }
+
+            # B3: Record consumption in registry for supply-chain traversal
+            self.registry.record_consumption(
+                batch_id=batch_id,
+                segment_id=seg.id,
+                material_id=entry.material_id,
+            )
 
             await self.publish(payload, equipment_id=eqp)

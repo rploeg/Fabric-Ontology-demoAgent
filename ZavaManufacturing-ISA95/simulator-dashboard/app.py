@@ -39,6 +39,17 @@ MAX_RESPONSES = 200
 _latest_state: Dict[str, Any] = {}
 _latest_state_lock = threading.Lock()
 
+# D1: Throughput metrics — rolling window of (timestamp, msg_count) samples
+_metrics_history: List[Dict[str, Any]] = []
+_metrics_lock = threading.Lock()
+_msg_total = 0
+_metrics_started = 0.0
+
+# D2: Anomaly timeline — recent anomaly START/END events
+_anomaly_events: List[Dict[str, Any]] = []
+_anomaly_lock = threading.Lock()
+MAX_ANOMALY_EVENTS = 100
+
 
 def _on_connect(client, userdata, flags, rc, properties):
     if not rc.is_failure:
@@ -50,6 +61,7 @@ def _on_connect(client, userdata, flags, rc, properties):
 
 
 def _on_message(client, userdata, msg):
+    global _msg_total
     try:
         payload = json.loads(msg.payload.decode())
     except Exception:
@@ -64,6 +76,9 @@ def _on_message(client, userdata, msg):
         while len(_responses) > MAX_RESPONSES:
             _responses.pop()
 
+    # D1: Count every message for throughput metrics
+    _msg_total += 1
+
     # Persist latest status / list-anomalies for the overview panel
     if msg.topic == STATUS_TOPIC and isinstance(payload, dict):
         action = payload.get("action")
@@ -71,9 +86,28 @@ def _on_message(client, userdata, msg):
             with _latest_state_lock:
                 _latest_state[action] = payload
 
+    # D2: Capture anomaly START/END events
+    if "anomalies" in msg.topic and isinstance(payload, dict):
+        phase = payload.get("Phase")
+        if phase in ("START", "END"):
+            evt = {
+                "timestamp": payload.get("Timestamp", entry["received_at"]),
+                "anomalyId": payload.get("AnomalyId", ""),
+                "scenario": payload.get("Scenario", ""),
+                "stream": payload.get("Stream", ""),
+                "phase": phase,
+                "durationSec": payload.get("DurationSec", 0),
+                "description": payload.get("Description", ""),
+            }
+            with _anomaly_lock:
+                _anomaly_events.insert(0, evt)
+                while len(_anomaly_events) > MAX_ANOMALY_EVENTS:
+                    _anomaly_events.pop()
+
 
 def init_mqtt(broker: str, port: int, username: str, password: str):
-    global _mqtt_client
+    global _mqtt_client, _metrics_started
+    _metrics_started = time.monotonic()
     _mqtt_client = mqtt.Client(
         callback_api_version=mqtt.CallbackAPIVersion.VERSION2,
         client_id=f"dashboard-{uuid.uuid4().hex[:8]}",
@@ -127,6 +161,32 @@ async def get_overview():
     """Return latest cached status + anomalies for the overview panel."""
     with _latest_state_lock:
         return dict(_latest_state)
+
+
+@app.get("/api/metrics")
+async def get_metrics():
+    """Return throughput metrics: current rate and 5-min history for sparkline."""
+    now = time.monotonic()
+    elapsed = now - _metrics_started if _metrics_started else 1
+    rate = round(_msg_total / elapsed, 1) if elapsed > 0 else 0
+
+    # Sample the current rate into a rolling history (kept server-side)
+    sample = {"t": time.strftime("%H:%M:%S", time.gmtime()), "rate": rate, "total": _msg_total}
+    with _metrics_lock:
+        _metrics_history.append(sample)
+        # Keep last 300 samples (~5 min at 1s poll)
+        while len(_metrics_history) > 300:
+            _metrics_history.pop(0)
+        history = list(_metrics_history)
+
+    return {"rate": rate, "total": _msg_total, "history": history}
+
+
+@app.get("/api/anomaly-events")
+async def get_anomaly_events(limit: int = 50):
+    """Return recent anomaly START/END events for the timeline."""
+    with _anomaly_lock:
+        return list(_anomaly_events[:limit])
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -264,6 +324,17 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
   .filter-row input { flex: 1; }
   .msg-count { font-size: 12px; color: var(--muted); }
+
+  /* D2: Anomaly timeline */
+  .anomaly-entry { display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    border-bottom: 1px solid var(--border); font-size: 12px; }
+  .anomaly-entry .phase { font-size: 10px; padding: 2px 6px; border-radius: 8px; font-weight: 600; }
+  .anomaly-entry .phase.start { background: rgba(239,68,68,0.15); color: var(--red); }
+  .anomaly-entry .phase.end { background: rgba(34,197,94,0.15); color: var(--green); }
+  .anomaly-entry .scenario { flex: 1; font-weight: 500; }
+  .anomaly-entry .stream-tag { font-size: 10px; color: var(--accent); background: rgba(99,102,241,0.1);
+    padding: 2px 6px; border-radius: 6px; }
+  .anomaly-entry .ts { font-size: 10px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -305,6 +376,7 @@ HTML_PAGE = r"""<!DOCTYPE html>
           <option value="material-consumption">material-consumption</option>
           <option value="quality-vision">quality-vision</option>
           <option value="supply-chain">supply-chain</option>
+          <option value="batch-lifecycle">batch-lifecycle</option>
         </select>
       </div>
       <div class="row" style="margin-bottom:8px">
@@ -407,6 +479,31 @@ HTML_PAGE = r"""<!DOCTYPE html>
         <div id="anomaly-overview" class="overview-grid">
           <div style="font-size:12px; color:var(--muted)">Loading...</div>
         </div>
+      </div>
+    </div>
+
+    <!-- D1: Throughput Sparkline -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h2 style="margin:0">Throughput</h2>
+        <span id="live-rate" style="font-size:14px; font-weight:600; color:var(--green)">0 msg/s</span>
+      </div>
+      <canvas id="sparkline" width="800" height="80" style="width:100%; height:80px; border-radius:8px; background:var(--bg);"></canvas>
+      <div style="display:flex; justify-content:space-between; margin-top:4px">
+        <span style="font-size:10px; color:var(--muted)">5 min ago</span>
+        <span id="spark-total" style="font-size:10px; color:var(--muted)">0 total</span>
+        <span style="font-size:10px; color:var(--muted)">now</span>
+      </div>
+    </div>
+
+    <!-- D2: Anomaly Timeline -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h2 style="margin:0">Anomaly Timeline</h2>
+        <span id="anomaly-event-count" class="msg-count">0 events</span>
+      </div>
+      <div id="anomaly-timeline" style="max-height:200px; overflow-y:auto;">
+        <div style="font-size:12px; color:var(--muted)">No anomaly events yet</div>
       </div>
     </div>
 
@@ -666,10 +763,94 @@ document.getElementById('config-path').addEventListener('change', e => {
     e.target.value === 'custom' ? '' : 'none';
 });
 
+// ---- D1: Sparkline ----
+let sparkData = [];
+const sparkCanvas = document.getElementById('sparkline');
+const sparkCtx = sparkCanvas ? sparkCanvas.getContext('2d') : null;
+
+function drawSparkline(data) {
+  if (!sparkCtx || data.length < 2) return;
+  const canvas = sparkCanvas;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  sparkCtx.scale(dpr, dpr);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const rates = data.map(d => d.rate);
+  const max = Math.max(...rates, 1);
+  const step = w / (rates.length - 1);
+
+  sparkCtx.clearRect(0, 0, w, h);
+
+  // Fill gradient
+  const gradient = sparkCtx.createLinearGradient(0, 0, 0, h);
+  gradient.addColorStop(0, 'rgba(99,102,241,0.3)');
+  gradient.addColorStop(1, 'rgba(99,102,241,0.0)');
+  sparkCtx.beginPath();
+  sparkCtx.moveTo(0, h);
+  rates.forEach((r, i) => {
+    const x = i * step;
+    const y = h - (r / max) * (h - 4);
+    sparkCtx.lineTo(x, y);
+  });
+  sparkCtx.lineTo(w, h);
+  sparkCtx.closePath();
+  sparkCtx.fillStyle = gradient;
+  sparkCtx.fill();
+
+  // Line
+  sparkCtx.beginPath();
+  rates.forEach((r, i) => {
+    const x = i * step;
+    const y = h - (r / max) * (h - 4);
+    i === 0 ? sparkCtx.moveTo(x, y) : sparkCtx.lineTo(x, y);
+  });
+  sparkCtx.strokeStyle = '#6366f1';
+  sparkCtx.lineWidth = 1.5;
+  sparkCtx.stroke();
+}
+
+async function pollMetrics() {
+  try {
+    const data = await api('GET', '/api/metrics');
+    document.getElementById('live-rate').textContent = data.rate + ' msg/s';
+    document.getElementById('spark-total').textContent = data.total.toLocaleString() + ' total';
+    sparkData = data.history || [];
+    drawSparkline(sparkData);
+  } catch(e) {}
+}
+
+// ---- D2: Anomaly Timeline ----
+async function pollAnomalyTimeline() {
+  try {
+    const events = await api('GET', '/api/anomaly-events?limit=30');
+    const el = document.getElementById('anomaly-timeline');
+    const countEl = document.getElementById('anomaly-event-count');
+    countEl.textContent = events.length + ' events';
+    if (!events.length) {
+      el.innerHTML = '<div style="font-size:12px; color:var(--muted)">No anomaly events yet</div>';
+      return;
+    }
+    el.innerHTML = events.map(e => {
+      const phaseClass = e.phase === 'START' ? 'start' : 'end';
+      const ts = e.timestamp ? e.timestamp.replace('T',' ').replace('Z','') : '';
+      return `<div class="anomaly-entry">
+        <span class="phase ${phaseClass}">${e.phase}</span>
+        <span class="scenario">${escHtml(e.scenario)}</span>
+        <span class="stream-tag">${escHtml(e.stream)}</span>
+        <span class="ts">${ts}</span>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
 // ---- Init ----
 pollInterval = setInterval(poll, 1000);
 setInterval(pollOverview, 3000);
+setInterval(pollMetrics, 1000);
+setInterval(pollAnomalyTimeline, 3000);
 poll();
+pollMetrics();
 
 // Auto-fetch status + anomalies on load
 setTimeout(() => {

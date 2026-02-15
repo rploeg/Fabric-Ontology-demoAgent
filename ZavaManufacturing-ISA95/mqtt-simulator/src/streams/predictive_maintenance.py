@@ -28,8 +28,8 @@ class MachineHealth:
 class PredictiveMaintenanceStream(BaseStream):
     stream_slug = "predictive-maintenance"
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
-        super().__init__(cfg, client)
+    def __init__(self, cfg: SimulatorConfig, client: MqttClient, **kwargs) -> None:
+        super().__init__(cfg, client, **kwargs)
         self._scfg = cfg.predictive_maintenance_signals
         self._machines: List[MachineHealth] = []
 
@@ -90,6 +90,13 @@ class PredictiveMaintenanceStream(BaseStream):
 
         while True:
             for m in self._machines:
+                # B2: Reset health when machine enters Maintenance (cross-stream correlation)
+                if deg_cfg.enabled and deg_cfg.reset_on_maintenance:
+                    if self.registry.entered_maintenance(m.eqp_id) and m.health_score < 0.9:
+                        logger.info("Predictive maintenance: %s reset to healthy (Maintenance state detected)", m.eqp_id)
+                        m.health_score = 1.0
+                        m.degrading = False
+
                 # Degrade health
                 if m.degrading and deg_cfg.enabled:
                     m.health_score = max(0.0, m.health_score - deg_rate)

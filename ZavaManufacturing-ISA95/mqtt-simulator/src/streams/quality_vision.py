@@ -21,8 +21,8 @@ logger = logging.getLogger(__name__)
 class QualityVisionStream(BaseStream):
     stream_slug = "quality-vision"
 
-    def __init__(self, cfg: SimulatorConfig, client: MqttClient) -> None:
-        super().__init__(cfg, client)
+    def __init__(self, cfg: SimulatorConfig, client: MqttClient, **kwargs) -> None:
+        super().__init__(cfg, client, **kwargs)
         self._scfg = cfg.quality_vision_events
 
     def is_enabled(self) -> bool:
