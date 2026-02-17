@@ -2,3 +2,8 @@ paho-mqtt>=2.0.0,<3.0.0
 pydantic>=2.5.0,<3.0.0
 pydantic-settings>=2.1.0,<3.0.0
 PyYAML>=6.0,<7.0
+
+# Event Hub output (only needed when outputMode = "eventHub")
+azure-eventhub>=5.11.0,<6.0.0
+azure-identity>=1.15.0,<2.0.0    # only for defaultCredential / managedIdentity
+aiohttp>=3.9.0                    # async transport for azure SDK

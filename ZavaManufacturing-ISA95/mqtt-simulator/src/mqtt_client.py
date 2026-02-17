@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 import paho.mqtt.client as mqtt
+from paho.mqtt.properties import Properties
+from paho.mqtt.packettypes import PacketTypes
 
 from .config import MqttConfig
 
@@ -29,6 +31,7 @@ class MqttClient:
         self._loop: asyncio.AbstractEventLoop | None = None
         self._msg_count = 0
         self._subscriptions: Dict[str, Callable[[str], None]] = {}
+        self._connect_properties: Properties | None = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -46,19 +49,32 @@ class MqttClient:
 
         # --- Auth ---
         if self._cfg.auth_method == "serviceAccountToken":
+            # Azure IoT Operations expects MQTT v5 Enhanced Authentication:
+            #   AuthenticationMethod = "K8S-SAT"
+            #   AuthenticationData   = <service-account-token bytes>
+            # The token is projected by Kubernetes at _SAT_TOKEN_PATH and
+            # refreshed automatically before expiry. We re-read it on every
+            # (re)connect via the on_connect callback so stale tokens are
+            # never reused.
             token = self._read_sat_token()
             if token:
-                self._client.username_pw_set(username="K8S-SAT", password=token)
-                logger.info("Using Service Account Token authentication")
+                props = Properties(PacketTypes.CONNECT)
+                props.AuthenticationMethod = "K8S-SAT"
+                props.AuthenticationData = token.encode("utf-8")
+                self._connect_properties = props
+                logger.info("Using Service Account Token (MQTT v5 Enhanced Auth)")
             else:
-                logger.warning("SAT token not found — falling back to no auth")
+                logger.warning("SAT token not found at %s — falling back to no auth", _SAT_TOKEN_PATH)
+                self._connect_properties = None
         elif self._cfg.auth_method == "usernamePassword":
             self._client.username_pw_set(
                 username=self._cfg.username,
                 password=self._cfg.password,
             )
+            self._connect_properties = None
             logger.info("Using username/password authentication")
         else:
+            self._connect_properties = None
             logger.info("Using no authentication")
 
         # --- TLS ---
@@ -71,9 +87,16 @@ class MqttClient:
         self._client.on_connect = self._on_connect
         self._client.on_disconnect = self._on_disconnect
         self._client.on_message = self._on_message
+        # Re-read the SAT token before every reconnect attempt
+        self._client.on_pre_connect = self._on_pre_connect
 
         # Non-blocking loop
-        self._client.connect_async(self._cfg.broker, self._cfg.port, self._cfg.keep_alive)
+        self._client.connect_async(
+            self._cfg.broker,
+            self._cfg.port,
+            self._cfg.keep_alive,
+            properties=self._connect_properties,
+        )
         self._client.loop_start()
 
         # Wait for the first connection
@@ -143,6 +166,33 @@ class MqttClient:
     # ------------------------------------------------------------------
     # Internal callbacks
     # ------------------------------------------------------------------
+
+    def _on_pre_connect(
+        self,
+        client: mqtt.Client,
+        userdata: Any,
+    ) -> None:
+        """Called by paho just before each (re)connect attempt.
+
+        For SAT auth we re-read the projected token so that Kubernetes-
+        rotated tokens are picked up automatically — even hours after the
+        pod started.
+        """
+        if self._cfg.auth_method != "serviceAccountToken":
+            return
+
+        token = self._read_sat_token()
+        if token:
+            props = Properties(PacketTypes.CONNECT)
+            props.AuthenticationMethod = "K8S-SAT"
+            props.AuthenticationData = token.encode("utf-8")
+            self._connect_properties = props
+            # Paho v2: overwrite the properties that will be sent in the
+            # upcoming CONNECT packet.
+            client._connect_properties = props  # noqa: SLF001
+            logger.debug("Refreshed SAT token for reconnect")
+        else:
+            logger.warning("SAT token missing on reconnect — auth may fail")
 
     def _on_connect(
         self,

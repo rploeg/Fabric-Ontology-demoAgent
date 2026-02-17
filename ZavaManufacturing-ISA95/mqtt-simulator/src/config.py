@@ -461,6 +461,36 @@ class AnomalyConfig(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Event Hub output
+# ---------------------------------------------------------------------------
+
+class EventHubConfig(BaseModel):
+    """Configuration for Azure Event Hub output.
+
+    Used when ``outputMode`` is ``"eventHub"``.
+
+    Authentication options:
+      1. ``connectionString`` — easiest for dev/testing (requires local auth enabled).
+      2. ``credential: "defaultCredential"`` + ``fullyQualifiedNamespace``
+         — uses Azure CLI / environment creds (great for local testing).
+      3. ``credential: "managedIdentity"`` + ``fullyQualifiedNamespace``
+         — recommended for AKS with workload identity (no secrets).
+    """
+    connection_string: str = Field("", alias="connectionString")
+    eventhub_name: str = Field("", alias="eventhubName")
+    fully_qualified_namespace: str = Field("", alias="fullyQualifiedNamespace")
+    credential: Literal["connectionString", "defaultCredential", "managedIdentity"] = "connectionString"
+    # Batching settings
+    max_batch_size: int = Field(100, alias="maxBatchSize")
+    max_wait_time_sec: float = Field(1.0, alias="maxWaitTimeSec")
+    # Partition key strategy: "topic" = use topic name, "stream" = use stream slug, "none" = round-robin
+    partition_key_mode: Literal["topic", "stream", "none"] = Field(
+        "topic", alias="partitionKeyMode"
+    )
+    model_config = {"populate_by_name": True}
+
+
+# ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
 
@@ -477,7 +507,16 @@ class LoggingConfig(BaseModel):
 # ---------------------------------------------------------------------------
 
 class SimulatorConfig(BaseModel):
+    # --- Output mode: choose where messages are sent ---
+    output_mode: Literal["mqtt", "eventHub"] = Field(
+        "mqtt", alias="outputMode",
+        description="Where to send simulated data: 'mqtt' for an MQTT broker, "
+                    "'eventHub' for Azure Event Hub.",
+    )
+
     mqtt: MqttConfig = Field(default_factory=MqttConfig)
+    eventhub: EventHubConfig = Field(default_factory=EventHubConfig, alias="eventHub")
+
     topic_prefix: str = Field("zava/telemetry", alias="topicPrefix")
     topic_mode: Literal["flat", "uns"] = Field("uns", alias="topicMode")
     uns: UnsConfig = Field(default_factory=UnsConfig)

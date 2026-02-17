@@ -109,6 +109,7 @@ containers:
 | `service-account.yaml` | ServiceAccount `zava-simulator` with `aio-broker-auth/audience: "aio-internal"` |
 | `configmap.yaml` | `zava-simulator-config` ConfigMap with simulator-config.yaml |
 | `deployment.yaml` | Deployment with SAT token projection + ConfigMap volume mount |
+| `broker-auth.yaml` | BrokerAuthentication + BrokerAuthorization for AIO (apply in `azure-iot-operations` NS) |
 | `kustomization.yaml` | Kustomize overlay tying everything together |
 
 ### (Optional) Use the full config
@@ -145,18 +146,25 @@ kubectl get brokerauthentication -n azure-iot-operations -o yaml
 ```
 
 Look for a `serviceAccountToken` method with audience `aio-internal`. If it
-doesn't exist, create one:
+doesn't exist, apply the manifest included in this repo:
+
+```bash
+kubectl apply -f k8s/broker-auth.yaml
+```
+
+This creates both the `BrokerAuthentication` and `BrokerAuthorization`
+resources. The manifest is equivalent to:
 
 ```yaml
 apiVersion: mqttbroker.iotoperations.azure.com/v1
 kind: BrokerAuthentication
 metadata:
-  name: default
+  name: zava-simulator-authn
   namespace: azure-iot-operations
 spec:
   authenticationMethods:
-    - method: serviceAccountToken
-      serviceAccountToken:
+    - method: ServiceAccountToken
+      serviceAccountTokenSettings:
         audiences:
           - "aio-internal"
 ```
@@ -244,7 +252,88 @@ kubectl run mqtt-debug --rm -it --image=eclipse-mosquitto:2 \
 
 ---
 
-## Step 5 — Set up the data pipeline to Fabric Eventhouse
+## Step 5 — (Alternative) Event Hub output mode on AKS
+
+Instead of using the MQTT broker → Data Flow → Fabric pipeline, the simulator
+can publish **directly to Azure Event Hub** using `outputMode: "eventHub"` with
+**AKS Workload Identity** (no secrets required).
+
+### 5a. Enable Workload Identity on the service account
+
+```bash
+# Get your Event Hub namespace's resource ID
+EH_NS_RESOURCE_ID=$(az eventhubs namespace show \
+  --resource-group "$RG" --name "$EH_NAMESPACE" --query id -o tsv)
+
+# Create a user-assigned managed identity (or reuse an existing one)
+az identity create --name zava-simulator-identity \
+  --resource-group "$RG" --location "$LOCATION"
+
+CLIENT_ID=$(az identity show --name zava-simulator-identity \
+  --resource-group "$RG" --query clientId -o tsv)
+IDENTITY_ID=$(az identity show --name zava-simulator-identity \
+  --resource-group "$RG" --query id -o tsv)
+
+# Assign "Azure Event Hubs Data Sender" role
+az role assignment create \
+  --role "Azure Event Hubs Data Sender" \
+  --assignee "$CLIENT_ID" \
+  --scope "$EH_NS_RESOURCE_ID"
+
+# Create federated credential for the simulator's K8s service account
+AKS_OIDC_ISSUER=$(az aks show --resource-group "$RG" --name "$AKS_NAME" \
+  --query "oidcIssuerProfile.issuerUrl" -o tsv)
+
+az identity federated-credential create \
+  --name zava-simulator-fed \
+  --identity-name zava-simulator-identity \
+  --resource-group "$RG" \
+  --issuer "$AKS_OIDC_ISSUER" \
+  --subject "system:serviceaccount:zava-simulator:zava-simulator" \
+  --audiences "api://AzureADTokenExchange"
+```
+
+### 5b. Annotate the Kubernetes service account
+
+Add the managed identity client ID to the ServiceAccount:
+
+```yaml
+# k8s/service-account.yaml — add:
+metadata:
+  annotations:
+    azure.workload.identity/client-id: "<CLIENT_ID>"  # from step 5a
+```
+
+And add the workload identity label to the Deployment pod template:
+
+```yaml
+# k8s/deployment.yaml — add to pod template:
+metadata:
+  labels:
+    azure.workload.identity/use: "true"
+```
+
+### 5c. Update the ConfigMap for Event Hub
+
+```yaml
+outputMode: "eventHub"
+
+eventHub:
+  fullyQualifiedNamespace: "<namespace>.servicebus.windows.net"
+  eventhubName: "zava-telemetry"
+  credential: "managedIdentity"   # uses Workload Identity — zero secrets
+  maxBatchSize: 100
+  maxWaitTimeSec: 1.0
+  partitionKeyMode: "topic"
+```
+
+`DefaultAzureCredential` (which `managedIdentity` uses under the hood) will
+pick up the Workload Identity token automatically — no connection strings,
+environment variables, or secrets needed.
+
+---
+
+## Step 6 — Set up the data pipeline to Fabric Eventhouse
 
 Once messages are flowing into the AIO MQTT broker, configure a **Data Flow**
 (or Data Processor pipeline) to route them to Microsoft Fabric.
@@ -318,7 +407,7 @@ spec:
 
 ---
 
-## Step 6 — Runtime operations
+## Step 7 — Runtime operations
 
 ### Send commands to the simulator
 
@@ -338,6 +427,10 @@ See [COMMANDS.md](COMMANDS.md) for the full list of available commands.
 
 ### Update configuration at runtime
 
+The simulator watches `simulator-config.yaml` for changes and **automatically
+reloads** when the file is modified. On AKS, ConfigMap updates are propagated
+to the mounted volume by the kubelet (typically within 30–60 seconds).
+
 ```bash
 # Update the ConfigMap with a new config
 kubectl create configmap zava-simulator-config \
@@ -345,9 +438,14 @@ kubectl create configmap zava-simulator-config \
   -n zava-simulator \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# Restart the simulator to pick up the new config
+# The simulator detects the change automatically — no restart needed!
+# If you need an immediate restart:
 kubectl rollout restart deployment/zava-simulator -n zava-simulator
 ```
+
+The auto-reload covers all config changes: output mode (MQTT ↔ Event Hub),
+broker settings, stream enable/disable, intervals, anomaly scenarios, etc.
+Signals (SIGINT/SIGTERM) still trigger a normal shutdown without reload.
 
 ### Scale (if needed)
 
@@ -369,14 +467,23 @@ kubectl logs -n zava-simulator -l app=zava-simulator --tail=50 | jq .
 
 ## Configuration reference (AKS vs Local)
 
-| Setting | AKS (in-cluster) | Local (Docker) |
-|---------|:-:|:-:|
-| `mqtt.broker` | `aio-broker.azure-iot-operations.svc.cluster.local` | `host.docker.internal` |
-| `mqtt.port` | `1883` | `1883` |
-| `mqtt.authMethod` | `serviceAccountToken` | `usernamePassword` |
-| `mqtt.useTls` | `false` *(in-cluster)* | `false` |
-| Config mount | ConfigMap → `/etc/simulator/simulator-config.yaml` | `-v` bind mount or baked-in |
-| Docker flag | N/A (ACR pull) | `--add-host=host.docker.internal:host-gateway` |
+| Setting | AKS (in-cluster) | Local (Docker) | Local (no Docker) |
+|---------|:-:|:-:|:-:|
+| `outputMode` | `mqtt` or `eventHub` | `mqtt` or `eventHub` | `mqtt` or `eventHub` |
+| `mqtt.broker` | `aio-broker.azure-iot-operations.svc.cluster.local` | `host.docker.internal` | `localhost` |
+| `mqtt.port` | `1883` | `1883` | `1883` |
+| `mqtt.authMethod` | `serviceAccountToken` | `usernamePassword` | `usernamePassword` |
+| `mqtt.useTls` | `false` *(in-cluster)* | `false` | `false` |
+| `eventHub.credential` | `managedIdentity` | `defaultCredential` | `defaultCredential` |
+| Event Hub auth source | Workload Identity (auto) | SP env vars (`AZURE_*`) | Azure CLI (`az login`) |
+| Config mount | ConfigMap → `/etc/simulator/` | `-v` bind mount or baked-in | `--config ./path` |
+| Docker flag | N/A (ACR pull) | `--add-host=host.docker.internal:host-gateway` | N/A |
+
+> **Docker + Event Hub:** Use `defaultCredential` with a service principal.
+> Pass `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` via
+> `docker run -e` or `--env-file .env`. The SDK's `EnvironmentCredential`
+> (first in the `DefaultAzureCredential` chain) picks them up automatically.
+> See [.env.example](.env.example) for setup instructions.
 
 ---
 
@@ -429,17 +536,15 @@ If the port is unreachable, check:
 
 Kubernetes automatically rotates projected service account tokens. The token
 has a 1-hour expiration (`expirationSeconds: 3600` in the Deployment). The
-paho-mqtt client in the simulator reads the token at startup. If the pod runs
-for more than an hour, the connection will use the original token until
-reconnect. On reconnect, paho re-uses the stored credentials — to pick up a
-fresh token, the pod must restart:
+simulator re-reads the token file before every (re)connect attempt via the
+`on_pre_connect` callback, so rotated tokens are picked up automatically
+without a pod restart.
 
-```bash
-kubectl rollout restart deployment/zava-simulator -n zava-simulator
-```
-
-> **Future improvement:** Implement periodic SAT token refresh by re-reading
-> the projected file and updating the MQTT credentials before each reconnect.
+If you still see auth errors after rotation, verify:
+1. The projected volume is correctly mounted at `/var/run/secrets/tokens/`
+2. The token audience matches the `BrokerAuthentication` config (`aio-internal`)
+3. The kubelet has refreshed the file:
+   `kubectl exec -n zava-simulator deploy/zava-simulator -- cat /var/run/secrets/tokens/mqtt-client-token | cut -c1-20`
 
 ---
 
@@ -471,10 +576,12 @@ kubectl apply -k k8s/
 kubectl get pods -n zava-simulator
 kubectl logs -n zava-simulator -l app=zava-simulator -f
 
-# Update config
+# Update config (auto-reloads — no restart needed)
 kubectl create configmap zava-simulator-config \
   --from-file=simulator-config.yaml=../simulator-config.yaml \
   -n zava-simulator --dry-run=client -o yaml | kubectl apply -f -
+
+# Force restart (if needed)
 kubectl rollout restart deployment/zava-simulator -n zava-simulator
 
 # Send command

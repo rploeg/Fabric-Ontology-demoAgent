@@ -3,9 +3,23 @@
 ## Prerequisites
 
 - **Docker Desktop** (macOS/Windows) — for running the simulator container
-- **MQTT broker** running on your machine (e.g. [Mosquitto](https://mosquitto.org/), [EMQX](https://www.emqx.io/), or any MQTTv5-compatible broker)
+- **Python 3.12+** — for running without Docker
+- **MQTT broker** (e.g. [Mosquitto](https://mosquitto.org/)) — only needed when `outputMode: "mqtt"`
+- **Azure CLI** (`az login`) — only needed for Event Hub with `defaultCredential` (no Docker)
+- **Azure Service Principal** — only needed for Event Hub via Docker (see [Step 2b](#2b-configure-event-hub-output))
 
-## 1. Start your MQTT broker
+## Output modes
+
+The simulator supports two output targets — choose one via `outputMode` in the config:
+
+| Mode | Target | Best for |
+|------|--------|----------|
+| `mqtt` (default) | MQTT broker | Local dev, AIO integration |
+| `eventHub` | Azure Event Hub | Direct-to-Fabric pipeline |
+
+## 1. Start your MQTT broker (mqtt mode only)
+
+Skip this step if you're using `outputMode: "eventHub"`.
 
 Make sure your broker is running on port **1883** with username `mqtt` and 
 
@@ -29,11 +43,15 @@ docker run -d --name mosquitto -p 1883:1883 eclipse-mosquitto:2
 
 ## 2. Configure the simulator
 
+### 2a. MQTT output (default)
+
 Edit `simulator-config.yaml` — the `mqtt` section should point to your local broker:
 
 ```yaml
+outputMode: "mqtt"
+
 mqtt:
-  broker: "host.docker.internal"   # Docker → host machine
+  broker: "host.docker.internal"   # Docker → host machine (use "localhost" without Docker)
   port: 1883
   useTls: false
   authMethod: "usernamePassword"
@@ -42,6 +60,55 @@ mqtt:
 ```
 
 > **Note:** `host.docker.internal` resolves to your host machine from inside a Docker container on macOS/Windows. On Linux, use `--add-host=host.docker.internal:host-gateway` when running the container.
+
+### 2b. Event Hub output
+
+Edit `simulator-config.yaml`:
+
+```yaml
+outputMode: "eventHub"
+
+eventHub:
+  fullyQualifiedNamespace: "<your-namespace>.servicebus.windows.net"
+  eventhubName: "<your-hub-name>"
+  credential: "defaultCredential"
+  maxBatchSize: 100
+  maxWaitTimeSec: 1.0
+  partitionKeyMode: "topic"
+```
+
+**Authentication depends on how you run:**
+
+| Running via | How `defaultCredential` resolves |
+|-------------|----------------------------------|
+| Python (no Docker) | Azure CLI — run `az login` first |
+| Docker | Service principal env vars (see below) |
+
+**Docker + Event Hub setup:**
+
+1. Create a service principal (one-time):
+   ```bash
+   az ad sp create-for-rbac --name "zava-simulator"
+   ```
+2. Assign the `Azure Event Hubs Data Sender` role:
+   ```bash
+   az role assignment create \
+     --role "Azure Event Hubs Data Sender" \
+     --assignee <appId from step 1> \
+     --scope /subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.EventHub/namespaces/<ns>
+   ```
+3. Create a `.env` file (copy from `.env.example`):
+   ```bash
+   cp .env.example .env
+   ```
+4. Fill in the values:
+   ```dotenv
+   AZURE_TENANT_ID=<tenant from step 1>
+   AZURE_CLIENT_ID=<appId from step 1>
+   AZURE_CLIENT_SECRET=<password from step 1>
+   ```
+
+> The `.env` file is in `.gitignore` — secrets never get committed.
 
 ### Topic mode
 
@@ -101,26 +168,58 @@ docker build -t zava-simulator:latest .
 
 ## 4. Run the simulator
 
-```bash
-docker run --rm \
-  --name zava-simulator \
-  --add-host=host.docker.internal:host-gateway \
-  zava-simulator:latest
-```
-
-The container uses the baked-in `simulator-config.yaml` by default.
-
-To override with a local config file:
+### MQTT mode
 
 ```bash
 docker run --rm \
   --name zava-simulator \
   --add-host=host.docker.internal:host-gateway \
-  -v "$(pwd)/simulator-config.yaml:/etc/simulator/simulator-config.yaml:ro" \
+  -v "$(pwd)/simulator-config.yaml:/app/simulator-config.yaml" \
   zava-simulator:latest
 ```
+
+> **Tip:** Always mount the config file (`-v`) so the simulator can detect
+> changes and auto-reload (see [Config hot-reload](#config-hot-reload) below).
+
+### Event Hub mode
+
+Pass the service principal credentials via `--env-file`:
+
+```bash
+docker run --rm \
+  --name zava-simulator \
+  --env-file .env \
+  -v "$(pwd)/simulator-config.yaml:/app/simulator-config.yaml" \
+  zava-simulator:latest
+```
+
+> Make sure `outputMode: "eventHub"` is set in your config and `.env` has the
+> `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` values filled in.
+
+### Config hot-reload
+
+The simulator **automatically detects changes** to `simulator-config.yaml`
+while running. When you save the file (e.g., from the web dashboard or a text
+editor), the simulator will:
+
+1. Detect the file change within ~2 seconds
+2. Gracefully stop all running streams and disconnect from the current output
+3. Re-read the updated config
+4. Restart with the new settings (new output mode, broker, Event Hub, streams, etc.)
+
+This means you can **switch between MQTT and Event Hub** without restarting the
+container — just change `outputMode` in the config and save.
+
+> **Important:** The config file must be bind-mounted (`-v`) for hot-reload to
+> work. If the container uses the baked-in config, changes on the host won't
+> be visible inside the container.
+>
+> **Note:** Environment variables (`.env`) are **not** hot-reloaded. If you
+> change the service principal credentials, you must restart the container.
 
 ## 5. Verify messages
+
+### MQTT mode
 
 Subscribe to all Zava topics using any MQTT client:
 
@@ -130,6 +229,23 @@ mosquitto_sub -h localhost -p 1883 -u mqtt -P mqtt -t 'zava/#' -v
 ```
 
 Or use a GUI client like [MQTTX](https://mqttx.app/) — subscribe to `zava/#`.
+
+### Event Hub mode
+
+Check the simulator logs for `Flushed N events to Event Hub` messages:
+
+```bash
+docker logs zava-simulator
+# Look for: "Flushed 1 events to Event Hub"
+```
+
+Or verify via Azure Monitor:
+
+```bash
+az monitor metrics list \
+  --resource /subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.EventHub/namespaces/<ns> \
+  --metric IncomingMessages --interval PT1M --output table
+```
 
 ### Expected output (UNS mode)
 
@@ -165,10 +281,27 @@ cd ZavaManufacturing-ISA95/mqtt-simulator
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
 
-# Edit simulator-config.yaml: set broker to "localhost"
+### MQTT mode
+
+```bash
+# Edit simulator-config.yaml: set broker to "localhost", outputMode to "mqtt"
 python -m src.main --config simulator-config.yaml
 ```
+
+### Event Hub mode
+
+```bash
+# Log in to Azure (DefaultAzureCredential picks up the CLI token)
+az login
+
+# Edit simulator-config.yaml: set outputMode to "eventHub", fill in eventHub section
+python -m src.main --config simulator-config.yaml
+```
+
+> No service principal or env vars needed — `DefaultAzureCredential` uses your
+> Azure CLI session directly.
 
 ## Full config reference
 

@@ -16,11 +16,13 @@ import json
 import threading
 import time
 import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import yaml
 import paho.mqtt.client as mqtt
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 import uvicorn
 
 # ---------------------------------------------------------------------------
@@ -31,6 +33,7 @@ COMMAND_TOPIC = "zava/simulator/command"
 STATUS_TOPIC = "zava/simulator/status"
 
 _mqtt_client: Optional[mqtt.Client] = None
+_config_path: Optional[Path] = None  # set by CLI --config
 _responses: List[Dict[str, Any]] = []
 _responses_lock = threading.Lock()
 MAX_RESPONSES = 200
@@ -195,6 +198,74 @@ async def dashboard():
 
 
 # ---------------------------------------------------------------------------
+# Config file API  (read / write simulator-config.yaml)
+# ---------------------------------------------------------------------------
+
+def _resolve_config_path() -> Path:
+    """Return the current config path or a sensible default."""
+    if _config_path and _config_path.exists():
+        return _config_path
+    # Fallback: look in the sibling mqtt-simulator directory
+    fallback = Path(__file__).resolve().parent.parent / "mqtt-simulator" / "simulator-config.yaml"
+    if fallback.exists():
+        return fallback
+    raise FileNotFoundError("No simulator-config.yaml found")
+
+
+@app.get("/api/config")
+async def get_config():
+    """Return the current simulator-config.yaml as JSON."""
+    try:
+        p = _resolve_config_path()
+        data = yaml.safe_load(p.read_text())
+        return {"ok": True, "config": data, "path": str(p)}
+    except FileNotFoundError as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=404)
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+
+
+@app.get("/api/config/raw")
+async def get_config_raw():
+    """Return simulator-config.yaml as raw text."""
+    try:
+        p = _resolve_config_path()
+        from fastapi.responses import PlainTextResponse
+        return PlainTextResponse(p.read_text())
+    except FileNotFoundError as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=404)
+
+
+@app.post("/api/config")
+async def save_config(request: Request):
+    """Overwrite simulator-config.yaml.
+
+    Accepts either:
+    - Content-Type: application/json → converts JSON to YAML
+    - Content-Type: text/yaml (or text/plain) → writes raw YAML directly
+    """
+    try:
+        p = _resolve_config_path()
+        ct = request.headers.get("content-type", "")
+        if "yaml" in ct or "plain" in ct:
+            raw = (await request.body()).decode("utf-8")
+            # Validate it's parseable YAML
+            yaml.safe_load(raw)
+            p.write_text(raw)
+        else:
+            body = await request.json()
+            yaml_str = yaml.dump(
+                body, default_flow_style=False, sort_keys=False, allow_unicode=True,
+            )
+            p.write_text(yaml_str)
+        return {"ok": True, "path": str(p)}
+    except FileNotFoundError as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=404)
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=500)
+
+
+# ---------------------------------------------------------------------------
 # Embedded HTML/JS dashboard
 # ---------------------------------------------------------------------------
 
@@ -335,16 +406,84 @@ HTML_PAGE = r"""<!DOCTYPE html>
   .anomaly-entry .stream-tag { font-size: 10px; color: var(--accent); background: rgba(99,102,241,0.1);
     padding: 2px 6px; border-radius: 6px; }
   .anomaly-entry .ts { font-size: 10px; color: var(--muted); }
+
+  /* Top-level page navigation */
+  .page-nav { display: flex; gap: 0; margin-left: 24px; }
+  .page-nav-btn { padding: 6px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    transition: all 0.15s; }
+  .page-nav-btn:first-child { border-radius: 8px 0 0 8px; }
+  .page-nav-btn:last-child { border-radius: 0 8px 8px 0; }
+  .page-nav-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .page-nav-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+  .page-view { display: none; }
+  .page-view.active { display: block; }
+
+  /* Config page */
+  .config-container { max-width: 960px; margin: 0 auto; padding: 24px; }
+  .config-section { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  .config-section h2 { font-size: 14px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--muted); margin-bottom: 16px; }
+  .config-section h3 { font-size: 13px; color: var(--accent); margin-bottom: 8px; font-weight: 600; }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .config-grid { grid-template-columns: 1fr; } }
+  .config-field { margin-bottom: 12px; }
+  .config-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .config-field input, .config-field select, .config-field textarea {
+    width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 13px; outline: none; }
+  .config-field input:focus, .config-field select:focus, .config-field textarea:focus {
+    border-color: var(--accent); }
+  .config-field textarea { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; resize: vertical; }
+  .config-field .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Output mode toggle */
+  .mode-toggle { display: flex; gap: 0; margin-bottom: 16px; }
+  .mode-toggle button { flex: 1; padding: 12px 16px; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: 2px solid var(--border); background: var(--bg); color: var(--muted);
+    transition: all 0.15s; }
+  .mode-toggle button:first-child { border-radius: 10px 0 0 10px; }
+  .mode-toggle button:last-child { border-radius: 0 10px 10px 0; }
+  .mode-toggle button.active { border-color: var(--accent); background: rgba(99,102,241,0.1); color: var(--accent); }
+  .mode-toggle button:hover:not(.active) { border-color: var(--accent); }
+
+  .config-conditional { display: none; }
+  .config-conditional.visible { display: block; }
+
+  /* Streams table in config */
+  .streams-config-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .streams-config-table th { text-align: left; padding: 8px; color: var(--muted);
+    border-bottom: 1px solid var(--border); font-weight: 500; font-size: 12px; }
+  .streams-config-table td { padding: 8px; border-bottom: 1px solid var(--border); }
+  .streams-config-table input[type="number"] { width: 80px; }
+  .streams-config-table input[type="checkbox"] { width: auto; }
+
+  /* Save bar */
+  .save-bar { display: flex; gap: 12px; align-items: center; justify-content: flex-end;
+    padding: 16px 0; }
+  .save-bar .status { font-size: 12px; color: var(--muted); }
+  .yaml-editor { width: 100%; min-height: 400px; padding: 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; resize: vertical;
+    white-space: pre; tab-size: 2; }
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>Zava Manufacturing Simulator Dashboard</h1>
+  <div class="page-nav">
+    <button class="page-nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="page-nav-btn" onclick="showPage('config')">Configuration</button>
+  </div>
   <span id="conn-badge" class="badge">Connected</span>
   <span style="flex:1"></span>
   <span id="msg-rate" style="font-size:12px; color:var(--muted)"></span>
 </div>
+
+<!-- ============ DASHBOARD PAGE ============ -->
+<div id="page-dashboard" class="page-view active">
 
 <div class="container">
   <!-- LEFT: Command Panel -->
@@ -528,6 +667,231 @@ HTML_PAGE = r"""<!DOCTYPE html>
     </div>
   </div>
 </div>
+</div>
+<!-- end DASHBOARD PAGE -->
+
+<!-- ============ CONFIGURATION PAGE ============ -->
+<div id="page-config" class="page-view">
+<div class="config-container">
+
+  <!-- Save / Load bar -->
+  <div class="save-bar" style="margin-bottom:8px">
+    <span id="config-status" class="status"></span>
+    <button class="btn-sm btn-outline" onclick="loadConfig()">Reload</button>
+    <button class="btn-sm btn-green" onclick="saveConfig()">Save Configuration</button>
+  </div>
+
+  <!-- View mode toggle -->
+  <div class="config-section">
+    <h2>Edit Mode</h2>
+    <div class="mode-toggle">
+      <button id="cfg-mode-form" class="active" onclick="setConfigEditMode('form')">Form Editor</button>
+      <button id="cfg-mode-yaml" onclick="setConfigEditMode('yaml')">YAML Editor</button>
+    </div>
+  </div>
+
+  <!-- ---- FORM VIEW ---- -->
+  <div id="config-form-view">
+
+    <!-- Output Mode -->
+    <div class="config-section">
+      <h2>Output Mode</h2>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px">
+        Choose where the simulator sends data. The simulator must be restarted for changes to take effect.
+      </p>
+      <div class="mode-toggle">
+        <button id="mode-mqtt" class="active" onclick="setOutputMode('mqtt')">MQTT Broker</button>
+        <button id="mode-eventHub" onclick="setOutputMode('eventHub')">Azure Event Hub</button>
+      </div>
+    </div>
+
+    <!-- MQTT Config -->
+    <div id="cfg-mqtt-section" class="config-section config-conditional visible">
+      <h2>MQTT Connection</h2>
+      <div class="config-grid">
+        <div class="config-field">
+          <label>Broker Host</label>
+          <input type="text" id="cfg-mqtt-broker" placeholder="127.0.0.1">
+        </div>
+        <div class="config-field">
+          <label>Port</label>
+          <input type="number" id="cfg-mqtt-port" placeholder="1883">
+        </div>
+        <div class="config-field">
+          <label>Auth Method</label>
+          <select id="cfg-mqtt-authMethod">
+            <option value="none">none</option>
+            <option value="usernamePassword">usernamePassword</option>
+            <option value="serviceAccountToken">serviceAccountToken</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Use TLS</label>
+          <select id="cfg-mqtt-useTls">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Username</label>
+          <input type="text" id="cfg-mqtt-username" placeholder="mqtt">
+        </div>
+        <div class="config-field">
+          <label>Password</label>
+          <input type="text" id="cfg-mqtt-password" placeholder="mqtt">
+        </div>
+        <div class="config-field">
+          <label>Client ID</label>
+          <input type="text" id="cfg-mqtt-clientId" placeholder="zava-simulator">
+        </div>
+        <div class="config-field">
+          <label>QoS</label>
+          <select id="cfg-mqtt-qos">
+            <option value="0">0 — At most once</option>
+            <option value="1">1 — At least once</option>
+            <option value="2">2 — Exactly once</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Keep Alive (sec)</label>
+          <input type="number" id="cfg-mqtt-keepAlive" placeholder="60">
+        </div>
+        <div class="config-field">
+          <label>Reconnect Delay (sec)</label>
+          <input type="number" id="cfg-mqtt-reconnectDelaySec" placeholder="5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Hub Config -->
+    <div id="cfg-eh-section" class="config-section config-conditional">
+      <h2>Azure Event Hub Connection</h2>
+      <div class="config-grid">
+        <div class="config-field" style="grid-column: 1 / -1">
+          <label>Credential</label>
+          <select id="cfg-eh-credential">
+            <option value="connectionString">connectionString (SAS key)</option>
+            <option value="defaultCredential">defaultCredential (Azure CLI / SP env vars)</option>
+            <option value="managedIdentity">managedIdentity (AKS Workload Identity)</option>
+          </select>
+          <div class="hint">Docker: use defaultCredential + AZURE_* env vars. AKS: use managedIdentity.</div>
+        </div>
+        <div class="config-field" style="grid-column: 1 / -1" id="cfg-eh-connstr-field">
+          <label>Connection String</label>
+          <input type="text" id="cfg-eh-connectionString" placeholder="Endpoint=sb://<ns>.servicebus.windows.net/;SharedAccessKeyName=...">
+        </div>
+        <div class="config-field">
+          <label>Fully Qualified Namespace</label>
+          <input type="text" id="cfg-eh-fullyQualifiedNamespace" placeholder="<ns>.servicebus.windows.net">
+          <div class="hint">Required for defaultCredential / managedIdentity</div>
+        </div>
+        <div class="config-field">
+          <label>Event Hub Name</label>
+          <input type="text" id="cfg-eh-eventhubName" placeholder="zava-telemetry">
+        </div>
+        <div class="config-field">
+          <label>Max Batch Size</label>
+          <input type="number" id="cfg-eh-maxBatchSize" placeholder="100">
+        </div>
+        <div class="config-field">
+          <label>Max Wait Time (sec)</label>
+          <input type="number" id="cfg-eh-maxWaitTimeSec" placeholder="1.0" step="0.1">
+        </div>
+        <div class="config-field">
+          <label>Partition Key Mode</label>
+          <select id="cfg-eh-partitionKeyMode">
+            <option value="topic">topic</option>
+            <option value="stream">stream</option>
+            <option value="none">none</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Topic Config -->
+    <div class="config-section">
+      <h2>Topic Configuration</h2>
+      <div class="config-grid">
+        <div class="config-field">
+          <label>Topic Prefix</label>
+          <input type="text" id="cfg-topicPrefix" placeholder="zava/telemetry">
+        </div>
+        <div class="config-field">
+          <label>Topic Mode</label>
+          <select id="cfg-topicMode">
+            <option value="flat">flat — single topic per stream</option>
+            <option value="uns">uns — ISA-95 hierarchical UNS</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Simulation Config -->
+    <div class="config-section">
+      <h2>Simulation Settings</h2>
+      <div class="config-grid">
+        <div class="config-field">
+          <label>Tick Interval (sec)</label>
+          <input type="number" id="cfg-sim-tickIntervalSec" placeholder="1" min="1">
+        </div>
+        <div class="config-field">
+          <label>Time Mode</label>
+          <select id="cfg-sim-timeMode">
+            <option value="realtime">realtime</option>
+            <option value="accelerated">accelerated</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Acceleration Factor</label>
+          <input type="number" id="cfg-sim-accelerationFactor" placeholder="10" min="1">
+        </div>
+        <div class="config-field">
+          <label>Day Shift Start</label>
+          <input type="text" id="cfg-sim-dayStart" placeholder="06:00">
+        </div>
+        <div class="config-field">
+          <label>Night Shift Start</label>
+          <input type="text" id="cfg-sim-nightStart" placeholder="18:00">
+        </div>
+      </div>
+    </div>
+
+    <!-- Streams Config -->
+    <div class="config-section">
+      <h2>Streams</h2>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px">
+        Enable/disable individual data streams and set their publish interval.
+      </p>
+      <table class="streams-config-table">
+        <thead>
+          <tr><th>Stream</th><th>Enabled</th><th>Interval (sec)</th><th>Topic Override</th></tr>
+        </thead>
+        <tbody id="cfg-streams-tbody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- end config-form-view -->
+
+  <!-- ---- YAML VIEW ---- -->
+  <div id="config-yaml-view" style="display:none">
+    <div class="config-section">
+      <h2>Raw YAML</h2>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px">
+        Edit the full simulator-config.yaml directly. Changes are applied when you click Save.
+      </p>
+      <textarea id="yaml-editor" class="yaml-editor" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <div class="save-bar">
+    <span id="config-status2" class="status"></span>
+    <button class="btn-sm btn-outline" onclick="loadConfig()">Reload</button>
+    <button class="btn-sm btn-green" onclick="saveConfig()">Save Configuration</button>
+  </div>
+
+</div>
+</div>
+<!-- end CONFIGURATION PAGE -->
 
 <div class="toast" id="toast"></div>
 
@@ -844,6 +1208,260 @@ async function pollAnomalyTimeline() {
   } catch(e) {}
 }
 
+// ---- Page Navigation ----
+function showPage(page) {
+  document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.page-nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelector(`.page-nav-btn[onclick="showPage('${page}')"]`).classList.add('active');
+  if (page === 'config') loadConfig();
+}
+
+// ---- Config: State ----
+let _configData = null;   // raw JS object mirroring the YAML
+let _configEditMode = 'form';
+
+// Known stream keys and their YAML config key
+const STREAM_KEYS = [
+  { key: 'equipmentTelemetry', label: 'Equipment Telemetry' },
+  { key: 'machineStateTelemetry', label: 'Machine State' },
+  { key: 'processSegmentTelemetry', label: 'Process Segment' },
+  { key: 'productionCounterTelemetry', label: 'Production Counter' },
+  { key: 'safetyIncidentEvents', label: 'Safety Incident' },
+  { key: 'predictiveMaintenanceTelemetry', label: 'Predictive Maintenance' },
+  { key: 'digitalTwinState', label: 'Digital Twin' },
+  { key: 'materialConsumptionEvents', label: 'Material Consumption' },
+  { key: 'qualityVisionEvents', label: 'Quality Vision' },
+  { key: 'supplyChainEvents', label: 'Supply Chain' },
+  { key: 'batchLifecycleEvents', label: 'Batch Lifecycle' },
+];
+
+// ---- Config: Load ----
+async function loadConfig() {
+  try {
+    const r = await api('GET', '/api/config');
+    if (!r.ok) { toast('Config load failed: ' + r.error, 'error'); return; }
+    _configData = r.config;
+    populateFormFromConfig(_configData);
+    populateYamlEditor(_configData);
+    setConfigStatus('Loaded from ' + r.path.split('/').pop());
+  } catch (e) {
+    toast('Config load error: ' + e.message, 'error');
+  }
+}
+
+// ---- Config: Save ----
+async function saveConfig() {
+  try {
+    let data;
+    if (_configEditMode === 'yaml') {
+      // Parse from YAML editor — we need jsyaml or just send raw text and let backend parse
+      // For simplicity we'll send JSON built from the YAML text using a mini approach
+      // Actually, let's send the raw text to a different endpoint... but simpler: sync form → _configData → save
+      toast('Syncing YAML editor...', 'success');
+      // We'll post the YAML as text and let the backend handle it
+      const yamlText = document.getElementById('yaml-editor').value;
+      const resp = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/yaml' },
+        body: yamlText,
+      });
+      const result = await resp.json();
+      if (result.ok) {
+        toast('Configuration saved!', 'success');
+        setConfigStatus('Saved');
+        loadConfig(); // reload to sync
+      } else {
+        toast('Save failed: ' + result.error, 'error');
+      }
+      return;
+    }
+
+    // Form mode: collect form → _configData → save
+    collectFormToConfig();
+    const r = await api('POST', '/api/config', _configData);
+    if (r.ok) {
+      toast('Configuration saved!', 'success');
+      setConfigStatus('Saved');
+    } else {
+      toast('Save failed: ' + r.error, 'error');
+    }
+  } catch (e) {
+    toast('Save error: ' + e.message, 'error');
+  }
+}
+
+function setConfigStatus(msg) {
+  document.getElementById('config-status').textContent = msg;
+  document.getElementById('config-status2').textContent = msg;
+}
+
+// ---- Config: Edit-mode toggle ----
+function setConfigEditMode(mode) {
+  _configEditMode = mode;
+  document.getElementById('cfg-mode-form').classList.toggle('active', mode === 'form');
+  document.getElementById('cfg-mode-yaml').classList.toggle('active', mode === 'yaml');
+  document.getElementById('config-form-view').style.display = mode === 'form' ? '' : 'none';
+  document.getElementById('config-yaml-view').style.display = mode === 'yaml' ? '' : 'none';
+  if (mode === 'yaml' && _configData) {
+    // Sync form updates into _configData first
+    collectFormToConfig();
+    populateYamlEditor(_configData);
+  }
+}
+
+// ---- Config: Output mode toggle ----
+function setOutputMode(mode) {
+  document.getElementById('mode-mqtt').classList.toggle('active', mode === 'mqtt');
+  document.getElementById('mode-eventHub').classList.toggle('active', mode === 'eventHub');
+  document.getElementById('cfg-mqtt-section').classList.toggle('visible', mode === 'mqtt');
+  document.getElementById('cfg-eh-section').classList.toggle('visible', mode === 'eventHub');
+}
+
+// ---- Config: Populate form from config object ----
+function populateFormFromConfig(cfg) {
+  // Output mode
+  const mode = cfg.outputMode || 'mqtt';
+  setOutputMode(mode);
+
+  // MQTT
+  const m = cfg.mqtt || {};
+  _setVal('cfg-mqtt-broker', m.broker || '');
+  _setVal('cfg-mqtt-port', m.port || 1883);
+  _setVal('cfg-mqtt-authMethod', m.authMethod || 'none');
+  _setVal('cfg-mqtt-useTls', String(m.useTls || false));
+  _setVal('cfg-mqtt-username', m.username || '');
+  _setVal('cfg-mqtt-password', m.password || '');
+  _setVal('cfg-mqtt-clientId', m.clientId || 'zava-simulator');
+  _setVal('cfg-mqtt-qos', String(m.qos ?? 1));
+  _setVal('cfg-mqtt-keepAlive', m.keepAlive || 60);
+  _setVal('cfg-mqtt-reconnectDelaySec', m.reconnectDelaySec || 5);
+
+  // Event Hub
+  const eh = cfg.eventHub || {};
+  _setVal('cfg-eh-credential', eh.credential || 'connectionString');
+  _setVal('cfg-eh-connectionString', eh.connectionString || '');
+  _setVal('cfg-eh-fullyQualifiedNamespace', eh.fullyQualifiedNamespace || '');
+  _setVal('cfg-eh-eventhubName', eh.eventhubName || '');
+  _setVal('cfg-eh-maxBatchSize', eh.maxBatchSize || 100);
+  _setVal('cfg-eh-maxWaitTimeSec', eh.maxWaitTimeSec || 1.0);
+  _setVal('cfg-eh-partitionKeyMode', eh.partitionKeyMode || 'topic');
+
+  // Topic
+  _setVal('cfg-topicPrefix', cfg.topicPrefix || 'zava/telemetry');
+  _setVal('cfg-topicMode', cfg.topicMode || 'uns');
+
+  // Simulation
+  const sim = cfg.simulation || {};
+  _setVal('cfg-sim-tickIntervalSec', sim.tickIntervalSec || 1);
+  _setVal('cfg-sim-timeMode', sim.timeMode || 'realtime');
+  _setVal('cfg-sim-accelerationFactor', sim.accelerationFactor || 10);
+  _setVal('cfg-sim-dayStart', (sim.shifts || {}).dayStart || '06:00');
+  _setVal('cfg-sim-nightStart', (sim.shifts || {}).nightStart || '18:00');
+
+  // Streams
+  populateStreamsTable(cfg);
+}
+
+function populateStreamsTable(cfg) {
+  const tbody = document.getElementById('cfg-streams-tbody');
+  tbody.innerHTML = STREAM_KEYS.map(({ key, label }) => {
+    const s = cfg[key] || {};
+    const checked = s.enabled !== false ? 'checked' : '';
+    const interval = s.intervalSec ?? '';
+    const topic = s.topic ?? '';
+    return `<tr data-stream-key="${key}">
+      <td><strong>${label}</strong><br><span style="font-size:11px;color:var(--muted)">${key}</span></td>
+      <td><input type="checkbox" class="stream-enabled" ${checked}></td>
+      <td><input type="number" class="stream-interval" value="${interval}" min="1" placeholder="—"></td>
+      <td><input type="text" class="stream-topic" value="${escHtml(topic)}" placeholder="auto"></td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- Config: Collect form values into _configData ----
+function collectFormToConfig() {
+  if (!_configData) _configData = {};
+
+  // Output mode
+  _configData.outputMode = document.getElementById('mode-eventHub').classList.contains('active') ? 'eventHub' : 'mqtt';
+
+  // MQTT
+  if (!_configData.mqtt) _configData.mqtt = {};
+  _configData.mqtt.broker = _getVal('cfg-mqtt-broker');
+  _configData.mqtt.port = parseInt(_getVal('cfg-mqtt-port')) || 1883;
+  _configData.mqtt.authMethod = _getVal('cfg-mqtt-authMethod');
+  _configData.mqtt.useTls = _getVal('cfg-mqtt-useTls') === 'true';
+  _configData.mqtt.username = _getVal('cfg-mqtt-username');
+  _configData.mqtt.password = _getVal('cfg-mqtt-password');
+  _configData.mqtt.clientId = _getVal('cfg-mqtt-clientId');
+  _configData.mqtt.qos = parseInt(_getVal('cfg-mqtt-qos')) || 1;
+  _configData.mqtt.keepAlive = parseInt(_getVal('cfg-mqtt-keepAlive')) || 60;
+  _configData.mqtt.reconnectDelaySec = parseInt(_getVal('cfg-mqtt-reconnectDelaySec')) || 5;
+
+  // Event Hub
+  if (!_configData.eventHub) _configData.eventHub = {};
+  _configData.eventHub.credential = _getVal('cfg-eh-credential');
+  _configData.eventHub.connectionString = _getVal('cfg-eh-connectionString');
+  _configData.eventHub.fullyQualifiedNamespace = _getVal('cfg-eh-fullyQualifiedNamespace');
+  _configData.eventHub.eventhubName = _getVal('cfg-eh-eventhubName');
+  _configData.eventHub.maxBatchSize = parseInt(_getVal('cfg-eh-maxBatchSize')) || 100;
+  _configData.eventHub.maxWaitTimeSec = parseFloat(_getVal('cfg-eh-maxWaitTimeSec')) || 1.0;
+  _configData.eventHub.partitionKeyMode = _getVal('cfg-eh-partitionKeyMode');
+
+  // Topic
+  _configData.topicPrefix = _getVal('cfg-topicPrefix');
+  _configData.topicMode = _getVal('cfg-topicMode');
+
+  // Simulation
+  if (!_configData.simulation) _configData.simulation = {};
+  _configData.simulation.tickIntervalSec = parseInt(_getVal('cfg-sim-tickIntervalSec')) || 1;
+  _configData.simulation.timeMode = _getVal('cfg-sim-timeMode');
+  _configData.simulation.accelerationFactor = parseInt(_getVal('cfg-sim-accelerationFactor')) || 10;
+  if (!_configData.simulation.shifts) _configData.simulation.shifts = {};
+  _configData.simulation.shifts.dayStart = _getVal('cfg-sim-dayStart');
+  _configData.simulation.shifts.nightStart = _getVal('cfg-sim-nightStart');
+
+  // Streams
+  document.querySelectorAll('#cfg-streams-tbody tr').forEach(tr => {
+    const key = tr.dataset.streamKey;
+    if (!_configData[key]) _configData[key] = {};
+    _configData[key].enabled = tr.querySelector('.stream-enabled').checked;
+    const intVal = tr.querySelector('.stream-interval').value;
+    if (intVal) _configData[key].intervalSec = parseInt(intVal);
+    const topicVal = tr.querySelector('.stream-topic').value;
+    if (topicVal) _configData[key].topic = topicVal;
+  });
+}
+
+// ---- Config: YAML editor helpers ----
+function populateYamlEditor(cfg) {
+  // Convert JS object to a formatted YAML-like display
+  // Since we don't have js-yaml in the browser, we'll use JSON with a note
+  // Actually, let's fetch the raw file from the backend
+  fetchRawYaml();
+}
+
+async function fetchRawYaml() {
+  try {
+    const r = await fetch('/api/config/raw');
+    if (r.ok) {
+      const text = await r.text();
+      document.getElementById('yaml-editor').value = text;
+    }
+  } catch(e) {}
+}
+
+// ---- Config: Helpers ----
+function _setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+function _getVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
 // ---- Init ----
 pollInterval = setInterval(poll, 1000);
 setInterval(pollOverview, 3000);
@@ -868,6 +1486,7 @@ setTimeout(() => {
 # ---------------------------------------------------------------------------
 
 def main():
+    global _config_path
     parser = argparse.ArgumentParser(description="Zava Manufacturing Simulator Dashboard")
     parser.add_argument("--broker", default="127.0.0.1", help="MQTT broker host")
     parser.add_argument("--mqtt-port", type=int, default=1883, help="MQTT broker port")
@@ -875,7 +1494,15 @@ def main():
     parser.add_argument("--password", default="mqtt", help="MQTT password")
     parser.add_argument("--host", default="0.0.0.0", help="Web server bind address")
     parser.add_argument("--port", type=int, default=8000, help="Web server port")
+    parser.add_argument(
+        "--config",
+        default=None,
+        help="Path to simulator-config.yaml (auto-detected if omitted)",
+    )
     args = parser.parse_args()
+
+    if args.config:
+        _config_path = Path(args.config).resolve()
 
     init_mqtt(args.broker, args.mqtt_port, args.username, args.password)
     print(f"[web] Starting dashboard at http://localhost:{args.port}")

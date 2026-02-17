@@ -24,6 +24,8 @@ from typing import Any, Dict, Optional
 
 from .config import SimulatorConfig
 from .mqtt_client import MqttClient
+from .eventhub_client import EventHubClient
+from .streams.base import MessageSink
 from .streams.base import BaseStream
 from .anomaly_engine import AnomalyEngine
 from .utils import utcnow
@@ -55,7 +57,7 @@ class CommandHandler:
     def __init__(
         self,
         cfg: SimulatorConfig,
-        client: MqttClient,
+        client: MessageSink,
         streams: Dict[str, BaseStream],
         anomaly: AnomalyEngine,
         start_time: float,

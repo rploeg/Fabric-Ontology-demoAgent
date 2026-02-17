@@ -9,6 +9,8 @@ from typing import Any, Dict, List
 
 from .config import AnomalyConfig, AnomalyScenario, SimulatorConfig
 from .mqtt_client import MqttClient
+from .eventhub_client import EventHubClient
+from .streams.base import MessageSink
 from .streams.base import BaseStream
 from .utils import utcnow, random_id, utcnow_dt
 
@@ -39,7 +41,7 @@ class AnomalyEngine:
     def __init__(
         self,
         cfg: SimulatorConfig,
-        client: MqttClient,
+        client: MessageSink,
         streams: Dict[str, BaseStream],
     ) -> None:
         self._cfg = cfg

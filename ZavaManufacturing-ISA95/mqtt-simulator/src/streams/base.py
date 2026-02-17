@@ -5,14 +5,18 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Dict, Union
 
 from ..config import SimulatorConfig
 from ..mqtt_client import MqttClient
+from ..eventhub_client import EventHubClient
 from ..state_registry import StateRegistry
 from ..utils import resolve_uns_topic
 
 logger = logging.getLogger(__name__)
+
+# Either output sink exposes the same publish() / subscribe() interface.
+MessageSink = Union[MqttClient, EventHubClient]
 
 
 class BaseStream(ABC):
@@ -27,7 +31,7 @@ class BaseStream(ABC):
     def __init__(
         self,
         cfg: SimulatorConfig,
-        client: MqttClient,
+        client: MessageSink,
         *,
         registry: StateRegistry | None = None,
     ) -> None:

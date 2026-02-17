@@ -1,0 +1,43 @@
+# BrokerAuthentication — allow the simulator pod to authenticate to the
+# Azure IoT Operations MQTT broker using a Kubernetes Service Account Token.
+#
+# Apply this in the azure-iot-operations namespace **before** deploying the
+# simulator, or verify the default BrokerAuthentication already includes a
+# serviceAccountToken method with audience "aio-internal".
+#
+# kubectl apply -f broker-auth.yaml
+apiVersion: mqttbroker.iotoperations.azure.com/v1
+kind: BrokerAuthentication
+metadata:
+  name: zava-simulator-authn
+  namespace: azure-iot-operations
+spec:
+  authenticationMethods:
+    - method: ServiceAccountToken
+      serviceAccountTokenSettings:
+        audiences:
+          - "aio-internal"
+---
+# BrokerAuthorization — grant the zava-simulator ServiceAccount permission
+# to connect, publish on zava/# topics, and subscribe to the command topic.
+apiVersion: mqttbroker.iotoperations.azure.com/v1
+kind: BrokerAuthorization
+metadata:
+  name: zava-simulator-authz
+  namespace: azure-iot-operations
+spec:
+  authorizationPolicies:
+    rules:
+      - principals:
+          serviceAccounts:
+            - namespace: zava-simulator
+              name: zava-simulator
+        brokerResources:
+          - method: Connect
+            topics: []
+          - method: Publish
+            topics:
+              - "zava/#"
+          - method: Subscribe
+            topics:
+              - "zava/simulator/command"
