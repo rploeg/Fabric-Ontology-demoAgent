@@ -8,8 +8,6 @@ import random
 from typing import Any, Dict, List
 
 from .config import AnomalyConfig, AnomalyScenario, SimulatorConfig
-from .mqtt_client import MqttClient
-from .eventhub_client import EventHubClient
 from .streams.base import MessageSink
 from .streams.base import BaseStream
 from .utils import utcnow, random_id, utcnow_dt
@@ -104,15 +102,15 @@ class AnomalyEngine:
         }
         await self._client.publish(topic, event)
 
-        # Apply overrides to the stream (if it supports them)
-        if stream and hasattr(stream, "apply_overrides"):
+        # Apply overrides to the stream (Q9: uses BaseStream ABC method)
+        if stream:
             stream.apply_overrides(scenario.overrides)
 
         # For duration-based scenarios, wait then revert
         if scenario.duration_sec > 0:
             await asyncio.sleep(scenario.duration_sec)
 
-            if stream and hasattr(stream, "clear_overrides"):
+            if stream:
                 stream.clear_overrides()
 
             # Publish anomaly end event

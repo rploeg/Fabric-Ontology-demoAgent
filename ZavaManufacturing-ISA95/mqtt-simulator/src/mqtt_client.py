@@ -134,11 +134,14 @@ class MqttClient:
         data = json.dumps(payload, default=str)
         q = qos if qos is not None else self._cfg.qos
 
-        info = self._client.publish(topic, data, qos=q, retain=retain)
-        if info.rc != mqtt.MQTT_ERR_SUCCESS:
-            logger.warning("Publish failed (rc=%s) on topic %s", info.rc, topic)
-        else:
-            self._msg_count += 1
+        try:
+            info = self._client.publish(topic, data, qos=q, retain=retain)
+            if info.rc != mqtt.MQTT_ERR_SUCCESS:
+                logger.warning("Publish failed (rc=%s) on topic %s", info.rc, topic)
+            else:
+                self._msg_count += 1
+        except Exception as exc:
+            logger.error("Publish error on topic %s: %s", topic, exc)
 
     def subscribe(
         self,

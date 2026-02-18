@@ -59,6 +59,42 @@ class BaseStream(ABC):
         ...
 
     # ------------------------------------------------------------------
+    # Override / anomaly injection (default no-ops)
+    # ------------------------------------------------------------------
+
+    def apply_overrides(self, overrides: dict) -> None:
+        """Apply anomaly overrides. Subclasses should override if needed."""
+
+    def clear_overrides(self) -> None:
+        """Revert all overrides to normal. Subclasses should override if needed."""
+
+    # ------------------------------------------------------------------
+    # Safe runner with error handling (E3)
+    # ------------------------------------------------------------------
+
+    async def safe_run(self) -> None:
+        """Wrap ``run()`` with automatic restart on unexpected errors.
+
+        ``CancelledError`` propagates immediately (used for shutdown).
+        All other exceptions are logged and the stream is restarted
+        after an exponential backoff (1 s → 2 s → … → 60 s max).
+        """
+        backoff = 1
+        while True:
+            try:
+                await self.run()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                logger.exception(
+                    "[%s] Stream crashed — restarting in %ds",
+                    self.stream_slug,
+                    backoff,
+                )
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 60)
+
+    # ------------------------------------------------------------------
     # Topic resolution helpers
     # ------------------------------------------------------------------
 

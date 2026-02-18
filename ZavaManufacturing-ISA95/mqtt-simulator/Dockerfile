@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12.11-slim
 
 LABEL maintainer="Zava Manufacturing" \
       description="MQTT Simulator for Zava factory telemetry"
@@ -19,6 +19,10 @@ ENV SIMULATOR_CONFIG="/etc/simulator/simulator-config.yaml"
 # Run as non-root
 RUN useradd --create-home appuser
 USER appuser
+
+# D4: basic health check — verify the Python process is alive
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import os, signal; os.kill(1, 0)" || exit 1
 
 ENTRYPOINT ["python", "-m", "src.main"]
 # K8s: mount ConfigMap to /etc/simulator/simulator-config.yaml (searched first)

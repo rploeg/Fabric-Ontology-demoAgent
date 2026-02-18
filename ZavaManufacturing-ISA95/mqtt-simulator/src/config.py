@@ -6,11 +6,14 @@ The root model is ``SimulatorConfig`` which is loaded via ``load_config(path)``.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Union
 
 import yaml
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -568,6 +571,18 @@ class SimulatorConfig(BaseModel):
 
 def load_config(path: str | Path) -> SimulatorConfig:
     """Load and validate a simulator-config.yaml file."""
-    with open(path) as f:
-        raw = yaml.safe_load(f)
-    return SimulatorConfig.model_validate(raw or {})
+    try:
+        with open(path) as f:
+            raw = yaml.safe_load(f)
+    except FileNotFoundError:
+        logger.error("Config file not found: %s", path)
+        raise
+    except yaml.YAMLError as exc:
+        logger.error("Invalid YAML in %s: %s", path, exc)
+        raise
+
+    try:
+        return SimulatorConfig.model_validate(raw or {})
+    except Exception as exc:
+        logger.error("Config validation failed for %s: %s", path, exc)
+        raise

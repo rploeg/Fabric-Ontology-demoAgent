@@ -186,7 +186,7 @@ async def run(cfg: SimulatorConfig, config_path: Optional[Path] = None) -> bool:
     # Start enabled streams (primary site)
     for slug in enabled:
         stream = streams[slug]
-        tasks.append(asyncio.create_task(stream.run(), name=f"stream-{slug}"))
+        tasks.append(asyncio.create_task(stream.safe_run(), name=f"stream-{slug}"))
 
     # ── Multi-site: clone streams for each additional site ────────
     site_streams: Dict[str, Dict[str, BaseStream]] = {}
@@ -205,7 +205,7 @@ async def run(cfg: SimulatorConfig, config_path: Optional[Path] = None) -> bool:
             ]
             for slug in s_enabled:
                 tasks.append(asyncio.create_task(
-                    s_streams[slug].run(),
+                    s_streams[slug].safe_run(),
                     name=f"site-{site_prof.site_id}-{slug}",
                 ))
             logger.info(

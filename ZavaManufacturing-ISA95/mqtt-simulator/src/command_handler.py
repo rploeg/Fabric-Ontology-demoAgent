@@ -23,8 +23,6 @@ import time
 from typing import Any, Dict, Optional
 
 from .config import SimulatorConfig
-from .mqtt_client import MqttClient
-from .eventhub_client import EventHubClient
 from .streams.base import MessageSink
 from .streams.base import BaseStream
 from .anomaly_engine import AnomalyEngine
@@ -68,6 +66,8 @@ class CommandHandler:
         self._anomaly = anomaly
         self._start_time = start_time
         self._queue: asyncio.Queue[dict] = asyncio.Queue()
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._stream_tasks: Dict[str, asyncio.Task] = {}  # B2: track re-enabled tasks
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -80,6 +80,7 @@ class CommandHandler:
 
     async def run(self) -> None:
         """Process commands from the queue forever."""
+        self._loop = asyncio.get_running_loop()  # B1: own loop reference
         await self.start()
         while True:
             cmd = await self._queue.get()
@@ -106,8 +107,8 @@ class CommandHandler:
         except json.JSONDecodeError:
             logger.warning("Invalid JSON command received: %s", payload_str[:200])
             return
-        # Schedule on the event loop
-        loop = self._client._loop
+        # Schedule on the event loop (B1: use own _loop, not client._loop)
+        loop = self._loop
         if loop:
             loop.call_soon_threadsafe(self._queue.put_nowait, cmd)
 
@@ -225,7 +226,8 @@ class CommandHandler:
         # Restart the stream task
         stream = self._streams.get(slug)
         if stream:
-            task = asyncio.create_task(stream.run(), name=f"stream-{slug}")
+            task = asyncio.create_task(stream.safe_run(), name=f"stream-{slug}")
+            self._stream_tasks[slug] = task
             logger.info("Stream %s enabled and restarted", slug)
 
         return {
@@ -351,7 +353,18 @@ class CommandHandler:
             return self._err(f"Invalid path: {path!r} (no attr '{final}')", cmd)
 
         old = getattr(obj, final)
-        setattr(obj, final, type(old)(value) if old is not None else value)
+        # B3: safe type coercion — only coerce scalars, pass through
+        # lists/dicts/None as-is to avoid type(old)(value) crashes.
+        if old is None or isinstance(old, (list, dict)):
+            new_value = value
+        else:
+            try:
+                new_value = type(old)(value)
+            except (TypeError, ValueError) as exc:
+                return self._err(
+                    f"Cannot convert {value!r} to {type(old).__name__}: {exc}", cmd
+                )
+        setattr(obj, final, new_value)
         new = getattr(obj, final)
         logger.info("Config set: %s = %s (was %s)", path, new, old)
 

@@ -51,6 +51,8 @@ def _ensure_sdk() -> None:
 class EventHubClient:
     """Async-friendly Azure Event Hub producer with the same publish() API as MqttClient."""
 
+    _MAX_FLUSH_RETRIES = 3  # B5: max retries before dropping events
+
     def __init__(self, cfg: EventHubConfig) -> None:
         _ensure_sdk()
         self._cfg = cfg
@@ -60,6 +62,7 @@ class EventHubClient:
         self._pending: list = []
         self._pending_lock = asyncio.Lock()
         self._flush_task: asyncio.Task | None = None
+        self._flush_failures = 0  # B5: consecutive failure counter
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -198,23 +201,47 @@ class EventHubClient:
             return
         count = len(self._pending)
         try:
-            batch = await self._producer.create_batch()
+            # B6: resolve partition key from the first event's mqtt_topic property
+            partition_key = None
+            if self._pending:
+                first_ev = self._pending[0]
+                topic = (first_ev.properties or {}).get("mqtt_topic", "")
+                partition_key = self._resolve_partition_key(topic, {})
+
+            batch = await self._producer.create_batch(
+                partition_key=partition_key,
+            )
             sent = 0
             while self._pending:
                 ev = self._pending[0]
                 try:
                     batch.add(ev)
                     self._pending.pop(0)
+                    sent += 1
                 except ValueError:
                     # Batch full — send what we have, start a new one
                     await self._producer.send_batch(batch)
-                    sent += 1
-                    batch = await self._producer.create_batch()
+                    batch = await self._producer.create_batch(
+                        partition_key=partition_key,
+                    )
                     # Don't pop — retry this event in the new batch
             if batch.size_in_bytes > 0:
                 await self._producer.send_batch(batch)
-            self._msg_count += count
-            logger.debug("Flushed %d events to Event Hub", count)
+            self._msg_count += sent  # B4: count only actually sent events
+            self._flush_failures = 0  # reset on success
+            logger.debug("Flushed %d events to Event Hub", sent)
         except Exception as exc:
-            logger.error("Event Hub send failed (%d events may be lost): %s", len(self._pending), exc)
-            self._pending.clear()  # drop to avoid infinite retry
+            self._flush_failures += 1
+            if self._flush_failures >= self._MAX_FLUSH_RETRIES:
+                logger.error(
+                    "Event Hub send failed %d times — dropping %d events: %s",
+                    self._flush_failures, len(self._pending), exc,
+                )
+                self._pending.clear()
+                self._flush_failures = 0
+            else:
+                logger.warning(
+                    "Event Hub send failed (attempt %d/%d, %d events kept for retry): %s",
+                    self._flush_failures, self._MAX_FLUSH_RETRIES,
+                    len(self._pending), exc,
+                )

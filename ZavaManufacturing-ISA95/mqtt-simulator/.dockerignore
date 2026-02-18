@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Git
+.git/
+.gitignore
+
+# Docs & tests
+*.md
+tests/
+k8s/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Misc
+.env
+.env.*
+*.log

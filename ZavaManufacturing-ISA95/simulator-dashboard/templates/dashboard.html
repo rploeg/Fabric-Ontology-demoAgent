@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zava Simulator Dashboard</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a;
+    --text: #e1e4ed; --muted: #8b8fa3; --accent: #6366f1;
+    --accent-hover: #818cf8; --green: #22c55e; --red: #ef4444;
+    --orange: #f59e0b; --blue: #3b82f6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--text); min-height: 100vh; }
+  .header { background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header .badge { font-size: 11px; padding: 3px 8px; border-radius: 12px;
+    background: var(--green); color: #000; font-weight: 600; }
+  .header .badge.disconnected { background: var(--red); color: #fff; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 24px;
+    display: grid; grid-template-columns: 360px 1fr; gap: 24px; }
+  @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; }
+  .card h2 { font-size: 14px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--muted); margin-bottom: 16px; }
+
+  /* Controls */
+  .section { margin-bottom: 20px; }
+  .section h3 { font-size: 13px; color: var(--accent); margin-bottom: 8px; font-weight: 600; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  select, input[type="text"], input[type="number"] {
+    width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 13px; outline: none; }
+  select:focus, input:focus { border-color: var(--accent); }
+  .row { display: flex; gap: 8px; align-items: flex-end; }
+  .row > * { flex: 1; }
+
+  button { cursor: pointer; border: none; border-radius: 8px; padding: 9px 16px;
+    font-size: 13px; font-weight: 600; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; margin-top: 12px; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn-green { background: var(--green); color: #000; }
+  .btn-red { background: var(--red); color: #fff; }
+  .btn-orange { background: var(--orange); color: #000; }
+  .btn-blue { background: var(--blue); color: #fff; }
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Quick actions grid */
+  .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* Stream table */
+  .stream-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .stream-table th { text-align: left; padding: 8px; color: var(--muted);
+    border-bottom: 1px solid var(--border); font-weight: 500; font-size: 12px; }
+  .stream-table td { padding: 8px; border-bottom: 1px solid var(--border); }
+  .stream-table tr:hover { background: rgba(99,102,241,0.05); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .status-dot.on { background: var(--green); }
+  .status-dot.off { background: var(--red); }
+
+  /* Overview panel */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .overview-grid { grid-template-columns: 1fr; } }
+  .overview-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    border-radius: 8px; font-size: 13px; background: var(--bg); }
+  .overview-item .name { flex: 1; }
+  .overview-item .meta { font-size: 11px; color: var(--muted); }
+  .overview-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .overview-badge.enabled { background: rgba(34,197,94,0.15); color: var(--green); }
+  .overview-badge.disabled { background: rgba(239,68,68,0.15); color: var(--red); }
+  .overview-badge.active { background: rgba(245,158,11,0.15); color: var(--orange); }
+  .overview-section { margin-bottom: 16px; }
+  .overview-section h3 { font-size: 12px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .overview-section h3 .count { font-size: 11px; color: var(--accent); font-weight: 400; }
+  .overview-master { display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+    border-radius: 8px; background: var(--bg); margin-bottom: 12px; font-size: 13px; }
+  .overview-master .label { flex: 1; font-weight: 500; }
+  .refresh-btn { background: none; border: 1px solid var(--border); color: var(--muted);
+    cursor: pointer; padding: 4px 10px; border-radius: 6px; font-size: 11px; }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Log panel */
+  .log-panel { max-height: 600px; overflow-y: auto; }
+  .log-entry { padding: 10px 12px; border-bottom: 1px solid var(--border);
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; }
+  .log-entry:hover { background: rgba(99,102,241,0.05); }
+  .log-topic { color: var(--accent); font-weight: 500; }
+  .log-time { color: var(--muted); font-size: 11px; float: right; }
+  .log-payload { color: var(--text); white-space: pre-wrap; word-break: break-all;
+    margin-top: 4px; line-height: 1.5; }
+  .log-status-ok { color: var(--green); }
+  .log-status-error { color: var(--red); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; margin-bottom: 16px; }
+  .tab { padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+    border-bottom: 2px solid transparent; color: var(--muted); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab:hover { color: var(--text); }
+
+  /* JSON preview */
+  .json-preview { background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; font-family: monospace; font-size: 12px;
+    white-space: pre-wrap; color: var(--muted); margin-top: 8px; max-height: 100px;
+    overflow-y: auto; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px;
+    border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 1000;
+    transform: translateY(100px); opacity: 0; transition: all 0.3s; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { background: var(--green); color: #000; }
+  .toast.error { background: var(--red); color: #fff; }
+
+  .filter-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .filter-row input { flex: 1; }
+  .msg-count { font-size: 12px; color: var(--muted); }
+
+  /* D2: Anomaly timeline */
+  .anomaly-entry { display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    border-bottom: 1px solid var(--border); font-size: 12px; }
+  .anomaly-entry .phase { font-size: 10px; padding: 2px 6px; border-radius: 8px; font-weight: 600; }
+  .anomaly-entry .phase.start { background: rgba(239,68,68,0.15); color: var(--red); }
+  .anomaly-entry .phase.end { background: rgba(34,197,94,0.15); color: var(--green); }
+  .anomaly-entry .scenario { flex: 1; font-weight: 500; }
+  .anomaly-entry .stream-tag { font-size: 10px; color: var(--accent); background: rgba(99,102,241,0.1);
+    padding: 2px 6px; border-radius: 6px; }
+  .anomaly-entry .ts { font-size: 10px; color: var(--muted); }
+
+  /* Top-level page navigation */
+  .page-nav { display: flex; gap: 0; margin-left: 24px; }
+  .page-nav-btn { padding: 6px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    transition: all 0.15s; }
+  .page-nav-btn:first-child { border-radius: 8px 0 0 8px; }
+  .page-nav-btn:last-child { border-radius: 0 8px 8px 0; }
+  .page-nav-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .page-nav-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+  .page-view { display: none; }
+  .page-view.active { display: block; }
+
+  /* Config page */
+  .config-container { max-width: 960px; margin: 0 auto; padding: 24px; }
+  .config-section { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  .config-section h2 { font-size: 14px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.5px; color: var(--muted); margin-bottom: 16px; }
+  .config-section h3 { font-size: 13px; color: var(--accent); margin-bottom: 8px; font-weight: 600; }
+  .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .config-grid { grid-template-columns: 1fr; } }
+  .config-field { margin-bottom: 12px; }
+  .config-field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .config-field input, .config-field select, .config-field textarea {
+    width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg); color: var(--text); font-size: 13px; outline: none; }
+  .config-field input:focus, .config-field select:focus, .config-field textarea:focus {
+    border-color: var(--accent); }
+  .config-field textarea { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; resize: vertical; }
+  .config-field .hint { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Output mode toggle */
+  .mode-toggle { display: flex; gap: 0; margin-bottom: 16px; }
+  .mode-toggle button { flex: 1; padding: 12px 16px; font-size: 14px; font-weight: 600;
+    cursor: pointer; border: 2px solid var(--border); background: var(--bg); color: var(--muted);
+    transition: all 0.15s; }
+  .mode-toggle button:first-child { border-radius: 10px 0 0 10px; }
+  .mode-toggle button:last-child { border-radius: 0 10px 10px 0; }
+  .mode-toggle button.active { border-color: var(--accent); background: rgba(99,102,241,0.1); color: var(--accent); }
+  .mode-toggle button:hover:not(.active) { border-color: var(--accent); }
+
+  .config-conditional { display: none; }
+  .config-conditional.visible { display: block; }
+
+  /* Streams table in config */
+  .streams-config-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .streams-config-table th { text-align: left; padding: 8px; color: var(--muted);
+    border-bottom: 1px solid var(--border); font-weight: 500; font-size: 12px; }
+  .streams-config-table td { padding: 8px; border-bottom: 1px solid var(--border); }
+  .streams-config-table input[type="number"] { width: 80px; }
+  .streams-config-table input[type="checkbox"] { width: auto; }
+
+  /* Save bar */
+  .save-bar { display: flex; gap: 12px; align-items: center; justify-content: flex-end;
+    padding: 16px 0; }
+  .save-bar .status { font-size: 12px; color: var(--muted); }
+  .yaml-editor { width: 100%; min-height: 400px; padding: 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; resize: vertical;
+    white-space: pre; tab-size: 2; }
+
+  /* Auth overlay */
+  .auth-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,0.85); display: flex;
+    align-items: center; justify-content: center;
+  }
+  .auth-overlay.hidden { display: none; }
+  .auth-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 32px; width: 360px;
+    text-align: center;
+  }
+  .auth-box h2 { color: var(--text); margin-bottom: 8px; font-size: 18px; }
+  .auth-box p  { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .auth-box input {
+    width: 100%; padding: 10px 14px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--bg);
+    color: var(--text); font-size: 14px; margin-bottom: 12px;
+  }
+  .auth-box .auth-err { color: var(--red); font-size: 12px; min-height: 18px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<!-- Auth login overlay (shown only when DASHBOARD_API_KEY is set) -->
+<div id="auth-overlay" class="auth-overlay hidden">
+  <div class="auth-box">
+    <h2>Dashboard Login</h2>
+    <p>Enter the API key to access the dashboard.</p>
+    <input type="password" id="auth-key-input" placeholder="API key" autocomplete="off"
+           onkeydown="if(event.key==='Enter') authLogin()">
+    <div class="auth-err" id="auth-err"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="authLogin()">Unlock</button>
+  </div>
+</div>
+
+<div class="header">
+  <h1>Zava Manufacturing Simulator Dashboard</h1>
+  <div class="page-nav">
+    <button class="page-nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+    <button class="page-nav-btn" onclick="showPage('config')">Configuration</button>
+  </div>
+  <span id="conn-badge" class="badge">Connected</span>
+  <span style="flex:1"></span>
+  <span id="msg-rate" style="font-size:12px; color:var(--muted)"></span>
+</div>
+
+<!-- ============ DASHBOARD PAGE ============ -->
+<div id="page-dashboard" class="page-view active">
+
+<div class="container">
+  <!-- LEFT: Command Panel -->
+  <div>
+    <!-- Quick Actions -->
+    <div class="card" style="margin-bottom:16px">
+      <h2>Quick Actions</h2>
+      <div class="quick-grid">
+        <button class="btn-sm btn-blue" onclick="sendQuick('status')">Get Status</button>
+        <button class="btn-sm btn-blue" onclick="sendQuick('list-streams')">List Streams</button>
+        <button class="btn-sm btn-blue" onclick="sendQuick('list-anomalies')">List Anomalies</button>
+        <button class="btn-sm btn-outline" onclick="clearLog()">Clear Log</button>
+      </div>
+    </div>
+
+    <!-- Stream Control -->
+    <div class="card" style="margin-bottom:16px">
+      <h2>Stream Control</h2>
+      <div class="section">
+        <label>Stream</label>
+        <select id="stream-select">
+          <option value="equipment">equipment</option>
+          <option value="machine-state">machine-state</option>
+          <option value="process-segment">process-segment</option>
+          <option value="production-counter">production-counter</option>
+          <option value="safety-incident">safety-incident</option>
+          <option value="predictive-maintenance">predictive-maintenance</option>
+          <option value="digital-twin">digital-twin</option>
+          <option value="material-consumption">material-consumption</option>
+          <option value="quality-vision">quality-vision</option>
+          <option value="supply-chain">supply-chain</option>
+          <option value="batch-lifecycle">batch-lifecycle</option>
+        </select>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <button class="btn-sm btn-green" onclick="sendStream('enable')">Enable</button>
+        <button class="btn-sm btn-red" onclick="sendStream('disable')">Disable</button>
+      </div>
+      <div class="section" style="margin-top:12px">
+        <label>Set Interval (seconds)</label>
+        <div class="row">
+          <input type="number" id="interval-val" value="5" min="1" max="3600">
+          <button class="btn-sm btn-orange" onclick="sendInterval()">Set</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Anomaly Injection -->
+    <div class="card" style="margin-bottom:16px">
+      <h2>Anomaly Injection</h2>
+      <div class="section">
+        <label>Scenario</label>
+        <select id="anomaly-select">
+          <option value="temperature_spike">temperature_spike (120s)</option>
+          <option value="oee_drop">oee_drop (300s)</option>
+          <option value="machine_cascade_failure">machine_cascade_failure (180s)</option>
+          <option value="bearing_failure_imminent">bearing_failure_imminent (600s)</option>
+          <option value="material_overconsumption">material_overconsumption (300s)</option>
+          <option value="vision_defect_surge">vision_defect_surge (240s)</option>
+          <option value="shipment_critical_delay">shipment_critical_delay (instant)</option>
+          <option value="energy_spike">energy_spike (180s)</option>
+          <option value="cascading_line_failure">cascading_line_failure (300s)</option>
+          <option value="safety_zone_breach">safety_zone_breach (120s)</option>
+          <option value="quality_model_degradation">quality_model_degradation (300s)</option>
+        </select>
+      </div>
+      <button class="btn-primary btn-red" onclick="triggerAnomaly()">Trigger Anomaly</button>
+    </div>
+
+    <!-- Config Set -->
+    <div class="card" style="margin-bottom:16px">
+      <h2>Config Override</h2>
+      <div class="section">
+        <label>Config Path</label>
+        <select id="config-path">
+          <option value="anomalies.scenario_interval_min">anomalies.scenario_interval_min</option>
+          <option value="anomalies.enabled">anomalies.enabled</option>
+          <option value="production_counter_telemetry.reject_rate">production_counter_telemetry.reject_rate</option>
+          <option value="production_counter_telemetry.oee_range">production_counter_telemetry.oee_range</option>
+          <option value="custom">Custom path...</option>
+        </select>
+        <input type="text" id="config-path-custom" placeholder="e.g. anomalies.enabled" style="display:none; margin-top:6px">
+      </div>
+      <div class="section">
+        <label>Value (JSON)</label>
+        <input type="text" id="config-value" placeholder='e.g. 15, true, [0.4, 0.6]'>
+      </div>
+      <button class="btn-primary" onclick="sendConfigSet()">Apply</button>
+      <div class="json-preview" id="cmd-preview">{}</div>
+    </div>
+
+    <!-- Raw JSON -->
+    <div class="card">
+      <h2>Raw Command</h2>
+      <div class="section">
+        <label>JSON Payload</label>
+        <textarea id="raw-json" rows="4" style="width:100%; padding:8px 10px; border-radius:8px;
+          border:1px solid var(--border); background:var(--bg); color:var(--text);
+          font-family:monospace; font-size:12px; resize:vertical;">{"action": "status"}</textarea>
+      </div>
+      <button class="btn-primary" onclick="sendRaw()">Send Raw</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: Response Log -->
+  <div>
+    <!-- Simulator Overview -->
+    <div class="card" id="overview-card" style="margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+        <h2 style="margin:0">Simulator Overview</h2>
+        <div style="display:flex; gap:8px; align-items:center">
+          <span id="overview-uptime" style="font-size:11px; color:var(--muted)"></span>
+          <button class="refresh-btn" onclick="refreshOverview()">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Streams -->
+      <div class="overview-section">
+        <h3>Streams <span class="count" id="stream-count"></span></h3>
+        <div id="stream-overview" class="overview-grid">
+          <div style="font-size:12px; color:var(--muted)">Loading...</div>
+        </div>
+      </div>
+
+      <!-- Anomaly Scenarios -->
+      <div class="overview-section" style="margin-bottom:0">
+        <h3>Anomaly Scenarios <span class="count" id="anomaly-count"></span></h3>
+        <div id="anomaly-master" class="overview-master">
+          <span class="label">Anomaly Engine</span>
+          <span id="anomaly-engine-badge" class="overview-badge disabled">—</span>
+        </div>
+        <div id="anomaly-overview" class="overview-grid">
+          <div style="font-size:12px; color:var(--muted)">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D1: Throughput Sparkline -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h2 style="margin:0">Throughput</h2>
+        <span id="live-rate" style="font-size:14px; font-weight:600; color:var(--green)">0 msg/s</span>
+      </div>
+      <canvas id="sparkline" width="800" height="80" style="width:100%; height:80px; border-radius:8px; background:var(--bg);"></canvas>
+      <div style="display:flex; justify-content:space-between; margin-top:4px">
+        <span style="font-size:10px; color:var(--muted)">5 min ago</span>
+        <span id="spark-total" style="font-size:10px; color:var(--muted)">0 total</span>
+        <span style="font-size:10px; color:var(--muted)">now</span>
+      </div>
+    </div>
+
+    <!-- D2: Anomaly Timeline -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+        <h2 style="margin:0">Anomaly Timeline</h2>
+        <span id="anomaly-event-count" class="msg-count">0 events</span>
+      </div>
+      <div id="anomaly-timeline" style="max-height:200px; overflow-y:auto;">
+        <div style="font-size:12px; color:var(--muted)">No anomaly events yet</div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
+        <h2 style="margin:0">Message Log</h2>
+        <span class="msg-count" id="msg-count">0 messages</span>
+      </div>
+      <div class="tabs">
+        <div class="tab active" data-filter="">All</div>
+        <div class="tab" data-filter="zava/simulator/status">Status</div>
+        <div class="tab" data-filter="zava/telemetry">Telemetry</div>
+      </div>
+      <div class="filter-row">
+        <input type="text" id="topic-filter" placeholder="Filter by topic...">
+        <button class="btn-sm btn-outline" onclick="togglePause()">
+          <span id="pause-label">Pause</span>
+        </button>
+      </div>
+      <div class="log-panel" id="log-panel"></div>
+    </div>
+  </div>
+</div>
+</div>
+<!-- end DASHBOARD PAGE -->
+
+<!-- ============ CONFIGURATION PAGE ============ -->
+<div id="page-config" class="page-view">
+<div class="config-container">
+
+  <!-- Save / Load bar -->
+  <div class="save-bar" style="margin-bottom:8px">
+    <span id="config-status" class="status"></span>
+    <button class="btn-sm btn-outline" onclick="loadConfig()">Reload</button>
+    <button class="btn-sm btn-green" onclick="saveConfig()">Save Configuration</button>
+  </div>
+
+  <!-- View mode toggle -->
+  <div class="config-section">
+    <h2>Edit Mode</h2>
+    <div class="mode-toggle">
+      <button id="cfg-mode-form" class="active" onclick="setConfigEditMode('form')">Form Editor</button>
+      <button id="cfg-mode-yaml" onclick="setConfigEditMode('yaml')">YAML Editor</button>
+    </div>
+  </div>
+
+  <!-- ---- FORM VIEW ---- -->
+  <div id="config-form-view">
+
+    <!-- Output Mode -->
+    <div class="config-section">
+      <h2>Output Mode</h2>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px">
+        Choose where the simulator sends data. The simulator must be restarted for changes to take effect.
+      </p>
+      <div class="mode-toggle">
+        <button id="mode-mqtt" class="active" onclick="setOutputMode('mqtt')">MQTT Broker</button>
+        <button id="mode-eventHub" onclick="setOutputMode('eventHub')">Azure Event Hub</button>
+      </div>
+    </div>
+
+    <!-- MQTT Config -->
+    <div id="cfg-mqtt-section" class="config-section config-conditional visible">
+      <h2>MQTT Connection</h2>
+      <div class="config-grid">
+        <div class="config-field">
+          <label>Broker Host</label>
+          <input type="text" id="cfg-mqtt-broker" placeholder="127.0.0.1">
+        </div>
+        <div class="config-field">
+          <label>Port</label>
+          <input type="number" id="cfg-mqtt-port" placeholder="1883">
+        </div>
+        <div class="config-field">
+          <label>Auth Method</label>
+          <select id="cfg-mqtt-authMethod">
+            <option value="none">none</option>
+            <option value="usernamePassword">usernamePassword</option>
+            <option value="serviceAccountToken">serviceAccountToken</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Use TLS</label>
+          <select id="cfg-mqtt-useTls">
+            <option value="false">No</option>
+            <option value="true">Yes</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Username</label>
+          <input type="text" id="cfg-mqtt-username" placeholder="mqtt">
+        </div>
+        <div class="config-field">
+          <label>Password</label>
+          <input type="text" id="cfg-mqtt-password" placeholder="mqtt">
+        </div>
+        <div class="config-field">
+          <label>Client ID</label>
+          <input type="text" id="cfg-mqtt-clientId" placeholder="zava-simulator">
+        </div>
+        <div class="config-field">
+          <label>QoS</label>
+          <select id="cfg-mqtt-qos">
+            <option value="0">0 — At most once</option>
+            <option value="1">1 — At least once</option>
+            <option value="2">2 — Exactly once</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Keep Alive (sec)</label>
+          <input type="number" id="cfg-mqtt-keepAlive" placeholder="60">
+        </div>
+        <div class="config-field">
+          <label>Reconnect Delay (sec)</label>
+          <input type="number" id="cfg-mqtt-reconnectDelaySec" placeholder="5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Hub Config -->
+    <div id="cfg-eh-section" class="config-section config-conditional">
+      <h2>Azure Event Hub Connection</h2>
+      <div class="config-grid">
+        <div class="config-field" style="grid-column: 1 / -1">
+          <label>Credential</label>
+          <select id="cfg-eh-credential">
+            <option value="connectionString">connectionString (SAS key)</option>
+            <option value="defaultCredential">defaultCredential (Azure CLI / SP env vars)</option>
+            <option value="managedIdentity">managedIdentity (AKS Workload Identity)</option>
+          </select>
+          <div class="hint">Docker: use defaultCredential + AZURE_* env vars. AKS: use managedIdentity.</div>
+        </div>
+        <div class="config-field" style="grid-column: 1 / -1" id="cfg-eh-connstr-field">
+          <label>Connection String</label>
+          <input type="text" id="cfg-eh-connectionString" placeholder="Endpoint=sb://<ns>.servicebus.windows.net/;SharedAccessKeyName=...">
+        </div>
+        <div class="config-field">
+          <label>Fully Qualified Namespace</label>
+          <input type="text" id="cfg-eh-fullyQualifiedNamespace" placeholder="<ns>.servicebus.windows.net">
+          <div class="hint">Required for defaultCredential / managedIdentity</div>
+        </div>
+        <div class="config-field">
+          <label>Event Hub Name</label>
+          <input type="text" id="cfg-eh-eventhubName" placeholder="zava-telemetry">
+        </div>
+        <div class="config-field">
+          <label>Max Batch Size</label>
+          <input type="number" id="cfg-eh-maxBatchSize" placeholder="100">
+        </div>
+        <div class="config-field">
+          <label>Max Wait Time (sec)</label>
+          <input type="number" id="cfg-eh-maxWaitTimeSec" placeholder="1.0" step="0.1">
+        </div>
+        <div class="config-field">
+          <label>Partition Key Mode</label>
+          <select id="cfg-eh-partitionKeyMode">
+            <option value="topic">topic</option>
+            <option value="stream">stream</option>
+            <option value="none">none</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Topic Config -->
+    <div class="config-section">
+      <h2>Topic Configuration</h2>
+      <div class="config-grid">
+        <div class="config-field">
+          <label>Topic Prefix</label>
+          <input type="text" id="cfg-topicPrefix" placeholder="zava/telemetry">
+        </div>
+        <div class="config-field">
+          <label>Topic Mode</label>
+          <select id="cfg-topicMode">
+            <option value="flat">flat — single topic per stream</option>
+            <option value="uns">uns — ISA-95 hierarchical UNS</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Simulation Config -->
+    <div class="config-section">
+      <h2>Simulation Settings</h2>
+      <div class="config-grid">
+        <div class="config-field">
+          <label>Tick Interval (sec)</label>
+          <input type="number" id="cfg-sim-tickIntervalSec" placeholder="1" min="1">
+        </div>
+        <div class="config-field">
+          <label>Time Mode</label>
+          <select id="cfg-sim-timeMode">
+            <option value="realtime">realtime</option>
+            <option value="accelerated">accelerated</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label>Acceleration Factor</label>
+          <input type="number" id="cfg-sim-accelerationFactor" placeholder="10" min="1">
+        </div>
+        <div class="config-field">
+          <label>Day Shift Start</label>
+          <input type="text" id="cfg-sim-dayStart" placeholder="06:00">
+        </div>
+        <div class="config-field">
+          <label>Night Shift Start</label>
+          <input type="text" id="cfg-sim-nightStart" placeholder="18:00">
+        </div>
+      </div>
+    </div>
+
+    <!-- Streams Config -->
+    <div class="config-section">
+      <h2>Streams</h2>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px">
+        Enable/disable individual data streams and set their publish interval.
+      </p>
+      <table class="streams-config-table">
+        <thead>
+          <tr><th>Stream</th><th>Enabled</th><th>Interval (sec)</th><th>Topic Override</th></tr>
+        </thead>
+        <tbody id="cfg-streams-tbody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- end config-form-view -->
+
+  <!-- ---- YAML VIEW ---- -->
+  <div id="config-yaml-view" style="display:none">
+    <div class="config-section">
+      <h2>Raw YAML</h2>
+      <p style="font-size:12px; color:var(--muted); margin-bottom:12px">
+        Edit the full simulator-config.yaml directly. Changes are applied when you click Save.
+      </p>
+      <textarea id="yaml-editor" class="yaml-editor" spellcheck="false"></textarea>
+    </div>
+  </div>
+
+  <div class="save-bar">
+    <span id="config-status2" class="status"></span>
+    <button class="btn-sm btn-outline" onclick="loadConfig()">Reload</button>
+    <button class="btn-sm btn-green" onclick="saveConfig()">Save Configuration</button>
+  </div>
+
+</div>
+</div>
+<!-- end CONFIGURATION PAGE -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---- State ----
+let paused = false;
+let activeFilter = '';
+let topicFilter = '';
+let messages = [];
+let pollInterval = null;
+
+// ---- Auth ----
+let _authToken = sessionStorage.getItem('dashApiKey') || '';
+
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/auth-status');
+    const d = await r.json();
+    if (!d.authRequired) {
+      // No auth needed — hide overlay, start app
+      document.getElementById('auth-overlay').classList.add('hidden');
+      return;
+    }
+    if (_authToken) {
+      // Validate stored token
+      const t = await fetch('/api/overview', {
+        headers: { 'Authorization': 'Bearer ' + _authToken }
+      });
+      if (t.ok) {
+        document.getElementById('auth-overlay').classList.add('hidden');
+        return;
+      }
+      // Token invalid — clear and show login
+      _authToken = '';
+      sessionStorage.removeItem('dashApiKey');
+    }
+    document.getElementById('auth-overlay').classList.remove('hidden');
+  } catch(e) {
+    // Backend unreachable — let it through (will fail on API calls anyway)
+    document.getElementById('auth-overlay').classList.add('hidden');
+  }
+}
+
+async function authLogin() {
+  const key = document.getElementById('auth-key-input').value.trim();
+  if (!key) { document.getElementById('auth-err').textContent = 'Please enter a key'; return; }
+  // Test the key against the API
+  try {
+    const r = await fetch('/api/overview', {
+      headers: { 'Authorization': 'Bearer ' + key }
+    });
+    if (r.ok) {
+      _authToken = key;
+      sessionStorage.setItem('dashApiKey', key);
+      document.getElementById('auth-overlay').classList.add('hidden');
+      document.getElementById('auth-err').textContent = '';
+    } else {
+      document.getElementById('auth-err').textContent = 'Invalid API key';
+    }
+  } catch(e) {
+    document.getElementById('auth-err').textContent = 'Connection error';
+  }
+}
+
+// ---- API helpers ----
+async function api(method, url, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (_authToken) opts.headers['Authorization'] = 'Bearer ' + _authToken;
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(url, opts);
+  if (r.status === 401) {
+    // Token expired or revoked — show login again
+    _authToken = '';
+    sessionStorage.removeItem('dashApiKey');
+    document.getElementById('auth-overlay').classList.remove('hidden');
+    throw new Error('Unauthorized');
+  }
+  return r.json();
+}
+
+async function sendCommand(cmd) {
+  updatePreview(cmd);
+  try {
+    const r = await api('POST', '/api/command', cmd);
+    toast(`Sent: ${cmd.action}`, 'success');
+    return r;
+  } catch (e) {
+    toast(`Failed: ${e.message}`, 'error');
+  }
+}
+
+// ---- Command builders ----
+function sendQuick(action) { sendCommand({ action }); }
+
+function sendStream(action) {
+  const stream = document.getElementById('stream-select').value;
+  sendCommand({ action, stream });
+}
+
+function sendInterval() {
+  const stream = document.getElementById('stream-select').value;
+  const sec = parseInt(document.getElementById('interval-val').value);
+  sendCommand({ action: 'set-interval', stream, intervalSec: sec });
+}
+
+function triggerAnomaly() {
+  const scenario = document.getElementById('anomaly-select').value;
+  sendCommand({ action: 'trigger-anomaly', scenario });
+}
+
+function sendConfigSet() {
+  const pathSel = document.getElementById('config-path').value;
+  const path = pathSel === 'custom'
+    ? document.getElementById('config-path-custom').value
+    : pathSel;
+  let value;
+  try { value = JSON.parse(document.getElementById('config-value').value); }
+  catch { value = document.getElementById('config-value').value; }
+  sendCommand({ action: 'set', path, value });
+}
+
+function sendRaw() {
+  try {
+    const cmd = JSON.parse(document.getElementById('raw-json').value);
+    sendCommand(cmd);
+  } catch (e) {
+    toast('Invalid JSON', 'error');
+  }
+}
+
+// ---- Preview ----
+function updatePreview(cmd) {
+  document.getElementById('cmd-preview').textContent = JSON.stringify(cmd, null, 2);
+}
+
+// ---- Overview panel ----
+let _lastStreamData = null;
+let _lastAnomalyData = null;
+
+function updateStreamOverview(data) {
+  if (!data.streams) return;
+  _lastStreamData = data;
+  const el = document.getElementById('stream-overview');
+  const entries = Object.entries(data.streams);
+  const enabledCount = entries.filter(([,v]) => v.enabled).length;
+  document.getElementById('stream-count').textContent = `${enabledCount}/${entries.length} active`;
+
+  if (data.uptime_sec != null) {
+    const m = Math.floor(data.uptime_sec / 60);
+    const s = data.uptime_sec % 60;
+    document.getElementById('overview-uptime').textContent =
+      `uptime ${m}m ${s}s | ${data.messages_published ?? '?'} msgs | ${data.msg_per_sec ?? '?'} msg/s`;
+  }
+
+  el.innerHTML = entries.map(([slug, info]) => {
+    const badge = info.enabled ? 'enabled' : 'disabled';
+    const label = info.enabled ? 'ON' : 'OFF';
+    const interval = info.intervalSec != null ? info.intervalSec + 's' : '';
+    return `<div class="overview-item">
+      <span class="status-dot ${info.enabled ? 'on' : 'off'}"></span>
+      <span class="name">${slug}</span>
+      <span class="meta">${interval}</span>
+      <span class="overview-badge ${badge}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function updateAnomalyOverview(data) {
+  if (!data.scenarios) return;
+  _lastAnomalyData = data;
+  const el = document.getElementById('anomaly-overview');
+  const engineBadge = document.getElementById('anomaly-engine-badge');
+
+  // Engine master toggle
+  if (data.anomalies_enabled) {
+    engineBadge.className = 'overview-badge enabled';
+    engineBadge.textContent = `ON — every ${data.interval_min ?? '?'} min`;
+  } else {
+    engineBadge.className = 'overview-badge disabled';
+    engineBadge.textContent = 'OFF';
+  }
+
+  const enabledCount = data.scenarios.filter(s => s.enabled).length;
+  document.getElementById('anomaly-count').textContent = `${enabledCount}/${data.scenarios.length} enabled`;
+
+  el.innerHTML = data.scenarios.map(s => {
+    const badge = s.enabled ? 'enabled' : 'disabled';
+    const label = s.enabled ? 'ON' : 'OFF';
+    const dur = s.durationSec ? s.durationSec + 's' : 'instant';
+    return `<div class="overview-item" title="${escHtml(s.description || '')}">
+      <span class="status-dot ${s.enabled ? 'on' : 'off'}"></span>
+      <span class="name">${s.name}</span>
+      <span class="meta">${dur}</span>
+      <span class="overview-badge ${badge}">${label}</span>
+    </div>`;
+  }).join('');
+}
+
+function refreshOverview() {
+  sendCommand({ action: 'status' });
+  sendCommand({ action: 'list-anomalies' });
+}
+
+async function fetchOverview() {
+  try {
+    const data = await api('GET', '/api/overview');
+    if (data['status']) updateStreamOverview(data['status']);
+    if (data['list-anomalies']) updateAnomalyOverview(data['list-anomalies']);
+  } catch(e) { /* ignore */ }
+}
+
+// ---- Log rendering ----
+function renderLog() {
+  const panel = document.getElementById('log-panel');
+  let filtered = messages;
+  if (activeFilter) filtered = filtered.filter(m => m.topic.includes(activeFilter));
+  if (topicFilter) filtered = filtered.filter(m => m.topic.toLowerCase().includes(topicFilter.toLowerCase()));
+  const shown = filtered.slice(0, 100);
+
+  panel.innerHTML = shown.map(m => {
+    const p = m.payload;
+    const statusClass = p.status === 'ok' ? 'log-status-ok' : p.status === 'error' ? 'log-status-error' : '';
+    const payloadStr = JSON.stringify(p, null, 2);
+    return `<div class="log-entry">
+      <span class="log-topic">${m.topic}</span>
+      <span class="log-time">${m.received_at}</span>
+      <div class="log-payload ${statusClass}">${escHtml(payloadStr)}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('msg-count').textContent = `${messages.length} messages (showing ${shown.length})`;
+
+  // Auto-update overview panels from status/anomaly responses
+  const lastStatus = messages.find(m => m.topic === 'zava/simulator/status' && m.payload.action === 'status');
+  if (lastStatus) updateStreamOverview(lastStatus.payload);
+  const lastAnomalies = messages.find(m => m.topic === 'zava/simulator/status' && m.payload.action === 'list-anomalies');
+  if (lastAnomalies) updateAnomalyOverview(lastAnomalies.payload);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ---- Polling ----
+async function poll() {
+  if (paused) return;
+  try {
+    const data = await api('GET', `/api/responses?limit=200&topic=${encodeURIComponent(topicFilter)}`);
+    messages = data;
+    renderLog();
+  } catch (e) { /* ignore transient errors */ }
+}
+
+async function pollOverview() {
+  try { await fetchOverview(); } catch(e) {}
+}
+
+function togglePause() {
+  paused = !paused;
+  document.getElementById('pause-label').textContent = paused ? 'Resume' : 'Pause';
+}
+
+function clearLog() {
+  api('GET', '/api/responses/clear').then(() => { messages = []; renderLog(); });
+}
+
+// ---- Toast ----
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast show ${type}`;
+  setTimeout(() => el.className = 'toast', 2500);
+}
+
+// ---- Tabs ----
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeFilter = tab.dataset.filter;
+    renderLog();
+  });
+});
+
+// ---- Topic filter ----
+document.getElementById('topic-filter').addEventListener('input', e => {
+  topicFilter = e.target.value;
+  renderLog();
+});
+
+// ---- Custom config path toggle ----
+document.getElementById('config-path').addEventListener('change', e => {
+  document.getElementById('config-path-custom').style.display =
+    e.target.value === 'custom' ? '' : 'none';
+});
+
+// ---- D1: Sparkline ----
+let sparkData = [];
+const sparkCanvas = document.getElementById('sparkline');
+const sparkCtx = sparkCanvas ? sparkCanvas.getContext('2d') : null;
+
+function drawSparkline(data) {
+  if (!sparkCtx || data.length < 2) return;
+  const canvas = sparkCanvas;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = canvas.clientWidth * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+  sparkCtx.scale(dpr, dpr);
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const rates = data.map(d => d.rate);
+  const max = Math.max(...rates, 1);
+  const step = w / (rates.length - 1);
+
+  sparkCtx.clearRect(0, 0, w, h);
+
+  // Fill gradient
+  const gradient = sparkCtx.createLinearGradient(0, 0, 0, h);
+  gradient.addColorStop(0, 'rgba(99,102,241,0.3)');
+  gradient.addColorStop(1, 'rgba(99,102,241,0.0)');
+  sparkCtx.beginPath();
+  sparkCtx.moveTo(0, h);
+  rates.forEach((r, i) => {
+    const x = i * step;
+    const y = h - (r / max) * (h - 4);
+    sparkCtx.lineTo(x, y);
+  });
+  sparkCtx.lineTo(w, h);
+  sparkCtx.closePath();
+  sparkCtx.fillStyle = gradient;
+  sparkCtx.fill();
+
+  // Line
+  sparkCtx.beginPath();
+  rates.forEach((r, i) => {
+    const x = i * step;
+    const y = h - (r / max) * (h - 4);
+    i === 0 ? sparkCtx.moveTo(x, y) : sparkCtx.lineTo(x, y);
+  });
+  sparkCtx.strokeStyle = '#6366f1';
+  sparkCtx.lineWidth = 1.5;
+  sparkCtx.stroke();
+}
+
+async function pollMetrics() {
+  try {
+    const data = await api('GET', '/api/metrics');
+    document.getElementById('live-rate').textContent = data.rate + ' msg/s';
+    document.getElementById('spark-total').textContent = data.total.toLocaleString() + ' total';
+    sparkData = data.history || [];
+    drawSparkline(sparkData);
+  } catch(e) {}
+}
+
+// ---- D2: Anomaly Timeline ----
+async function pollAnomalyTimeline() {
+  try {
+    const events = await api('GET', '/api/anomaly-events?limit=30');
+    const el = document.getElementById('anomaly-timeline');
+    const countEl = document.getElementById('anomaly-event-count');
+    countEl.textContent = events.length + ' events';
+    if (!events.length) {
+      el.innerHTML = '<div style="font-size:12px; color:var(--muted)">No anomaly events yet</div>';
+      return;
+    }
+    el.innerHTML = events.map(e => {
+      const phaseClass = e.phase === 'START' ? 'start' : 'end';
+      const ts = e.timestamp ? e.timestamp.replace('T',' ').replace('Z','') : '';
+      return `<div class="anomaly-entry">
+        <span class="phase ${phaseClass}">${e.phase}</span>
+        <span class="scenario">${escHtml(e.scenario)}</span>
+        <span class="stream-tag">${escHtml(e.stream)}</span>
+        <span class="ts">${ts}</span>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+// ---- Page Navigation ----
+function showPage(page) {
+  document.querySelectorAll('.page-view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.page-nav-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelector(`.page-nav-btn[onclick="showPage('${page}')"]`).classList.add('active');
+  if (page === 'config') loadConfig();
+}
+
+// ---- Config: State ----
+let _configData = null;   // raw JS object mirroring the YAML
+let _configEditMode = 'form';
+
+// Known stream keys and their YAML config key
+const STREAM_KEYS = [
+  { key: 'equipmentTelemetry', label: 'Equipment Telemetry' },
+  { key: 'machineStateTelemetry', label: 'Machine State' },
+  { key: 'processSegmentTelemetry', label: 'Process Segment' },
+  { key: 'productionCounterTelemetry', label: 'Production Counter' },
+  { key: 'safetyIncidentEvents', label: 'Safety Incident' },
+  { key: 'predictiveMaintenanceSignals', label: 'Predictive Maintenance' },
+  { key: 'digitalTwinStateSync', label: 'Digital Twin' },
+  { key: 'materialConsumptionEvents', label: 'Material Consumption' },
+  { key: 'qualityVisionEvents', label: 'Quality Vision' },
+  { key: 'supplyChainAlerts', label: 'Supply Chain' },
+  { key: 'batchLifecycle', label: 'Batch Lifecycle' },
+];
+
+// ---- Config: Load ----
+async function loadConfig() {
+  try {
+    const r = await api('GET', '/api/config');
+    if (!r.ok) { toast('Config load failed: ' + r.error, 'error'); return; }
+    _configData = r.config;
+    populateFormFromConfig(_configData);
+    populateYamlEditor(_configData);
+    setConfigStatus('Loaded from ' + r.path.split('/').pop());
+  } catch (e) {
+    toast('Config load error: ' + e.message, 'error');
+  }
+}
+
+// ---- Config: Save ----
+async function saveConfig() {
+  try {
+    let data;
+    if (_configEditMode === 'yaml') {
+      // Parse from YAML editor — we need jsyaml or just send raw text and let backend parse
+      // For simplicity we'll send JSON built from the YAML text using a mini approach
+      // Actually, let's send the raw text to a different endpoint... but simpler: sync form → _configData → save
+      toast('Syncing YAML editor...', 'success');
+      // We'll post the YAML as text and let the backend handle it
+      const yamlText = document.getElementById('yaml-editor').value;
+      const resp = await fetch('/api/config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/yaml',
+          ...(_authToken ? { 'Authorization': 'Bearer ' + _authToken } : {}),
+        },
+        body: yamlText,
+      });
+      const result = await resp.json();
+      if (result.ok) {
+        toast('Configuration saved!', 'success');
+        setConfigStatus('Saved');
+        loadConfig(); // reload to sync
+      } else {
+        toast('Save failed: ' + result.error, 'error');
+      }
+      return;
+    }
+
+    // Form mode: collect form → _configData → save
+    collectFormToConfig();
+    const r = await api('POST', '/api/config', _configData);
+    if (r.ok) {
+      toast('Configuration saved!', 'success');
+      setConfigStatus('Saved');
+    } else {
+      toast('Save failed: ' + r.error, 'error');
+    }
+  } catch (e) {
+    toast('Save error: ' + e.message, 'error');
+  }
+}
+
+function setConfigStatus(msg) {
+  document.getElementById('config-status').textContent = msg;
+  document.getElementById('config-status2').textContent = msg;
+}
+
+// ---- Config: Edit-mode toggle ----
+function setConfigEditMode(mode) {
+  _configEditMode = mode;
+  document.getElementById('cfg-mode-form').classList.toggle('active', mode === 'form');
+  document.getElementById('cfg-mode-yaml').classList.toggle('active', mode === 'yaml');
+  document.getElementById('config-form-view').style.display = mode === 'form' ? '' : 'none';
+  document.getElementById('config-yaml-view').style.display = mode === 'yaml' ? '' : 'none';
+  if (mode === 'yaml' && _configData) {
+    // Sync form updates into _configData first
+    collectFormToConfig();
+    populateYamlEditor(_configData);
+  }
+}
+
+// ---- Config: Output mode toggle ----
+function setOutputMode(mode) {
+  document.getElementById('mode-mqtt').classList.toggle('active', mode === 'mqtt');
+  document.getElementById('mode-eventHub').classList.toggle('active', mode === 'eventHub');
+  document.getElementById('cfg-mqtt-section').classList.toggle('visible', mode === 'mqtt');
+  document.getElementById('cfg-eh-section').classList.toggle('visible', mode === 'eventHub');
+}
+
+// ---- Config: Populate form from config object ----
+function populateFormFromConfig(cfg) {
+  // Output mode
+  const mode = cfg.outputMode || 'mqtt';
+  setOutputMode(mode);
+
+  // MQTT
+  const m = cfg.mqtt || {};
+  _setVal('cfg-mqtt-broker', m.broker || '');
+  _setVal('cfg-mqtt-port', m.port || 1883);
+  _setVal('cfg-mqtt-authMethod', m.authMethod || 'none');
+  _setVal('cfg-mqtt-useTls', String(m.useTls || false));
+  _setVal('cfg-mqtt-username', m.username || '');
+  _setVal('cfg-mqtt-password', m.password || '');
+  _setVal('cfg-mqtt-clientId', m.clientId || 'zava-simulator');
+  _setVal('cfg-mqtt-qos', String(m.qos ?? 1));
+  _setVal('cfg-mqtt-keepAlive', m.keepAlive || 60);
+  _setVal('cfg-mqtt-reconnectDelaySec', m.reconnectDelaySec || 5);
+
+  // Event Hub
+  const eh = cfg.eventHub || {};
+  _setVal('cfg-eh-credential', eh.credential || 'connectionString');
+  _setVal('cfg-eh-connectionString', eh.connectionString || '');
+  _setVal('cfg-eh-fullyQualifiedNamespace', eh.fullyQualifiedNamespace || '');
+  _setVal('cfg-eh-eventhubName', eh.eventhubName || '');
+  _setVal('cfg-eh-maxBatchSize', eh.maxBatchSize || 100);
+  _setVal('cfg-eh-maxWaitTimeSec', eh.maxWaitTimeSec || 1.0);
+  _setVal('cfg-eh-partitionKeyMode', eh.partitionKeyMode || 'topic');
+
+  // Topic
+  _setVal('cfg-topicPrefix', cfg.topicPrefix || 'zava/telemetry');
+  _setVal('cfg-topicMode', cfg.topicMode || 'uns');
+
+  // Simulation
+  const sim = cfg.simulation || {};
+  _setVal('cfg-sim-tickIntervalSec', sim.tickIntervalSec || 1);
+  _setVal('cfg-sim-timeMode', sim.timeMode || 'realtime');
+  _setVal('cfg-sim-accelerationFactor', sim.accelerationFactor || 10);
+  _setVal('cfg-sim-dayStart', (sim.shifts || {}).dayStart || '06:00');
+  _setVal('cfg-sim-nightStart', (sim.shifts || {}).nightStart || '18:00');
+
+  // Streams
+  populateStreamsTable(cfg);
+}
+
+function populateStreamsTable(cfg) {
+  const tbody = document.getElementById('cfg-streams-tbody');
+  tbody.innerHTML = STREAM_KEYS.map(({ key, label }) => {
+    const s = cfg[key] || {};
+    const checked = s.enabled !== false ? 'checked' : '';
+    const interval = s.intervalSec ?? '';
+    const topic = s.topic ?? '';
+    return `<tr data-stream-key="${key}">
+      <td><strong>${label}</strong><br><span style="font-size:11px;color:var(--muted)">${key}</span></td>
+      <td><input type="checkbox" class="stream-enabled" ${checked}></td>
+      <td><input type="number" class="stream-interval" value="${interval}" min="1" placeholder="—"></td>
+      <td><input type="text" class="stream-topic" value="${escHtml(topic)}" placeholder="auto"></td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- Config: Collect form values into _configData ----
+function collectFormToConfig() {
+  if (!_configData) _configData = {};
+
+  // Output mode
+  _configData.outputMode = document.getElementById('mode-eventHub').classList.contains('active') ? 'eventHub' : 'mqtt';
+
+  // MQTT
+  if (!_configData.mqtt) _configData.mqtt = {};
+  _configData.mqtt.broker = _getVal('cfg-mqtt-broker');
+  _configData.mqtt.port = parseInt(_getVal('cfg-mqtt-port')) || 1883;
+  _configData.mqtt.authMethod = _getVal('cfg-mqtt-authMethod');
+  _configData.mqtt.useTls = _getVal('cfg-mqtt-useTls') === 'true';
+  _configData.mqtt.username = _getVal('cfg-mqtt-username');
+  _configData.mqtt.password = _getVal('cfg-mqtt-password');
+  _configData.mqtt.clientId = _getVal('cfg-mqtt-clientId');
+  _configData.mqtt.qos = parseInt(_getVal('cfg-mqtt-qos')) || 1;
+  _configData.mqtt.keepAlive = parseInt(_getVal('cfg-mqtt-keepAlive')) || 60;
+  _configData.mqtt.reconnectDelaySec = parseInt(_getVal('cfg-mqtt-reconnectDelaySec')) || 5;
+
+  // Event Hub
+  if (!_configData.eventHub) _configData.eventHub = {};
+  _configData.eventHub.credential = _getVal('cfg-eh-credential');
+  _configData.eventHub.connectionString = _getVal('cfg-eh-connectionString');
+  _configData.eventHub.fullyQualifiedNamespace = _getVal('cfg-eh-fullyQualifiedNamespace');
+  _configData.eventHub.eventhubName = _getVal('cfg-eh-eventhubName');
+  _configData.eventHub.maxBatchSize = parseInt(_getVal('cfg-eh-maxBatchSize')) || 100;
+  _configData.eventHub.maxWaitTimeSec = parseFloat(_getVal('cfg-eh-maxWaitTimeSec')) || 1.0;
+  _configData.eventHub.partitionKeyMode = _getVal('cfg-eh-partitionKeyMode');
+
+  // Topic
+  _configData.topicPrefix = _getVal('cfg-topicPrefix');
+  _configData.topicMode = _getVal('cfg-topicMode');
+
+  // Simulation
+  if (!_configData.simulation) _configData.simulation = {};
+  _configData.simulation.tickIntervalSec = parseInt(_getVal('cfg-sim-tickIntervalSec')) || 1;
+  _configData.simulation.timeMode = _getVal('cfg-sim-timeMode');
+  _configData.simulation.accelerationFactor = parseInt(_getVal('cfg-sim-accelerationFactor')) || 10;
+  if (!_configData.simulation.shifts) _configData.simulation.shifts = {};
+  _configData.simulation.shifts.dayStart = _getVal('cfg-sim-dayStart');
+  _configData.simulation.shifts.nightStart = _getVal('cfg-sim-nightStart');
+
+  // Streams
+  document.querySelectorAll('#cfg-streams-tbody tr').forEach(tr => {
+    const key = tr.dataset.streamKey;
+    if (!_configData[key]) _configData[key] = {};
+    _configData[key].enabled = tr.querySelector('.stream-enabled').checked;
+    const intVal = tr.querySelector('.stream-interval').value;
+    if (intVal) _configData[key].intervalSec = parseInt(intVal);
+    const topicVal = tr.querySelector('.stream-topic').value;
+    if (topicVal) _configData[key].topic = topicVal;
+  });
+}
+
+// ---- Config: YAML editor helpers ----
+function populateYamlEditor(cfg) {
+  // Convert JS object to a formatted YAML-like display
+  // Since we don't have js-yaml in the browser, we'll use JSON with a note
+  // Actually, let's fetch the raw file from the backend
+  fetchRawYaml();
+}
+
+async function fetchRawYaml() {
+  try {
+    const r = await fetch('/api/config/raw');
+    if (r.ok) {
+      const text = await r.text();
+      document.getElementById('yaml-editor').value = text;
+    }
+  } catch(e) {}
+}
+
+// ---- Config: Helpers ----
+function _setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val;
+}
+function _getVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+// ---- Init ----
+checkAuth();  // probe auth requirement before starting
+pollInterval = setInterval(poll, 1000);
+setInterval(pollOverview, 3000);
+setInterval(pollMetrics, 1000);
+setInterval(pollAnomalyTimeline, 3000);
+poll();
+pollMetrics();
+
+// Auto-fetch status + anomalies on load
+setTimeout(() => {
+  sendQuick('status');
+  sendQuick('list-anomalies');
+  setTimeout(fetchOverview, 1500);
+}, 500);
+</script>
+</body>
+</html>
